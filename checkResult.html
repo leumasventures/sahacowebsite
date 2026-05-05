@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Check Your Results</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0b0e1a;
+      --surface: #12172b;
+      --card: #1a2240;
+      --border: #2a3560;
+      --accent: #4f8ef7;
+      --accent2: #7c3aed;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #e8edf8;
+      --muted: #6b7a9e;
+      --glow: rgba(79,142,247,0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated mesh background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(79,142,247,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(124,58,237,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,142,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,142,247,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fadeDown 0.7s ease both;
+    }
+    .header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(79,142,247,0.12);
+      border: 1px solid rgba(79,142,247,0.25);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    .header h1 {
+      font-size: clamp(26px, 6vw, 34px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #e8edf8 30%, #4f8ef7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 64px rgba(0,0,0,0.4), 0 0 48px var(--glow);
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+
+    /* PIN input section */
+    .section-label {
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .pin-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .pin-cell {
+      width: 56px;
+      height: 64px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 26px;
+      color: var(--accent);
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      caret-color: var(--accent);
+    }
+    .pin-cell:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,142,247,0.18);
+      transform: translateY(-2px);
+    }
+    .pin-cell.filled {
+      border-color: rgba(79,142,247,0.5);
+    }
+    .pin-cell.error {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+      animation: shake 0.4s ease;
+    }
+
+    .check-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(79,142,247,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    .check-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(255,255,255,0.12), transparent);
+      pointer-events: none;
+    }
+    .check-btn:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(79,142,247,0.4);
+    }
+    .check-btn:active:not(:disabled) { transform: translateY(0); }
+    .check-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .generate-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(79,142,247,0.06);
+    }
+
+    /* PIN display */
+    .pin-display {
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-top: 18px;
+      display: none;
+      animation: fadeUp 0.4s ease both;
+    }
+    .pin-display.visible { display: block; }
+    .pin-display .label {
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .pin-display .value {
+      font-family: 'Space Mono', monospace;
+      font-size: 28px;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .pin-display .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #f87171;
+      margin-top: 16px;
+    }
+    .error-msg.visible { display: flex; }
+
+    /* Results panel */
+    .results-panel {
+      display: none;
+      margin-top: 28px;
+      animation: fadeUp 0.5s ease both;
+    }
+    .results-panel.visible { display: block; }
+
+    .student-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .student-info .name {
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .student-info .id {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .result-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.2s;
+    }
+    .result-item:hover { border-color: rgba(79,142,247,0.3); }
+    .result-item .subject {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 6px;
+    }
+    .result-item .score {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+    }
+    .result-item .grade {
+      font-size: 12px;
+      margin-top: 2px;
+      font-weight: 600;
+    }
+
+    .grade-A { color: var(--green); }
+    .grade-B { color: #60a5fa; }
+    .grade-C { color: var(--yellow); }
+    .grade-D, .grade-F { color: var(--red); }
+
+    .overall-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .overall-bar .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .overall-bar .label-t {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .overall-bar .score-t {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .bar-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 14px;
+    }
+    .status-pass { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+    .status-fail { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+
+    .back-btn {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shake {
+      0%,100%  { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--muted);
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-overlay"></div>
+
+  <div class="wrapper">
+    <div class="header">
+      <div class="badge">🎓 Academic Portal</div>
+      <h1>Check Your Results</h1>
+      <p>Enter your unique PIN to securely view your exam results.</p>
+    </div>
+
+    <div class="card" id="loginCard">
+      <!-- PIN Entry -->
+      <div class="section-label">Enter your PIN</div>
+      <div class="pin-row" id="pinRow">
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+        <input class="pin-cell" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off"/>
+      </div>
+
+      <button class="check-btn" id="checkBtn" disabled onclick="checkPin()">
+        Check Results →
+      </button>
+
+      <div class="error-msg" id="errorMsg">
+        <span>⚠️</span> Invalid PIN. Please try again.
+      </div>
+
+      <div class="divider">or</div>
+
+      <button class="generate-btn" onclick="generatePin()">
+        <span>✦</span> Generate a demo PIN
+      </button>
+
+      <div class="pin-display" id="pinDisplay">
+        <div class="label">Your generated PIN</div>
+        <div class="value" id="pinValue">——————</div>
+        <div class="hint">Copy this PIN and enter it above to see demo results.</div>
+      </div>
+
+      <!-- Results Panel (shown inside card on same page) -->
+      <div class="results-panel" id="resultsPanel">
+        <div class="student-header">
+          <div class="avatar" id="avatarEl"></div>
+          <div class="student-info">
+            <div class="name" id="studentName"></div>
+            <div class="id" id="studentId"></div>
+          </div>
+        </div>
+
+        <div class="result-grid" id="resultGrid"></div>
+
+        <div class="overall-bar">
+          <div class="top">
+            <div class="label-t">Overall Average</div>
+            <div class="score-t" id="overallScore"></div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+          <div id="statusBadge"></div>
+        </div>
+
+        <button class="back-btn" onclick="resetView()">← Check another PIN</button>
+      </div>
+    </div>
+
+    <div class="footer">Results are confidential · Secured by PIN · © 2025 Academic Portal</div>
+  </div>
+
+  <script>
+    // ─── Demo data store ─────────────────────────────────────────────────────
+    const studentDB = {};
+
+    const demoStudents = [
+      { name: "Amara Osei", id: "STU-2024-001", results: [
+        { subject: "Mathematics", score: 88 },
+        { subject: "English",     score: 74 },
+        { subject: "Physics",     score: 91 },
+        { subject: "Chemistry",   score: 67 },
+        { subject: "History",     score: 79 },
+        { subject: "Biology",     score: 82 },
+      ]},
+      { name: "Kwame Asante", id: "STU-2024-002", results: [
+        { subject: "Mathematics", score: 55 },
+        { subject: "English",     score: 62 },
+        { subject: "Physics",     score: 48 },
+        { subject: "Chemistry",   score: 71 },
+        { subject: "History",     score: 58 },
+        { subject: "Biology",     score: 60 },
+      ]},
+      { name: "Fatima Nkrumah", id: "STU-2024-003", results: [
+        { subject: "Mathematics", score: 95 },
+        { subject: "English",     score: 89 },
+        { subject: "Physics",     score: 93 },
+        { subject: "Chemistry",   score: 88 },
+        { subject: "History",     score: 91 },
+        { subject: "Biology",     score: 97 },
+      ]},
+    ];
+
+    function gradeFor(score) {
+      if (score >= 90) return "A";
+      if (score >= 80) return "B";
+      if (score >= 70) return "C";
+      if (score >= 60) return "D";
+      return "F";
+    }
+
+    function genPin() {
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    // ─── Generate PIN ─────────────────────────────────────────────────────────
+    function generatePin() {
+      const student = demoStudents[Math.floor(Math.random() * demoStudents.length)];
+      const pin = genPin();
+      studentDB[pin] = student;
+
+      document.getElementById('pinValue').textContent = pin;
+      document.getElementById('pinDisplay').classList.add('visible');
+
+      // Pre-fill pin cells for UX
+      const cells = document.querySelectorAll('.pin-cell');
+      pin.split('').forEach((d, i) => {
+        cells[i].value = d;
+        cells[i].classList.add('filled');
+      });
+      document.getElementById('checkBtn').disabled = false;
+      document.getElementById('errorMsg').classList.remove('visible');
+    }
+
+    // ─── PIN Cells Logic ─────────────────────────────────────────────────────
+    const cells = document.querySelectorAll('.pin-cell');
+    cells.forEach((cell, i) => {
+      cell.addEventListener('input', e => {
+        const val = e.target.value.replace(/\D/g, '');
+        e.target.value = val ? val[val.length - 1] : '';
+        e.target.classList.toggle('filled', !!e.target.value);
+        if (e.target.value && i < cells.length - 1) cells[i + 1].focus();
+        updateBtn();
+      });
+      cell.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && i > 0) {
+          cells[i - 1].value = '';
+          cells[i - 1].classList.remove('filled');
+          cells[i - 1].focus();
+          updateBtn();
+        }
+        if (e.key === 'Enter') checkPin();
+      });
+      cell.addEventListener('paste', e => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+        pasted.split('').forEach((ch, j) => {
+          if (cells[j]) { cells[j].value = ch; cells[j].classList.add('filled'); }
+        });
+        updateBtn();
+      });
+    });
+
+    function updateBtn() {
+      const pin = getPin();
+      document.getElementById('checkBtn').disabled = pin.length < 6;
+    }
+
+    function getPin() {
+      return [...cells].map(c => c.value).join('');
+    }
+
+    // ─── Check PIN ────────────────────────────────────────────────────────────
+    function checkPin() {
+      const pin = getPin();
+      const student = studentDB[pin];
+      if (!student) {
+        cells.forEach(c => c.classList.add('error'));
+        document.getElementById('errorMsg').classList.add('visible');
+        setTimeout(() => cells.forEach(c => c.classList.remove('error')), 600);
+        return;
+      }
+      document.getElementById('errorMsg').classList.remove('visible');
+      showResults(student);
+    }
+
+    function showResults(student) {
+      // Hide login elements
+      document.getElementById('pinRow').style.display = 'none';
+      document.getElementById('checkBtn').style.display = 'none';
+      document.querySelector('.divider').style.display = 'none';
+      document.querySelector('.generate-btn').style.display = 'none';
+      document.getElementById('pinDisplay').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+
+      // Avatar
+      document.getElementById('avatarEl').textContent = student.name[0];
+      document.getElementById('studentName').textContent = student.name;
+      document.getElementById('studentId').textContent = student.id;
+
+      // Subject grid
+      const grid = document.getElementById('resultGrid');
+      grid.innerHTML = '';
+      student.results.forEach(r => {
+        const grade = gradeFor(r.score);
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.innerHTML = `
+          <div class="subject">${r.subject}</div>
+          <div class="score grade-${grade}">${r.score}<span style="font-size:14px">/100</span></div>
+          <div class="grade grade-${grade}">Grade ${grade}</div>
+        `;
+        grid.appendChild(div);
+      });
+
+      // Overall
+      const avg = Math.round(student.results.reduce((s, r) => s + r.score, 0) / student.results.length);
+      const pass = avg >= 50;
+      document.getElementById('overallScore').textContent = avg + '%';
+      document.getElementById('statusBadge').innerHTML = pass
+        ? `<span class="status-badge status-pass">✓ PASSED</span>`
+        : `<span class="status-badge status-fail">✗ FAILED</span>`;
+
+      document.getElementById('resultsPanel').classList.add('visible');
+      setTimeout(() => { document.getElementById('barFill').style.width = avg + '%'; }, 100);
+    }
+
+    function resetView() {
+      cells.forEach(c => { c.value = ''; c.classList.remove('filled', 'error'); });
+      document.getElementById('checkBtn').disabled = true;
+      document.getElementById('pinRow').style.display = 'flex';
+      document.getElementById('checkBtn').style.display = 'block';
+      document.querySelector('.divider').style.display = 'flex';
+      document.querySelector('.generate-btn').style.display = 'flex';
+      document.getElementById('pinDisplay').classList.remove('visible');
+      document.getElementById('pinDisplay').style.display = '';
+      document.getElementById('errorMsg').style.display = '';
+      document.getElementById('resultsPanel').classList.remove('visible');
+      document.getElementById('barFill').style.width = '0%';
+    }
+  </script>
+</body>
+</html>

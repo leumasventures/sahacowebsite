@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sacred Heart College – School Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="icon" href="data:,">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Brand */
+      --navy:          #0c1f3f;
+      --navy-mid:      #1a3560;
+      --navy-light:    #254b82;
+      --blue:          #2563eb;
+      --blue-light:    #3b82f6;
+      --blue-pale:     #dbeafe;
+      --gold:          #c9962c;
+      --gold-light:    #f4c542;
+      --gold-pale:     #fef9e7;
+
+      /* Semantic */
+      --emerald:       #059669;
+      --emerald-pale:  #d1fae5;
+      --amber:         #d97706;
+      --amber-pale:    #fef3c7;
+      --rose:          #e11d48;
+      --rose-pale:     #fee2e2;
+      --violet:        #7c3aed;
+      --violet-pale:   #ede9fe;
+
+      /* Neutrals */
+      --slate-50:      #f8fafc;
+      --slate-100:     #f1f5f9;
+      --slate-200:     #e2e8f0;
+      --slate-300:     #cbd5e1;
+      --slate-400:     #94a3b8;
+      --slate-500:     #64748b;
+      --slate-600:     #475569;
+      --slate-700:     #334155;
+      --slate-800:     #1e293b;
+      --white:         #ffffff;
+
+      /* Layout */
+      --sidebar-w:     268px;
+      --topbar-h:      64px;
+
+      /* Radii */
+      --r-xl:          20px;
+      --r-lg:          14px;
+      --r-md:          10px;
+      --r-sm:          7px;
+
+      /* Shadows */
+      --sh-xs:  0 1px 3px rgba(0,0,0,.06);
+      --sh-sm:  0 2px 8px rgba(0,0,0,.08);
+      --sh-md:  0 4px 20px rgba(0,0,0,.10);
+      --sh-lg:  0 8px 40px rgba(0,0,0,.14);
+      --sh-xl:  0 16px 64px rgba(0,0,0,.18);
+
+      /* Motion */
+      --t:      .22s ease;
+      --t-fast: .14s ease;
+    }
+
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--slate-100);
+      color: var(--slate-800);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════════════════════ */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      z-index: 400;
+      transition: width var(--t), min-width var(--t), transform var(--t);
+      overflow: hidden;
+      /* Subtle inner texture */
+      background-image:
+        radial-gradient(ellipse at 10% 20%, rgba(37,99,235,.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 90% 80%, rgba(201,150,44,.08) 0%, transparent 50%);
+      box-shadow: 6px 0 32px rgba(0,0,0,.22);
+    }
+    #sidebar.collapsed { width: 0; min-width: 0; }
+
+    /* ── Brand ── */
+    .sidebar-brand {
+      padding: 1.4rem 1.3rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: .85rem;
+    }
+    .school-crest {
+      width: 42px; height: 42px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 16px rgba(201,150,44,.40), 0 0 0 1px rgba(201,150,44,.25);
+    }
+    .brand-text { min-width: 0; }
+    .brand-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: .92rem; font-weight: 700;
+      color: #fff; line-height: 1.3; white-space: nowrap;
+    }
+    .brand-text p {
+      font-size: .69rem; color: rgba(255,255,255,.42);
+      margin-top: .1rem; white-space: nowrap;
+    }
+
+    /* ── Navigation ── */
+    .sidebar-nav {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: .6rem 0 1rem;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.08) transparent;
+    }
+    .sidebar-nav::-webkit-scrollbar { width: 3px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    .sidebar-nav ul { list-style: none; }
+
+    .nav-section {
+      font-size: .62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .12em;
+      color: rgba(255,255,255,.22);
+      padding: .95rem 1.3rem .3rem;
+      white-space: nowrap;
+    }
+    .sidebar-nav li a {
+      display: flex; align-items: center; gap: .7rem;
+      padding: .58rem 1.3rem;
+      color: rgba(255,255,255,.62);
+      text-decoration: none;
+      font-size: .855rem; font-weight: 500;
+      transition: background var(--t-fast), color var(--t-fast), padding-left var(--t);
+      white-space: nowrap;
+      border-right: 3px solid transparent;
+      position: relative;
+    }
+    .sidebar-nav li a .ni {
+      font-size: .95rem; width: 19px; text-align: center; flex-shrink: 0;
+      transition: transform var(--t);
+    }
+    .sidebar-nav li a:hover {
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.92);
+      padding-left: 1.5rem;
+    }
+    .sidebar-nav li a:hover .ni { transform: scale(1.15); }
+
+    .sidebar-nav li.active > a {
+      background: linear-gradient(90deg, rgba(37,99,235,.45) 0%, rgba(37,99,235,.08) 100%);
+      color: #fff;
+      border-right-color: var(--blue-light);
+      padding-left: 1.5rem;
+    }
+    .sidebar-nav li.active > a .ni { color: var(--gold-light); transform: scale(1.1); }
+
+    /* Badge count on nav item */
+    .nav-badge {
+      margin-left: auto;
+      background: var(--rose);
+      color: #fff;
+      font-size: .62rem; font-weight: 700;
+      padding: .1rem .42rem;
+      border-radius: 99px;
+      min-width: 18px; text-align: center;
+      animation: pulse-badge 2s ease infinite;
+    }
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .65; }
+    }
+
+    /* ── User footer ── */
+    .sidebar-footer {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding: .9rem 1.3rem;
+      flex-shrink: 0;
+    }
+    .sidebar-user { display: flex; align-items: center; gap: .7rem; }
+    .s-avatar {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(37,99,235,.4);
+    }
+    .s-info { flex: 1; min-width: 0; }
+    .s-info strong {
+      display: block; font-size: .8rem; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .s-info span { font-size: .69rem; color: rgba(255,255,255,.38); }
+    #logout-btn {
+      background: none; border: none;
+      color: rgba(255,255,255,.35);
+      cursor: pointer; font-size: .95rem; padding: .2rem;
+      border-radius: 6px; transition: color var(--t);
+    }
+    #logout-btn:hover { color: var(--rose); }
+
+    /* ═══════════════════════════════════════════════════════
+       MAIN AREA
+    ═══════════════════════════════════════════════════════ */
+    .main-container {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+      transition: margin-left var(--t);
+    }
+    .main-container.sidebar-collapsed { margin-left: 0; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--slate-200);
+      display: flex; align-items: center;
+      padding: 0 1.75rem;
+      gap: 1rem;
+      position: sticky; top: 0; z-index: 300;
+      box-shadow: var(--sh-xs);
+    }
+    #sidebar-toggle-mobile {
+      background: none; border: none; cursor: pointer;
+      color: var(--slate-500); font-size: 1.2rem;
+      padding: .38rem; border-radius: 8px;
+      transition: background var(--t), color var(--t);
+      flex-shrink: 0;
+    }
+    #sidebar-toggle-mobile:hover { background: var(--slate-100); color: var(--navy); }
+
+    /* Breadcrumb */
+    .topbar-crumb { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 0; }
+    .crumb-home {
+      font-size: .78rem; color: var(--slate-400);
+      text-decoration: none; transition: color var(--t); white-space: nowrap;
+    }
+    .crumb-home:hover { color: var(--navy); }
+    .crumb-sep { color: var(--slate-300); font-size: .82rem; }
+    #page-title {
+      font-size: 1rem; font-weight: 700; color: var(--navy);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Topbar right */
+    .topbar-right { display: flex; align-items: center; gap: .85rem; margin-left: auto; flex-shrink: 0; }
+    .session-chip {
+      background: var(--navy);
+      color: var(--gold-light);
+      border-radius: 20px; padding: .28rem .9rem;
+      font-size: .72rem; font-weight: 700;
+      letter-spacing: .03em; white-space: nowrap;
+    }
+    #current-user-name-role {
+      font-size: .8rem; color: var(--slate-500); font-weight: 500; white-space: nowrap;
+    }
+    #logout-btn-top {
+      background: none; border: 1px solid var(--slate-200);
+      color: var(--slate-600); cursor: pointer;
+      font-size: .78rem; padding: .32rem .8rem; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      transition: background var(--t), color var(--t), border-color var(--t);
+      white-space: nowrap;
+    }
+    #logout-btn-top:hover { background: var(--rose); color: #fff; border-color: var(--rose); }
+
+    /* ── Page content ── */
+    .page-content {
+      flex: 1;
+      padding: 2rem 1.75rem 1rem;
+      max-width: 1520px;
+      width: 100%;
+    }
+
+    /* Section show/hide */
+    .content-section { display: none; animation: fadeIn .24s ease; }
+    .content-section:not(.hidden) { display: block; }
+    .content-section.hidden { display: none !important; }
+
+    /* ── Footer ── */
+    .main-footer {
+      padding: 1rem 1.75rem;
+      font-size: .75rem; color: var(--slate-400);
+      border-top: 1px solid var(--slate-200);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap;
+    }
+    .main-footer a { color: var(--slate-400); text-decoration: none; }
+    .main-footer a:hover { color: var(--navy); }
+
+    /* ═══════════════════════════════════════════════════════
+       DASHBOARD SECTION
+    ═══════════════════════════════════════════════════════ */
+    .dash-header { margin-bottom: 1.75rem; }
+    .dash-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.65rem; font-weight: 700;
+      color: var(--navy); line-height: 1.2;
+      margin-bottom: .3rem;
+    }
+    .dash-header p { font-size: .9rem; color: var(--slate-500); }
+    .dash-header strong { color: var(--navy); font-weight: 600; }
+
+    /* Stats grid */
+    #dashboard-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1.1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    /* Stat card — enhanced over the original */
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      padding: 1.25rem 1.35rem 1.1rem;
+      box-shadow: var(--sh-sm);
+      border-top: 3px solid var(--slate-200);
+      transition: box-shadow var(--t), transform var(--t), border-color var(--t);
+      cursor: default;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute; bottom: -18px; right: -18px;
+      width: 72px; height: 72px; border-radius: 50%;
+      background: currentColor; opacity: .035;
+      pointer-events: none;
+    }
+    .stat-card:hover { box-shadow: var(--sh-md); transform: translateY(-2px); }
+    .stat-card h4 {
+      font-size: .72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--slate-400); margin-bottom: .55rem;
+    }
+    .stat-card .number {
+      font-size: 1.95rem; font-weight: 700;
+      color: var(--navy); line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-card .trend {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .73rem; color: var(--slate-400);
+      margin-top: .35rem; font-weight: 500;
+    }
+    .stat-card .trend.up   { color: var(--emerald); }
+    .stat-card .trend.down { color: var(--rose); }
+
+    /* Card accent colours */
+    .stat-card.warning { border-top-color: var(--amber); }
+    .stat-card.warning .number { color: var(--amber); }
+    .stat-card.success { border-top-color: var(--emerald); }
+    .stat-card.success .number { color: var(--emerald); }
+    .stat-card.info    { border-top-color: var(--blue); }
+    .stat-card.info    .number { color: var(--blue); }
+    .stat-card.alert   { border-top-color: var(--rose); }
+    .stat-card.alert   .number { color: var(--rose); }
+    .stat-card.gold    { border-top-color: var(--gold); }
+    .stat-card.gold    .number { color: var(--gold); }
+
+    /* Quick actions */
+    .quick-actions {
+      display: flex; flex-wrap: wrap; gap: .75rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Activity feed */
+    .dash-widgets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .widget-card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh-sm);
+      overflow: hidden;
+    }
+    .widget-head {
+      padding: .95rem 1.2rem .7rem;
+      border-bottom: 1px solid var(--slate-100);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .widget-head h3 {
+      font-size: .875rem; font-weight: 700; color: var(--navy);
+    }
+    .widget-head a {
+      font-size: .75rem; color: var(--blue); text-decoration: none; font-weight: 600;
+    }
+    .widget-head a:hover { text-decoration: underline; }
+    .widget-body { padding: .75rem 1.2rem 1rem; }
+
+    /* Activity list */
+    .activity-list { list-style: none; display: flex; flex-direction: column; gap: .55rem; }
+    .activity-item {
+      display: flex; align-items: flex-start; gap: .7rem;
+      padding: .45rem 0;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: .835rem;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: .32rem;
+    }
+    .activity-text { flex: 1; color: var(--slate-700); line-height: 1.45; }
+    .activity-time { font-size: .72rem; color: var(--slate-400); white-space: nowrap; flex-shrink: 0; }
+
+    /* Class performance mini-bars */
+    .perf-list { display: flex; flex-direction: column; gap: .6rem; }
+    .perf-row { display: flex; flex-direction: column; gap: .2rem; }
+    .perf-label { display: flex; justify-content: space-between; font-size: .8rem; }
+    .perf-label span:first-child { color: var(--slate-700); font-weight: 500; }
+    .perf-label span:last-child  { color: var(--slate-500); font-size: .75rem; }
+    .perf-track {
+      height: 7px; background: var(--slate-100);
+      border-radius: 99px; overflow: hidden;
+    }
+    .perf-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--navy-mid), var(--blue-light));
+      transition: width .7s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SHARED ELEMENTS
+    ═══════════════════════════════════════════════════════ */
+
+    /* Buttons */
+    .btn-primary, .btn-secondary, .btn-outline, .btn-danger {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .855rem; font-weight: 600;
+      padding: .52rem 1.2rem; border-radius: 9px;
+      border: none; cursor: pointer;
+      transition: opacity .15s, transform .1s, background .15s, box-shadow .15s;
+      letter-spacing: .01em;
+      display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-primary:active, .btn-secondary:active,
+    .btn-outline:active, .btn-danger:active { transform: scale(.97); }
+    .btn-primary   { background: var(--navy); color: #fff; box-shadow: 0 2px 10px rgba(12,31,63,.25); }
+    .btn-primary:hover { background: var(--navy-mid); box-shadow: 0 4px 16px rgba(12,31,63,.30); }
+    .btn-secondary { background: var(--slate-100); color: var(--slate-700); }
+    .btn-secondary:hover { background: var(--slate-200); }
+    .btn-outline   { background: transparent; color: var(--navy); border: 1.5px solid var(--navy); }
+    .btn-outline:hover { background: var(--navy); color: #fff; }
+    .btn-danger    { background: var(--rose-pale); color: var(--rose); }
+    .btn-danger:hover { background: var(--rose); color: #fff; }
+    .btn-gold      { background: var(--gold); color: #fff; }
+    .btn-gold:hover { background: var(--gold-light); color: var(--navy); }
+
+    /* ═══════════════════════════════════════════════════════
+       MOBILE BACKDROP
+    ═══════════════════════════════════════════════════════ */
+    #sidebar-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.48); z-index: 399;
+      backdrop-filter: blur(2px);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SCROLLBARS
+    ═══════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--slate-300); }
+
+    /* ═══════════════════════════════════════════════════════
+       FOCUS STYLES
+    ═══════════════════════════════════════════════════════ */
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--navy-mid) !important;
+      box-shadow: 0 0 0 3px rgba(26,53,96,.1) !important;
+      outline: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MOBILE
+    ═══════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        transform: translateX(-100%);
+        width: var(--sidebar-w) !important;
+        min-width: var(--sidebar-w) !important;
+      }
+      #sidebar:not(.collapsed) { transform: translateX(0); }
+      .main-container { margin-left: 0 !important; }
+      .page-content { padding: 1.25rem 1rem .75rem; }
+      #sidebar-backdrop.show { display: block; }
+      .session-chip, #current-user-name-role { display: none; }
+      .dash-widgets { grid-template-columns: 1fr; }
+      #dashboard-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       KEYFRAMES
+    ═══════════════════════════════════════════════════════ */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Staggered stat card entrance */
+    #dashboard-stats .stat-card { animation: fadeIn .4s ease both; }
+    #dashboard-stats .stat-card:nth-child(1) { animation-delay: .05s; }
+    #dashboard-stats .stat-card:nth-child(2) { animation-delay: .10s; }
+    #dashboard-stats .stat-card:nth-child(3) { animation-delay: .15s; }
+    #dashboard-stats .stat-card:nth-child(4) { animation-delay: .20s; }
+    #dashboard-stats .stat-card:nth-child(5) { animation-delay: .25s; }
+    #dashboard-stats .stat-card:nth-child(6) { animation-delay: .30s; }
+
+    /* ═══════════════════════════════════════════════════════
+       PRINT
+    ═══════════════════════════════════════════════════════ */
+    @media print {
+      #sidebar, .topbar, #sidebar-backdrop, .main-footer,
+      .quick-actions, .dash-widgets { display: none !important; }
+      .main-container { margin-left: 0 !important; }
+      .page-content { padding: 0 !important; }
+      .content-section { display: block !important; }
+      button { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    /* score inputs (resultEntry) */
+    #results input[type="number"]::-webkit-outer-spin-button,
+    #results input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #results input[type="number"] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-backdrop"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════ -->
+<aside id="sidebar">
+
+  <div class="sidebar-brand">
+    <div class="school-crest">✝</div>
+    <div class="brand-text">
+      <h1>Sacred Heart<br>College</h1>
+      <p>Eziukwu Aba · Est. 1956</p>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+    <ul>
+
+      <li class="nav-section">Overview</li>
+      <li id="nav-li-dashboard">
+        <a href="#dashboard" data-section="dashboard">
+          <span class="ni">🏠</span> Dashboard
+        </a>
+      </li>
+
+      <li class="nav-section">Academic</li>
+      <li id="nav-li-classes">
+        <a href="#classes" data-section="classes">
+          <span class="ni">🏫</span> Classes
+        </a>
+      </li>
+      <li id="nav-li-arms">
+        <a href="#arms" data-section="arms">
+          <span class="ni">🚪</span> Class Arms
+        </a>
+      </li>
+      <li id="nav-li-students">
+        <a href="#students" data-section="students">
+          <span class="ni">🎒</span> Students
+        </a>
+      </li>
+      <li id="nav-li-teachers">
+        <a href="#teachers" data-section="teachers">
+          <span class="ni">👩‍🏫</span> Staff
+        </a>
+      </li>
+      <li id="nav-li-subjects">
+        <a href="#subjects" data-section="subjects">
+          <span class="ni">📚</span> Subjects
+        </a>
+      </li>
+
+      <li class="nav-section">Admissions</li>
+      <li id="nav-li-admissions">
+        <a href="admissionList.html">
+          <span class="ni">📋</span> Admission List
+        </a>
+      </li>
+      <li id="nav-li-regform">
+        <a href="regForm.html">
+          <span class="ni">📝</span> New Registration
+        </a>
+      </li>
+
+      <li class="nav-section">Performance</li>
+      <li id="nav-li-results">
+        <a href="#results" data-section="results">
+          <span class="ni">📊</span> Results Entry
+          <span class="nav-badge" id="nav-badge-results" style="display:none">!</span>
+        </a>
+      </li>
+      <li id="nav-li-report-cards">
+        <a href="#report-cards" data-section="report-cards">
+          <span class="ni">📄</span> Report Cards
+        </a>
+      </li>
+      <li id="nav-li-attendance">
+        <a href="#attendance" data-section="attendance">
+          <span class="ni">✅</span> Attendance
+        </a>
+      </li>
+
+      <li class="nav-section">Activities</li>
+      <li id="nav-li-fixtures">
+        <a href="#fixtures" data-section="fixtures">
+          <span class="ni">🏆</span> Fixtures &amp; Honours
+        </a>
+      </li>
+
+      <li class="nav-section">System</li>
+      <li id="nav-li-parent-portal">
+        <a href="#parent-portal" data-section="parent-portal">
+          <span class="ni">👨‍👩‍👧</span> Parent Portal
+        </a>
+      </li>
+      <li id="nav-li-settings">
+        <a href="#settings" data-section="settings">
+          <span class="ni">⚙️</span> Settings
+        </a>
+      </li>
+
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="s-avatar" id="sidebar-avatar">SA</div>
+      <div class="s-info">
+        <strong id="sidebar-username">SAHARCO Admin</strong>
+        <span id="sidebar-role">Administrator</span>
+      </div>
+      <button id="logout-btn" title="Logout">⏻</button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTAINER
+═══════════════════════════════════════════════════════ -->
+<div class="main-container" id="main-container">
+
+  <!-- TOPBAR -->
+  <header class="topbar" role="banner">
+    <button id="sidebar-toggle-mobile" aria-label="Toggle navigation">☰</button>
+
+    <div class="topbar-crumb">
+      <a href="#dashboard" class="crumb-home">SHC</a>
+      <span class="crumb-sep">›</span>
+      <span id="page-title">Dashboard</span>
+    </div>
+
+    <div class="topbar-right">
+      <span class="session-chip" id="session-badge">2025/2026 · Second Term</span>
+      <span id="current-user-name-role">SAHARCO (Admin)</span>
+      <button id="logout-btn-top">Logout</button>
+    </div>
+  </header>
+
+  <!-- PAGE CONTENT -->
+  <main class="page-content" role="main">
+
+    <!-- ════════════════════════════════════
+         DASHBOARD
+    ════════════════════════════════════ -->
+    <section id="dashboard" class="content-section">
+
+      <div class="dash-header">
+        <h2 id="dash-greeting">Good morning! 👋</h2>
+        <p>Welcome to <strong>Sacred Heart College</strong> — School Management System</p>
+      </div>
+
+      <!-- Stats — script2.js can replace this div or script2.js populates it -->
+      <div id="dashboard-stats">
+        <!-- Populated by script2.js renderDashboard(),
+             but pre-seeded here as fallback skeleton -->
+        <div class="stat-card">
+          <h4>Total Students</h4>
+          <div class="number" id="stat-students">—</div>
+          <span class="trend">Loading…</span>
+        </div>
+        <div class="stat-card warning">
+          <h4>Pending Results</h4>
+          <div class="number" id="stat-pending">—</div>
+          <span class="trend">Awaiting entry</span>
+        </div>
+        <div class="stat-card success">
+          <h4>Avg Attendance</h4>
+          <div class="number" id="stat-attendance">—</div>
+          <span class="trend up">This term</span>
+        </div>
+        <div class="stat-card info">
+          <h4>Active Staff</h4>
+          <div class="number" id="stat-teachers">—</div>
+          <span class="trend">Teaching staff</span>
+        </div>
+        <div class="stat-card gold">
+          <h4>Subjects Offered</h4>
+          <div class="number" id="stat-subjects">—</div>
+          <span class="trend">Across all classes</span>
+        </div>
+        <div class="stat-card alert">
+          <h4>Low Attendance</h4>
+          <div class="number" id="stat-low-att">—</div>
+          <span class="trend">Students &lt; 75%</span>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="quick-actions">
+        <button class="btn-primary"   onclick="if(window.navigate)navigate('results')">📊 Enter Results</button>
+        <button class="btn-secondary" onclick="if(window.navigate)navigate('report-cards')">📄 Report Cards</button>
+        <button class="btn-outline"   onclick="if(window.navigate)navigate('attendance')">✅ Attendance</button>
+        <button class="btn-secondary" onclick="if(window.navigate)navigate('students')">🎒 Students</button>
+        <button class="btn-gold"      onclick="window.location.href='admissionList.html'">📋 Admissions</button>
+      </div>
+
+      <!-- Admissions widget (links out) -->
+      <!-- Widgets row -->
+      <div class="dash-widgets">
+
+        <!-- Recent activity -->
+        <div class="widget-card">
+          <div class="widget-head">
+            <h3>Recent Activity</h3>
+            <a href="#results" onclick="if(window.navigate)navigate('results');return false;">View all</a>
+          </div>
+          <div class="widget-body">
+            <ul class="activity-list" id="dash-activity">
+              <li class="activity-item">
+                <span class="activity-dot" style="background:var(--emerald)"></span>
+                <span class="activity-text">Results saved for <strong>JSS 1A</strong> — Mathematics</span>
+                <span class="activity-time">2m ago</span>
+              </li>
+              <li class="activity-item">
+                <span class="activity-dot" style="background:var(--blue)"></span>
+                <span class="activity-text"><strong>3 new students</strong> enrolled in SS 2B</span>
+                <span class="activity-time">1h ago</span>
+              </li>
+              <li class="activity-item">
+                <span class="activity-dot" style="background:var(--amber)"></span>
+                <span class="activity-text">Attendance marked for <strong>SS 3A</strong></span>
+                <span class="activity-time">3h ago</span>
+              </li>
+              <li class="activity-item">
+                <span class="activity-dot" style="background:var(--violet)"></span>
+                <span class="activity-text">Report cards generated for <strong>JSS 2</strong></span>
+                <span class="activity-time">Yesterday</span>
+              </li>
+              <li class="activity-item">
+                <span class="activity-dot" style="background:var(--rose)"></span>
+                <span class="activity-text">Low attendance alert: <strong>19 students</strong> flagged</span>
+                <span class="activity-time">Yesterday</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Class performance mini-bars -->
+        <div class="widget-card">
+          <div class="widget-head">
+            <h3>Class Performance</h3>
+            <a href="#report-cards" onclick="if(window.navigate)navigate('report-cards');return false;">Full report</a>
+          </div>
+          <div class="widget-body">
+            <div class="perf-list" id="dash-perf">
+              <div class="perf-row">
+                <div class="perf-label"><span>SS 3A</span><span>78%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:78%"></div></div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-label"><span>SS 2B</span><span>72%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:72%"></div></div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-label"><span>SS 1A</span><span>69%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:69%"></div></div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-label"><span>JSS 3A</span><span>65%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:65%"></div></div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-label"><span>JSS 2B</span><span>61%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:61%"></div></div>
+              </div>
+              <div class="perf-row">
+                <div class="perf-label"><span>JSS 1C</span><span>58%</span></div>
+                <div class="perf-track"><div class="perf-fill" style="width:58%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════
+         ALL OTHER SECTIONS
+         script2.js renderXxx() populates each
+    ════════════════════════════════════ -->
+    <section id="classes"       class="content-section hidden"></section>
+    <section id="arms"          class="content-section hidden"></section>
+    <section id="students"      class="content-section hidden"></section>
+    <section id="teachers"      class="content-section hidden"></section>
+    <section id="subjects"      class="content-section hidden"></section>
+    <section id="results"       class="content-section hidden"></section>
+    <section id="report-cards"  class="content-section hidden"></section>
+    <section id="attendance"    class="content-section hidden"></section>
+    <section id="fixtures"      class="content-section hidden"></section>
+    <section id="parent-portal" class="content-section hidden"></section>
+    <section id="settings"      class="content-section hidden"></section>
+
+  </main>
+
+  <footer class="main-footer">
+    <span>© 2026 Sacred Heart College Eziukwu Aba</span>
+    <span id="footer-session"></span>
+  </footer>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     BOOTSTRAP  (runs before script2.js)
+═══════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════
+     Sacred Heart College Eziukwu Aba – School Portal
+     dashboard-scripts.html  |  Drop-in script block for dashboard.html
+     Place this block just before </body>
+═══════════════════════════════════════════════════════════════ -->
+
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 1 — AUTH GUARD
+   Redirect to login if no valid session exists.
+   Must run before anything else.
+───────────────────────────────────────────────────────────── */
+// (function authGuard() {
+//   // SHC_Auth is defined in login.js which must be loaded before this block.
+//   // If it isn't, bail gracefully rather than crash.
+//   if (!window.SHC_Auth) {
+//     console.warn('[SHC] SHC_Auth not available – skipping guard.');
+//     return;
+//   }
+//   var session = SHC_Auth.getSession();
+//   if (!session) {
+//     window.location.replace('login.html');
+//     return;
+//   }
+//   // Expose globally for all scripts
+//   window.__SHC_SESSION = session;
+// })();
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 2 — SIDEBAR TOGGLE
+───────────────────────────────────────────────────────────── */
+(function initSidebar() {
+  var backdrop = document.getElementById('sidebar-backdrop');
+  var sidebar  = document.getElementById('sidebar');
+  var mainCont = document.getElementById('main-container');
+  if (!sidebar) return;
+
+  function openSidebar() {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth < 769) {
+      if (backdrop) backdrop.classList.add('show');
+    } else {
+      if (mainCont) mainCont.classList.remove('sidebar-collapsed');
+    }
+  }
+
+  function closeSidebar() {
+    sidebar.classList.add('collapsed');
+    if (backdrop) backdrop.classList.remove('show');
+    if (window.innerWidth >= 769 && mainCont) mainCont.classList.add('sidebar-collapsed');
+  }
+
+  function toggleSidebar() {
+    sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+  }
+
+  var toggleBtn = document.getElementById('sidebar-toggle-mobile');
+  if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
+  if (backdrop)  backdrop.addEventListener('click', closeSidebar);
+
+  // Close sidebar on mobile when a nav link is tapped
+  document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      if (window.innerWidth < 769) {
+        sidebar.classList.add('collapsed');
+        if (backdrop) backdrop.classList.remove('show');
+      }
+    });
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 3 — LOGOUT
+   All logout triggers (buttons, links with data-action="logout")
+   call SHC_Auth.clearSession() then redirect to login.html.
+───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   AUTH GUARD — Redirect to login if no session
+───────────────────────────────────────────────────────────── */
+(function authGuard() {
+  if (!window.SHC_Auth) return; // auth.js not loaded, skip silently
+  const session = window.SHC_Auth.getSession();
+  if (!session) window.location.replace('login.html');
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   LOGOUT — All logout triggers redirect to login.html
+───────────────────────────────────────────────────────────── */
+(function initLogout() {
+
+  function doLogout(e) {
+    if (e) e.preventDefault();
+    if (window.SHC_Auth) window.SHC_Auth.clearSession();
+    window.location.replace('login.html');
+  }
+
+  function bindLogoutTargets() {
+    document.querySelectorAll(
+      '[data-action="logout"], #logout-btn, #logout-btn-top, .logout-btn, [href="logout"]'
+    ).forEach(function(el) {
+      if (el.dataset.logoutBound) return; // avoid double-binding
+      el.dataset.logoutBound = '1';
+      el.addEventListener('click', doLogout);
+    });
+  }
+
+  // Initial bind
+  bindLogoutTargets();
+
+  // Re-bind after dynamic content is injected
+  var observer = new MutationObserver(bindLogoutTargets);
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Expose globally so script2.js can call window.SHC_Logout() directly
+  window.SHC_Logout   = doLogout;
+  window.handleLogout = doLogout; // alias for script2.js init()
+
+})();
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 4 — DYNAMIC GREETING
+───────────────────────────────────────────────────────────── */
+(function setGreeting() {
+  var h = new Date().getHours();
+  var g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  var el = document.getElementById('dash-greeting');
+  if (el) el.textContent = g + '! 👋';
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 5 — GLOBAL STYLE INJECTION
+   Centralised so there is one single <style> block injected,
+   making it easy to audit and override.
+───────────────────────────────────────────────────────────── */
+(function injectStyles() {
+  if (document.getElementById('shc-injected-styles')) return; // idempotent
+  var s = document.createElement('style');
+  s.id  = 'shc-injected-styles';
+  s.textContent = [
+
+    /* ── Font normalise ── */
+    '.content-section, .content-section *,',
+    '#modal-overlay, #modal-overlay *,',
+    '#toast-container > div,',
+    'button, input, select, textarea {',
+    '  font-family: "DM Sans", sans-serif;',
+    '}',
+
+    /* ── Modal ── */
+    '#modal-overlay { backdrop-filter: blur(4px); }',
+    '#modal-overlay > div {',
+    '  border-radius: 18px !important;',
+    '  box-shadow: 0 24px 72px rgba(0,0,0,.24) !important;',
+    '  animation: slideUp .22s ease;',
+    '}',
+
+    /* ── Toast ── */
+    '#toast-container { bottom: 1.5rem !important; right: 1.5rem !important; }',
+    '#toast-container > div {',
+    '  border-radius: 11px !important;',
+    '  box-shadow: 0 8px 32px rgba(0,0,0,.18) !important;',
+    '  animation: slideInRight .28s cubic-bezier(.34,1.56,.64,1);',
+    '}',
+
+    /* ── Stat card accent colours ── */
+    '.stat-card.warning { border-top-color: #d97706 !important; }',
+    '.stat-card.success { border-top-color: #059669 !important; }',
+    '.stat-card.info    { border-top-color: #2563eb !important; }',
+    '.stat-card.alert   { border-top-color: #e11d48 !important; }',
+    '.stat-card.gold    { border-top-color: #c9962c !important; }',
+
+    /* ── Pending-approval badge on nav ── */
+    '#nav-badge-approvals {',
+    '  display: inline-flex; align-items: center; justify-content: center;',
+    '  min-width: 18px; height: 18px; padding: 0 4px;',
+    '  border-radius: 9px;',
+    '  background: #e11d48; color: #fff;',
+    '  font-size: .62rem; font-weight: 700;',
+    '  margin-left: .4rem;',
+    '  vertical-align: middle;',
+    '}',
+
+    /* ── Table normalise ── */
+    '.content-section table {',
+    '  width: 100%; border-collapse: collapse; font-size: .855rem;',
+    '}',
+    '.content-section table th {',
+    '  background: #0c1f3f !important; color: #fff !important;',
+    '  font-size: .74rem !important; font-weight: 600 !important;',
+    '  padding: .5rem .75rem !important; letter-spacing: .03em;',
+    '  white-space: nowrap; text-align: left;',
+    '}',
+    '.content-section table td {',
+    '  padding: .42rem .75rem !important;',
+    '  border-bottom: 1px solid #e2e8f0 !important;',
+    '  vertical-align: middle !important;',
+    '}',
+    '.content-section table tbody tr { transition: background .14s ease; }',
+    '.content-section table tbody tr:hover td { background: #f0f9ff !important; }',
+    '.content-section table tbody tr:nth-child(even) td { background: #f8fafc; }',
+    '.content-section table tbody tr:nth-child(even):hover td { background: #f0f9ff !important; }',
+
+    /* ── Input / select ── */
+    '.content-section input[type="text"],',
+    '.content-section input[type="search"],',
+    '.content-section input[type="email"],',
+    '.content-section input[type="number"],',
+    '.content-section select {',
+    '  border-radius: 8px !important; font-size: .875rem !important;',
+    '}',
+
+    /* ── Result score inputs ── */
+    '#results input[type="number"] {',
+    '  width: 58px !important; text-align: center !important;',
+    '  font-weight: 600 !important; font-size: .84rem !important;',
+    '  padding: .3rem .4rem !important; border-radius: 6px !important;',
+    '  border: 1.5px solid #e2e8f0 !important; background: #f8fafc !important;',
+    '  transition: border-color .15s, background .15s, box-shadow .15s !important;',
+    '}',
+    '#results input[type="number"]:focus {',
+    '  border-color: #2563eb !important;',
+    '  background: #fff !important;',
+    '  box-shadow: 0 0 0 3px rgba(37,99,235,.12) !important;',
+    '}',
+
+    /* ── Active sidebar nav ── */
+    '.sidebar-nav li.active > a {',
+    '  background: linear-gradient(90deg,rgba(37,99,235,.45) 0%,rgba(37,99,235,.08) 100%) !important;',
+    '  color: #fff !important;',
+    '  border-right-color: #3b82f6 !important;',
+    '  padding-left: 1.5rem !important;',
+    '}',
+    '.sidebar-nav li.active > a .ni { color: #f4c542 !important; }',
+
+    /* ── Nav section labels ── */
+    '.nav-section {',
+    '  list-style: none;',
+    '  font-size: .62rem; font-weight: 700;',
+    '  text-transform: uppercase; letter-spacing: .12em;',
+    '  color: rgba(255,255,255,.22);',
+    '  padding: .95rem 1.3rem .3rem;',
+    '  white-space: nowrap;',
+    '}',
+
+    /* ── Print styles ── */
+    '@media print {',
+    '  #sidebar, .topbar, #sidebar-backdrop, .main-footer,',
+    '  .quick-actions, .dash-widgets { display: none !important; }',
+    '  .main-container { margin-left: 0 !important; }',
+    '  .page-content { padding: 0 !important; }',
+    '  #report-cards { display: block !important; width: 100%; }',
+    '  .report-card-page, [class*="report-card"] { page-break-after: always; }',
+    '  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    '  #report-cards button { display: none !important; }',
+    '}',
+
+  ].join('\n');
+  document.head.appendChild(s);
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 6 — RESULTS ENTRY  (score validation + Enter-advance)
+───────────────────────────────────────────────────────────── */
+(function initResultsEntry() {
+  /* Live validation */
+  document.addEventListener('input', function(e) {
+    var el = e.target;
+    if (el.tagName !== 'INPUT' || el.type !== 'number') return;
+    if (!el.closest('#results')) return;
+    var val = parseFloat(el.value);
+    var max = parseFloat(el.getAttribute('max') || 100);
+    var bad = isNaN(val) || val < 0 || val > max;
+    el.style.borderColor = bad ? '#e11d48' : '';
+    el.style.background  = bad ? '#fff1f2' : '';
+  });
+
+  /* Enter key advances to next input */
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    var el = e.target;
+    if (el.tagName !== 'INPUT' || el.type !== 'number' || !el.closest('#results')) return;
+    e.preventDefault();
+    var grid   = el.closest('table') || el.closest('#results');
+    var inputs = Array.prototype.slice.call(grid.querySelectorAll('input[type="number"]'));
+    var idx    = inputs.indexOf(el);
+    if (idx > -1 && idx < inputs.length - 1) {
+      inputs[idx + 1].focus();
+      inputs[idx + 1].select();
+    }
+  });
+})();
+
+
+/* ─────────────────────────────────────────────────────────────
+   SECTION 7 — POST-LOAD SYNC
+   Runs after all app scripts have had a chance to set window.App.
+   Populates sidebar user block, session badge, stat cards,
+   results badge, and — for admins — the pending-approvals badge.
+───────────────────────────────────────────────────────────── */
+window.addEventListener('load', function() {
+  requestAnimationFrame(function() {
+
+    /* ── 7a. Session badge & footer ── */
+    try {
+      var si = window.App && window.App.data && window.App.data.schoolInfo;
+      if (si) {
+        var chip  = si.session + ' · ' + si.term;
+        var badge = document.getElementById('session-badge');
+        var foot  = document.getElementById('footer-session');
+        if (badge) badge.textContent = chip;
+        if (foot)  foot.textContent  = chip;
+      }
+    } catch(err) { console.warn('[SHC] session badge:', err); }
+
+    /* ── 7b. Sidebar user block ── */
+    try {
+      var session = window.SHC_Auth && SHC_Auth.getSession();
+      // Prefer session user data; fall back to App.currentUser
+      var u = session || (window.App && window.App.currentUser);
+      if (u) {
+        var name     = u.name || '';
+        var initials = name.trim().split(/\s+/).map(function(w){ return w[0] || ''; }).slice(0,2).join('').toUpperCase();
+        var av = document.getElementById('sidebar-avatar');   if (av) av.textContent = initials;
+        var un = document.getElementById('sidebar-username'); if (un) un.textContent = name;
+        var ro = document.getElementById('sidebar-role');     if (ro) ro.textContent = u.role || '';
+        var cr = document.getElementById('current-user-name-role');
+        if (cr) cr.textContent = name + (u.role ? ' (' + u.role + ')' : '');
+      }
+    } catch(err) { console.warn('[SHC] sidebar user:', err); }
+
+    /* ── 7c. Skeleton stat cards ── */
+    try {
+      var d = window.App && window.App.data;
+      if (d) {
+        var safe = function(id, val) {
+          var el = document.getElementById(id);
+          if (el && el.textContent === '—') el.textContent = val;
+        };
+        if (d.students) safe('stat-students', d.students.length);
+        if (d.teachers) safe('stat-teachers', d.teachers.length);
+        if (d.subjects) safe('stat-subjects', d.subjects.length);
+      }
+    } catch(err) { console.warn('[SHC] stat cards:', err); }
+
+    /* ── 7d. Unsaved-results nav badge ── */
+    try {
+      var resultsBadge = document.getElementById('nav-badge-results');
+      if (resultsBadge && window.App && window.App.data && window.App.data.results) {
+        var pending = window.App.data.results.filter(function(r) {
+          return !r.saved && !r.submitted;
+        }).length;
+        if (pending > 0) {
+          resultsBadge.textContent = pending > 9 ? '9+' : pending;
+          resultsBadge.style.display = 'inline-block';
+        }
+      }
+    } catch(err) { console.warn('[SHC] results badge:', err); }
+
+    /* ── 7e. Pending-signup-approvals badge (Admin only) ── */
+    try {
+      var session2 = window.SHC_Auth && SHC_Auth.getSession();
+      if (session2 && session2.role === 'Admin' && window.SHC_Auth.getPendingCount) {
+        var count = SHC_Auth.getPendingCount();
+        if (count > 0) {
+          // Update existing badge element if present
+          var approvalBadge = document.getElementById('nav-badge-approvals');
+          if (approvalBadge) {
+            approvalBadge.textContent = count > 99 ? '99+' : count;
+            approvalBadge.style.display = 'inline-flex';
+          }
+
+          // Also inject a badge next to the approvals nav link if no element exists
+          if (!approvalBadge) {
+            var appLink = document.querySelector('[href="#signup-approvals"], [data-section="signup-approvals"]');
+            if (appLink) {
+              var b = document.createElement('span');
+              b.id          = 'nav-badge-approvals';
+              b.textContent = count > 99 ? '99+' : count;
+              appLink.appendChild(b);
+            }
+          }
+
+          // Show a toast nudge so admin notices straight away
+          if (typeof window.showToast === 'function') {
+            window.showToast(
+              count + ' signup request' + (count > 1 ? 's' : '') + ' awaiting your approval.',
+              'warning'
+            );
+          } else {
+            console.info('[SHC] ' + count + ' pending signup approval(s).');
+          }
+        }
+      }
+    } catch(err) { console.warn('[SHC] approvals badge:', err); }
+
+    /* ── 7f. Role-based nav visibility ── */
+    try {
+      var session3 = window.SHC_Auth && SHC_Auth.getSession();
+      if (session3 && window.SHC_Auth.canAccessSection) {
+        // Hide nav items the current role cannot access
+        document.querySelectorAll('[data-section]').forEach(function(el) {
+          var sec = el.getAttribute('data-section');
+          if (sec && !SHC_Auth.canAccessSection(sec)) {
+            var li = el.closest('li') || el;
+            li.style.display = 'none';
+          }
+        });
+      }
+    } catch(err) { console.warn('[SHC] nav visibility:', err); }
+
+  }); // rAF
+}); // load
+
+</script>
+<script src="login.js"></script>
+<script src="script.js"></script>
+<script src="script2.js"></script>
+<script src="script3.js"></script>
+<script type="module" src="auth.js"></script>
+
+</body>
+</html>

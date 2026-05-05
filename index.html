@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sacred Heart College Eziukwu Aba (SAHARCO) - A leading Catholic boys' secondary school in Aba, Abia State, Nigeria. Excellence in academics, discipline, and moral formation since 1957." />
+  <title>Sacred Heart College Eziukwu Aba | SAHARCO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+  <style>
+    :root {
+      --maroon:      #6B1212;
+      --maroon-dark: #4A0C0C;
+      --maroon-mid:  #8B1A1A;
+      --gold:        #B8862A;
+      --gold-light:  #D4A84B;
+      --gold-pale:   #F5E8CC;
+      --cream:       #FAF8F4;
+      --parchment:   #F2EDE3;
+      --white:       #FFFFFF;
+      --ink:         #1C1612;
+      --ink-light:   #3D3028;
+      --muted:       #7A6E65;
+      --rule:        rgba(107,18,18,0.12);
+      --font-serif:  'EB Garamond', Georgia, serif;
+      --font-sans:   'DM Sans', system-ui, sans-serif;
+      --transition:  0.28s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 90px; font-size: 16px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img { max-width: 100%; height: auto; display: block; }
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+    .container { max-width: 1180px; margin-inline: auto; padding-inline: 28px; }
+
+    /* ===== TOPBAR ===== */
+    .topbar {
+      background: var(--maroon-dark);
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(184,134,42,0.2);
+    }
+    .topbar .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .topbar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.03em;
+    }
+    .topbar-item ion-icon { color: var(--gold-light); font-size: 0.85rem; }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .social-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.85rem;
+      transition: all var(--transition);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .social-btn:hover { color: var(--gold-light); border-color: rgba(184,134,42,0.4); }
+
+    /* ===== HEADER ===== */
+    .header {
+      position: sticky;
+      top: 0; z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--rule);
+      box-shadow: 0 1px 0 var(--rule);
+      transition: box-shadow var(--transition);
+    }
+    .header.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      padding-block: 14px;
+    }
+
+    /* Logo / Crest */
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      flex-shrink: 0;
+    }
+    .crest {
+      width: 52px; height: 52px;
+      background: var(--maroon);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .crest::after {
+      content: '✝';
+      font-size: 1.4rem;
+      color: var(--gold-light);
+      line-height: 1;
+    }
+    .logo-text { line-height: 1.2; }
+    .logo-name {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--maroon);
+      display: block;
+    }
+    .logo-tag {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: block;
+    }
+
+    /* Nav */
+    .navbar { margin-inline-start: auto; }
+    .navbar-list {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .navbar-link {
+      display: block;
+      padding: 0.55rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--ink-light);
+      letter-spacing: 0.03em;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition);
+    }
+    .navbar-link:hover, .navbar-link.active {
+      color: var(--maroon);
+      border-bottom-color: var(--gold);
+    }
+
+    /* Admissions CTA */
+    .btn-admit {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--maroon);
+      color: var(--white);
+      padding: 0.6rem 1.25rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-admit:hover { background: var(--maroon-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(107,18,18,0.25); }
+
+    .nav-toggle { display: none; color: var(--maroon); font-size: 1.5rem; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: opacity var(--transition); }
+    .overlay.active { opacity: 1; pointer-events: all; }
+
+    /* ===== HERO ===== */
+    .hero {
+      background: var(--maroon-dark);
+      position: relative;
+      overflow: hidden;
+      min-height: 88vh;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Textured background */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: 
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 60px,
+          rgba(255,255,255,0.015) 60px,
+          rgba(255,255,255,0.015) 61px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 60px,
+          rgba(255,255,255,0.015) 60px,
+          rgba(255,255,255,0.015) 61px
+        );
+    }
+
+    /* Gold decorative arc */
+    .hero::after {
+      content: '';
+      position: absolute;
+      right: -120px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 600px; height: 600px;
+      border: 60px solid rgba(184,134,42,0.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 4rem;
+      align-items: center;
+      padding-block: 80px;
+    }
+
+    /* Vertical rule */
+    .hero-divider {
+      position: absolute;
+      left: 50%;
+      top: 80px; bottom: 80px;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(184,134,42,0.3) 20%, rgba(184,134,42,0.3) 80%, transparent);
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .eyebrow-rule { width: 32px; height: 1px; background: var(--gold); display: block; }
+    .eyebrow-text {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold-light);
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 600;
+      line-height: 1.1;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+      font-style: italic;
+    }
+
+    .hero-subtitle {
+      font-family: var(--font-serif);
+      font-size: clamp(0.85rem, 1.5vw, 1rem);
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.75rem;
+      font-style: normal;
+    }
+
+    .hero-desc {
+      font-size: 0.92rem;
+      line-height: 1.8;
+      color: rgba(255,255,255,0.65);
+      max-width: 50ch;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--gold);
+      color: var(--maroon-dark);
+      padding: 0.85rem 1.75rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all var(--transition);
+    }
+    .btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(184,134,42,0.35); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255,255,255,0.7);
+      padding: 0.85rem 1.25rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 3px;
+      transition: all var(--transition);
+    }
+    .btn-ghost:hover { color: var(--white); border-color: rgba(255,255,255,0.45); }
+
+    /* Hero right: stat cards */
+    .hero-aside {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .hero-badge {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(184,134,42,0.2);
+      border-radius: 6px;
+      padding: 1.4rem 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      transition: all var(--transition);
+    }
+    .hero-badge:hover { background: rgba(255,255,255,0.08); border-color: rgba(184,134,42,0.4); }
+
+    .badge-icon {
+      width: 48px; height: 48px;
+      background: rgba(184,134,42,0.12);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gold-light);
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .badge-num {
+      font-family: var(--font-serif);
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1;
+      display: block;
+    }
+    .badge-label {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: block;
+      margin-top: 0.2rem;
+    }
+
+    .hero-motto {
+      margin-top: 0.5rem;
+      padding: 1.2rem 1.6rem;
+      border-left: 3px solid var(--gold);
+      background: rgba(184,134,42,0.06);
+      border-radius: 0 4px 4px 0;
+    }
+    .hero-motto blockquote {
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      font-style: italic;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+    }
+    .hero-motto cite {
+      font-family: var(--font-sans);
+      font-size: 0.68rem;
+      font-style: normal;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: block;
+      margin-top: 0.6rem;
+    }
+
+    /* ===== SECTION BASE ===== */
+    .section { padding-block: 88px; }
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .section-eyebrow .rule { width: 28px; height: 1px; background: var(--gold); }
+    .eyebrow-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 1.1rem;
+    }
+    .section-desc {
+      font-size: 0.92rem;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 58ch;
+    }
+
+    /* ===== ABOUT ===== */
+    .about { background: var(--white); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    /* Photo collage placeholder */
+    .about-visual {
+      position: relative;
+      height: 520px;
+    }
+    .photo-main {
+      position: absolute;
+      top: 0; left: 0;
+      width: 72%; height: 85%;
+      background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-mid) 100%);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-main img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-main .placeholder-inner {
+      text-align: center;
+      color: rgba(255,255,255,0.25);
+    }
+    .photo-main .placeholder-inner ion-icon { font-size: 3rem; }
+    .photo-main .placeholder-inner p { font-size: 0.75rem; margin-top: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .photo-accent {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 46%; height: 50%;
+      background: var(--parchment);
+      border-radius: 6px;
+      border: 4px solid var(--white);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-accent img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-accent .placeholder-inner { color: var(--muted); text-align: center; }
+    .photo-accent .placeholder-inner ion-icon { font-size: 2rem; }
+    .photo-accent .placeholder-inner p { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    /* Gold year badge */
+    .year-badge {
+      position: absolute;
+      top: 48%; right: 29%;
+      transform: translate(50%, -50%);
+      background: var(--gold);
+      color: var(--maroon-dark);
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(184,134,42,0.4);
+      border: 3px solid var(--white);
+      z-index: 2;
+    }
+    .year-badge .yr { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; line-height: 1; }
+    .year-badge .yr-label { font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+
+    .about-pillars { margin: 2rem 0; display: flex; flex-direction: column; gap: 0; }
+    .pillar {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.1rem;
+      padding-block: 1.1rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .pillar:last-child { border-bottom: none; }
+    .pillar-num {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--gold);
+      line-height: 1;
+      flex-shrink: 0;
+      width: 2rem;
+      text-align: right;
+      opacity: 0.6;
+    }
+    .pillar-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.01em;
+    }
+    .pillar-text { font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+
+    /* ===== STATS BAND ===== */
+    .stats-band {
+      background: var(--maroon);
+      position: relative;
+      overflow: hidden;
+    }
+    .stats-band::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 40px,
+        rgba(255,255,255,0.015) 40px,
+        rgba(255,255,255,0.015) 41px
+      );
+    }
+    .stats-band .container {
+      position: relative;
+      padding-block: 56px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+    }
+    .stat-item { text-align: center; }
+    .stat-rule { width: 24px; height: 2px; background: var(--gold); margin: 0 auto 1rem; }
+    .stat-num {
+      font-family: var(--font-serif);
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      display: block;
+    }
+    .stat-divider {
+      width: 1px;
+      background: rgba(255,255,255,0.1);
+      align-self: stretch;
+    }
+
+    /* ===== BENEFITS ===== */
+    .benefits { background: var(--cream); }
+    .benefits-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: end;
+      margin-bottom: 3.5rem;
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .benefit-card {
+      background: var(--white);
+      padding: 2rem 1.75rem;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .benefit-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transition: transform var(--transition);
+    }
+    .benefit-card:hover { background: var(--cream); }
+    .benefit-card:hover::before { transform: scaleX(1); }
+
+    .benefit-icon {
+      width: 46px; height: 46px;
+      background: var(--gold-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--maroon);
+      font-size: 1.2rem;
+      margin-bottom: 1.1rem;
+      transition: all var(--transition);
+    }
+    .benefit-card:hover .benefit-icon { background: var(--maroon); color: var(--gold-light); }
+    .benefit-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.01em;
+    }
+    .benefit-meta { font-size: 0.76rem; color: var(--muted); line-height: 1.6; }
+
+    /* ===== CLASSES ===== */
+    .classes { background: var(--white); }
+    .classes-inner {
+      display: grid;
+      grid-template-columns: 0.9fr 2fr;
+      gap: 5rem;
+      align-items: start;
+    }
+    .classes-aside { position: sticky; top: 110px; }
+
+    .class-tabs { display: flex; flex-direction: column; gap: 0; margin-top: 2rem; }
+    .class-tab {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--rule);
+      font-size: 0.84rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+    .class-tab:hover, .class-tab.active { color: var(--maroon); }
+    .class-tab.active { font-weight: 600; }
+    .class-tab ion-icon { font-size: 0.75rem; opacity: 0; transition: opacity var(--transition); }
+    .class-tab.active ion-icon, .class-tab:hover ion-icon { opacity: 1; color: var(--gold); }
+
+    .classes-cards { display: grid; gap: 1.25rem; }
+    .class-card {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: all var(--transition);
+    }
+    .class-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); border-color: rgba(107,18,18,0.15); }
+    .class-img {
+      background: var(--parchment);
+      height: 180px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      font-size: 2rem;
+    }
+    .class-img img { width: 100%; height: 100%; object-fit: cover; }
+    .class-body { padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; }
+    .class-level {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.4rem;
+    }
+    .class-title {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+    .class-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+    .class-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.85rem; }
+    .tag {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.6rem;
+      background: var(--gold-pale);
+      color: var(--maroon);
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ===== CTA ===== */
+    .cta-section {
+      background: var(--maroon-dark);
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .cta-section .container {
+      position: relative;
+      padding-block: 100px;
+      text-align: center;
+    }
+    .cta-section .section-eyebrow { justify-content: center; }
+    .cta-section .section-eyebrow .rule { background: var(--gold); }
+    .cta-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 600;
+      color: var(--white);
+      line-height: 1.2;
+      max-width: 20ch;
+      margin: 0 auto 1.25rem;
+      font-style: italic;
+    }
+    .cta-desc {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.55);
+      max-width: 50ch;
+      margin: 0 auto 2.5rem;
+      line-height: 1.8;
+    }
+    .cta-actions { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .cta-actions .btn-primary { background: var(--gold); color: var(--maroon-dark); }
+    .cta-actions .btn-ghost { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.65); }
+
+    /* ===== ENQUIRY ===== */
+    .enquiry { background: var(--parchment); }
+    .enquiry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    .enquiry-form-wrap {
+      background: var(--white);
+      padding: 2.5rem;
+      border-radius: 6px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      border: 1px solid var(--rule);
+    }
+    .form-title {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 0.25rem;
+    }
+    .form-subtitle { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.75rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .form-label { font-size: 0.72rem; font-weight: 600; color: var(--ink-light); letter-spacing: 0.05em; text-transform: uppercase; }
+    .form-input, .form-select {
+      padding: 0.7rem 0.9rem;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 4px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      color: var(--ink);
+      background: var(--cream);
+      transition: border-color var(--transition);
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--maroon); background: var(--white); }
+    .form-input::placeholder { color: rgba(0,0,0,0.3); }
+    .form-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: var(--maroon);
+      color: var(--white);
+      padding: 0.85rem;
+      border-radius: 4px;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: all var(--transition);
+      margin-top: 0.5rem;
+    }
+    .form-btn:hover { background: var(--maroon-dark); transform: translateY(-1px); }
+
+    /* Contact info list */
+    .contact-items { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
+    .contact-item { display: flex; align-items: flex-start; gap: 1rem; }
+    .contact-icon-wrap {
+      width: 40px; height: 40px;
+      background: var(--gold-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--maroon);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .contact-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 0.2rem; }
+    .contact-value { font-size: 0.88rem; color: var(--ink-light); line-height: 1.5; }
+
+    /* ===== FOOTER ===== */
+    .footer { background: var(--ink); }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr 1fr;
+      gap: 4rem;
+      padding-block: 60px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .footer-logo-name {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--white);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .footer-logo-tag { font-size: 0.62rem; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 1rem; }
+    .footer-desc { font-size: 0.8rem; color: rgba(255,255,255,0.38); line-height: 1.8; max-width: 36ch; }
+    .footer-rule { width: 32px; height: 1px; background: rgba(255,255,255,0.1); margin-block: 1.25rem; }
+    .footer-col-title { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.25rem; }
+    .footer-links { display: flex; flex-direction: column; gap: 0.1rem; }
+    .footer-link {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      padding-block: 0.4rem;
+      transition: color var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .footer-link:hover { color: rgba(255,255,255,0.85); }
+    .footer-link ion-icon { font-size: 0.65rem; color: var(--gold); opacity: 0.6; }
+    .footer-address {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.4);
+      font-style: normal;
+      line-height: 1.7;
+      padding-block: 0.4rem;
+    }
+    .footer-address ion-icon { color: var(--gold); opacity: 0.6; flex-shrink: 0; margin-top: 3px; font-size: 0.75rem; }
+    .footer-bottom {
+      padding-block: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .copyright { font-size: 0.72rem; color: rgba(255,255,255,0.22); }
+    .footer-bottom-links { display: flex; gap: 1.5rem; }
+    .footer-bottom-link { font-size: 0.72rem; color: rgba(255,255,255,0.25); transition: color var(--transition); }
+    .footer-bottom-link:hover { color: rgba(255,255,255,0.6); }
+
+    /* ===== BACK TO TOP ===== */
+    .back-top {
+      position: fixed;
+      bottom: 1.75rem; right: 1.75rem;
+      z-index: 50;
+      width: 40px; height: 40px;
+      background: var(--maroon);
+      color: var(--white);
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 4px 16px rgba(107,18,18,0.35);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all var(--transition);
+      pointer-events: none;
+    }
+    .back-top.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+    .back-top:hover { background: var(--maroon-dark); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .hero-divider { display: none; }
+      .hero-aside { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .hero-motto { grid-column: 1 / -1; }
+      .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .about-visual { height: 320px; max-width: 480px; }
+      .benefits-header { grid-template-columns: 1fr; }
+      .benefits-grid { grid-template-columns: repeat(2, 1fr); }
+      .classes-inner { grid-template-columns: 1fr; }
+      .classes-aside { position: static; }
+      .class-tabs { flex-direction: row; gap: 0.5rem; overflow-x: auto; }
+      .class-tab { border-bottom: none; border-bottom: 2px solid transparent; padding-inline: 1rem; white-space: nowrap; }
+      .class-tab.active, .class-tab:hover { border-bottom-color: var(--gold); }
+      .enquiry-grid { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+      .stats-band .container { grid-template-columns: repeat(2, 1fr); }
+      .stat-divider { display: none; }
+    }
+
+    @media (max-width: 768px) {
+      .topbar-left { display: none; }
+      .navbar { display: none; }
+      .nav-toggle { display: flex; align-items: center; margin-inline-start: auto; }
+      .hero-aside { grid-template-columns: 1fr; }
+      .benefits-grid { grid-template-columns: 1fr; }
+      .class-card { grid-template-columns: 1fr; }
+      .class-img { height: 160px; }
+      .form-row { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr; gap: 2rem; }
+      .stats-band .container { grid-template-columns: repeat(2, 1fr); }
+      .footer-bottom { flex-direction: column; text-align: center; }
+
+      /* Mobile nav drawer */
+      .mobile-nav {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: var(--maroon-dark);
+        z-index: 110;
+        padding: 1.5rem;
+        transform: translateX(-100%);
+        transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      }
+      .mobile-nav.active { transform: translateX(0); }
+      .mobile-nav-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; }
+      .mobile-nav-close { color: rgba(255,255,255,0.6); font-size: 1.5rem; }
+      .mobile-nav-links { display: flex; flex-direction: column; }
+      .mobile-nav-link { display: block; padding: 1rem 0; font-size: 1.1rem; font-family: var(--font-serif); color: rgba(255,255,255,0.8); border-bottom: 1px solid rgba(255,255,255,0.07); }
+    }
+
+    @media (max-width: 480px) {
+      .stats-band .container { grid-template-columns: 1fr 1fr; padding-block: 36px; }
+      .hero-actions { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ===== ANIMATE ON SCROLL ===== */
+    [data-aos] { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    [data-aos].visible { opacity: 1; transform: translateY(0); }
+    [data-aos="fade-left"] { transform: translateX(-24px); }
+    [data-aos="fade-left"].visible { transform: translateX(0); }
+  </style>
+</head>
+<body id="top">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <span class="topbar-item">
+          <ion-icon name="location-outline"></ion-icon>
+          Eziukwu, Aba North, Abia State, Nigeria
+        </span>
+        <span class="topbar-item">
+          <ion-icon name="mail-outline"></ion-icon>
+          sacredheartcollegeaba@gmail.com
+        </span>
+      </div>
+      <div class="topbar-right">
+        <a href="#" class="social-btn" aria-label="Facebook"><ion-icon name="logo-facebook"></ion-icon></a>
+        <a href="#" class="social-btn" aria-label="Twitter"><ion-icon name="logo-twitter"></ion-icon></a>
+        <a href="#" class="social-btn" aria-label="Instagram"><ion-icon name="logo-instagram"></ion-icon></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header" data-header>
+    <div class="container">
+      <div class="header-inner">
+        <a href="#top" class="logo-wrap">
+          <div class="crest" aria-hidden="true"></div>
+          <div class="logo-text">
+            <span class="logo-name">Sacred Heart College</span>
+            <span class="logo-tag">Eziukwu Aba · Est. 1957</span>
+          </div>
+        </a>
+
+        <nav class="navbar" aria-label="Primary navigation">
+          <ul class="navbar-list">
+            <li><a href="#home" class="navbar-link active">Home</a></li>
+            <li><a href="#about" class="navbar-link">About</a></li>
+            <li><a href="#benefits" class="navbar-link">Programmes</a></li>
+            <li><a href="#classes" class="navbar-link">Academics</a></li>
+            <li><a href="#enquiry" class="navbar-link">Admissions</a></li>
+          </ul>
+        </nav>
+
+        <a href="login.html" class="btn-admit">
+          Login 
+          <ion-icon name="arrow-forward-outline"></ion-icon>
+        </a>
+
+        <button class="nav-toggle" aria-label="Open menu" id="navToggle">
+          <ion-icon name="menu-outline"></ion-icon>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE NAV -->
+  <div class="mobile-nav" id="mobileNav" aria-hidden="true">
+    <div class="mobile-nav-head">
+      <span class="logo-name" style="color:#fff; font-family:var(--font-serif);">Sacred Heart College</span>
+      <button class="mobile-nav-close" id="navClose" aria-label="Close menu"><ion-icon name="close-outline"></ion-icon></button>
+    </div>
+    <nav>
+      <a href="#home" class="mobile-nav-link" data-mob-link>Home</a>
+      <a href="#about" class="mobile-nav-link" data-mob-link>About</a>
+      <a href="#benefits" class="mobile-nav-link" data-mob-link>Programmes</a>
+      <a href="#classes" class="mobile-nav-link" data-mob-link>Academics</a>
+      <a href="#RMS/regForm.html" class="mobile-nav-link" data-mob-link>Admissions</a>
+    </nav>
+  </div>
+  <div class="overlay" id="overlay"></div>
+
+  <main>
+    <!-- ===== HERO ===== -->
+    <section class="hero" id="home" aria-labelledby="hero-heading">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-divider" aria-hidden="true"></div>
+
+          <div class="hero-content">
+            <div class="hero-eyebrow">
+              <span class="eyebrow-rule"></span>
+              <span class="eyebrow-text">Catholic Boys' Secondary School · Aba, Nigeria</span>
+            </div>
+            <h1 class="hero-title" id="hero-heading">
+              Testimonium<br>Perhibere<br>Veritati
+            </h1>
+            <p class="hero-subtitle">Forming Minds in Truth &amp; Charity</p>
+            <p class="hero-desc">
+              Sacred Heart College Eziukwu Aba (SAHARCO) is a missionary Catholic secondary school established in 1957. We are committed to academic excellence, moral discipline, and the holistic formation of young men of character.
+            </p>
+            <div class="hero-actions">
+              <a href="#about" class="btn-primary">
+                Explore School Life
+                <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+              </a>
+              <a href="#RMS/regForm.html" class="btn-ghost">
+                Admissions
+                <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+              </a>
+            </div>
+          </div>
+
+          <div class="hero-aside">
+            <div class="hero-badge">
+              <div class="badge-icon"><ion-icon name="school-outline"></ion-icon></div>
+              <div>
+                <span class="badge-num">67+</span>
+                <span class="badge-label">Years of Excellence</span>
+              </div>
+            </div>
+            <div class="hero-badge">
+              <div class="badge-icon"><ion-icon name="ribbon-outline"></ion-icon></div>
+              <div>
+                <span class="badge-num">100%</span>
+                <span class="badge-label">WAEC Pass Rate Target</span>
+              </div>
+            </div>
+            <div class="hero-badge">
+              <div class="badge-icon"><ion-icon name="people-outline"></ion-icon></div>
+              <div>
+                <span class="badge-num">6</span>
+                <span class="badge-label">Year Groups (JSS–SSS)</span>
+              </div>
+            </div>
+            <div class="hero-motto">
+              <blockquote>
+                "To bear witness to the truth — shaping men of intellect, virtue, and faith for the service of God and country."
+              </blockquote>
+              <cite>— SAHARCO Mission Statement</cite>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== STATS BAND ===== -->
+    <div class="stats-band" aria-label="School at a glance">
+      <div class="container">
+        <div class="stat-item" data-aos>
+          <div class="stat-rule"></div>
+          <span class="stat-num">1957</span>
+          <span class="stat-label">Year Founded</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item" data-aos>
+          <div class="stat-rule"></div>
+          <span class="stat-num">JSS–SSS</span>
+          <span class="stat-label">Full 6-Year Programme</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item" data-aos>
+          <div class="stat-rule"></div>
+          <span class="stat-num">3</span>
+          <span class="stat-label">Academic Streams</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item" data-aos>
+          <div class="stat-rule"></div>
+          <span class="stat-num">Aba</span>
+          <span class="stat-label">Abia State, Nigeria</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ABOUT ===== -->
+    <section class="section about" id="about" aria-labelledby="about-heading">
+      <div class="container">
+        <div class="about-grid">
+          <div class="about-visual" data-aos="fade-left">
+            <div class="photo-main">
+              <img src="./assets/images/illustration.webp" alt="Students of Sacred Heart College" onerror="this.parentNode.innerHTML='<div class=\'placeholder-inner\'><ion-icon name=\'school-outline\'></ion-icon><p>School Campus</p></div>'">
+            </div>
+            <div class="photo-accent">
+              <img src="./assets/images/illustration-2.avif" alt="College life" onerror="this.parentNode.innerHTML='<div class=\'placeholder-inner\'><ion-icon name=\'people-outline\'></ion-icon><p>College Life</p></div>'">
+            </div>
+            <div class="year-badge" aria-label="Founded 1957">
+              <span class="yr">1957</span>
+              <span class="yr-label">Est.</span>
+            </div>
+          </div>
+
+          <div class="about-content" data-aos>
+            <div class="section-eyebrow">
+              <span class="rule"></span>
+              <span class="eyebrow-label">Who We Are</span>
+            </div>
+            <h2 class="section-title" id="about-heading">
+              Forming Leaders in the<br>Catholic Tradition
+            </h2>
+            <p class="section-desc">
+              Founded by the Catholic Diocese of Aba under Most Rev. Joseph B. Whelan, C.S.Sp, Sacred Heart College has spent over six decades nurturing the minds, values, and character of young men across Eastern Nigeria. Returned to the Diocese in 2012, we continue a proud legacy.
+            </p>
+
+            <ul class="about-pillars">
+              <li class="pillar">
+                <span class="pillar-num">01</span>
+                <div>
+                  <p class="pillar-title">Dedicated &amp; Qualified Educators</p>
+                  <p class="pillar-text">Experienced teachers and clergy committed to academic excellence and moral guidance in every classroom.</p>
+                </div>
+              </li>
+              <li class="pillar">
+                <span class="pillar-num">02</span>
+                <div>
+                  <p class="pillar-title">Comprehensive Nigerian Curriculum</p>
+                  <p class="pillar-text">Sciences, arts, and commerce tracks with deep emphasis on Catholic values, discipline, and national standards.</p>
+                </div>
+              </li>
+              <li class="pillar">
+                <span class="pillar-num">03</span>
+                <div>
+                  <p class="pillar-title">A Brotherhood &amp; Community</p>
+                  <p class="pillar-text">A disciplined student body united in academic pursuit, sporting tradition, and Christian brotherhood.</p>
+                </div>
+              </li>
+            </ul>
+
+            <a href="https://saharco.com.ng/about-the-school" target="_blank" class="btn-primary" style="margin-top:0.5rem">
+              Learn More About Us
+              <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BENEFITS ===== -->
+    <section class="section benefits" id="benefits" aria-labelledby="benefits-heading">
+      <div class="container">
+        <div class="benefits-header">
+          <div data-aos>
+            <div class="section-eyebrow">
+              <span class="rule"></span>
+              <span class="eyebrow-label">Programmes &amp; Formation</span>
+            </div>
+            <h2 class="section-title" id="benefits-heading">
+              Key Areas of<br>Excellence
+            </h2>
+          </div>
+          <p class="section-desc" data-aos style="transition-delay:0.1s">
+            At SAHARCO, formation goes beyond the classroom. We develop the whole person — intellectually, spiritually, physically, and socially — in the finest tradition of Catholic education.
+          </p>
+        </div>
+
+        <div class="benefits-grid" data-aos>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="school-outline"></ion-icon></div>
+            <h3 class="benefit-title">Academic Excellence</h3>
+            <p class="benefit-meta">Strong WAEC &amp; NECO examination results with consistent distinction-level performances across subjects.</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="fitness-outline"></ion-icon></div>
+            <h3 class="benefit-title">Sports &amp; Athletics</h3>
+            <p class="benefit-meta">A proud inter-house and inter-school sporting tradition fostering discipline, teamwork, and physical wellness.</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="heart-outline"></ion-icon></div>
+            <h3 class="benefit-title">Moral &amp; Spiritual Growth</h3>
+            <p class="benefit-meta">Catholic values, daily prayer, retreat programs, and sacramental life forming men of deep faith and integrity.</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="home-outline"></ion-icon></div>
+            <h3 class="benefit-title">Boarding Life</h3>
+            <p class="benefit-meta">A structured, safe, and conducive boarding environment where brotherhood and personal responsibility are built.</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="flask-outline"></ion-icon></div>
+            <h3 class="benefit-title">Science &amp; Technology</h3>
+            <p class="benefit-meta">Well-equipped laboratories and learning facilities supporting STEM education and practical skill development.</p>
+          </div>
+          <div class="benefit-card">
+            <div class="benefit-icon"><ion-icon name="trending-up-outline"></ion-icon></div>
+            <h3 class="benefit-title">Leadership Formation</h3>
+            <p class="benefit-meta">Prefect systems, student councils, clubs, and debate societies cultivating tomorrow's civic and professional leaders.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CLASSES ===== -->
+    <section class="section classes" id="classes" aria-labelledby="classes-heading">
+      <div class="container">
+        <div class="classes-inner">
+          <div class="classes-aside">
+            <div class="section-eyebrow">
+              <span class="rule"></span>
+              <span class="eyebrow-label">Academic Structure</span>
+            </div>
+            <h2 class="section-title" id="classes-heading">
+              Our School<br>Sections
+            </h2>
+            <p class="section-desc">
+              Sacred Heart College offers a complete six-year secondary education across Junior and Senior levels, preparing students for national examinations and university entrance.
+            </p>
+            <ul class="class-tabs" role="tablist" aria-label="School sections">
+              <li class="class-tab active" role="tab" aria-selected="true">Junior Secondary <ion-icon name="chevron-forward-outline"></ion-icon></li>
+              <li class="class-tab" role="tab">Senior Secondary <ion-icon name="chevron-forward-outline"></ion-icon></li>
+              <li class="class-tab" role="tab">Boarding <ion-icon name="chevron-forward-outline"></ion-icon></li>
+            </ul>
+          </div>
+
+          <div class="classes-cards" data-aos>
+            <div class="class-card">
+              <div class="class-img">
+                <img src="./assets/images/1.png" alt="Junior Secondary students" onerror="this.parentNode.innerHTML='<ion-icon name=\'book-outline\'></ion-icon>'">
+              </div>
+              <div class="class-body">
+                <span class="class-level">Years 1–3</span>
+                <h3 class="class-title">Junior Secondary School (JSS 1–3)</h3>
+                <p class="class-desc">A solid foundation across all core subjects with emphasis on discipline, study habits, and moral formation to build confident young scholars.</p>
+                <div class="class-tags">
+                  <span class="tag">English</span>
+                  <span class="tag">Mathematics</span>
+                  <span class="tag">Basic Science</span>
+                  <span class="tag">Civic Education</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="class-card">
+              <div class="class-img">
+                <img src="./assets/images/2.png" alt="Senior Secondary students" onerror="this.parentNode.innerHTML='<ion-icon name=\'document-text-outline\'></ion-icon>'">
+              </div>
+              <div class="class-body">
+                <span class="class-level">Years 4–6</span>
+                <h3 class="class-title">Senior Secondary School (SSS 1–3)</h3>
+                <p class="class-desc">Rigorous preparation for WAEC, NECO, and JAMB across science, commercial, and arts streams, with strong examination coaching and university guidance.</p>
+                <div class="class-tags">
+                  <span class="tag">Sciences</span>
+                  <span class="tag">Commerce</span>
+                  <span class="tag">Arts</span>
+                  <span class="tag">WAEC/NECO</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="class-card">
+              <div class="class-img">
+                <img src="./assets/images/3.png" alt="Boarding facilities" onerror="this.parentNode.innerHTML='<ion-icon name=\'bed-outline\'></ion-icon>'">
+              </div>
+              <div class="class-body">
+                <span class="class-level">Full-Time</span>
+                <h3 class="class-title">Boarding Facilities</h3>
+                <p class="class-desc">Structured boarding life with supervised prep hours, recreational facilities, and a close-knit community that builds independence, teamwork, and personal responsibility.</p>
+                <div class="class-tags">
+                  <span class="tag">Supervised Prep</span>
+                  <span class="tag">Sports</span>
+                  <span class="tag">Community Life</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="cta-section" aria-labelledby="cta-heading">
+      <div class="container">
+        <div class="section-eyebrow" style="justify-content:center">
+          <span class="rule" style="background:var(--gold)"></span>
+          <span class="eyebrow-label" style="color:var(--gold-light)">A Legacy of Formation</span>
+        </div>
+        <h2 class="cta-title" id="cta-heading">
+          Join a Tradition of Excellence Since 1957
+        </h2>
+        <p class="cta-desc">
+          Sacred Heart College Eziukwu Aba has shaped generations of scholars, leaders, and men of faith. Be part of this continuing legacy of Catholic education in Eastern Nigeria.
+        </p>
+        <div class="cta-actions">
+          <a href="#enquiry" class="btn-primary">
+            Apply for Admission
+            <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+          </a>
+          <a href="https://saharco.com.ng/" target="_blank" class="btn-ghost">
+            Visit Full Website
+            <ion-icon name="open-outline" aria-hidden="true"></ion-icon>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ENQUIRY ===== -->
+    <section class="section enquiry" id="enquiry" aria-labelledby="enquiry-heading">
+      <div class="container">
+        <div class="enquiry-grid">
+          <div data-aos="fade-left">
+            <div class="section-eyebrow">
+              <span class="rule"></span>
+              <span class="eyebrow-label">Admissions</span>
+            </div>
+            <h2 class="section-title" id="enquiry-heading">
+              Begin Your<br>SAHARCO Journey
+            </h2>
+            <p class="section-desc">
+              We welcome applications from boys seeking a rigorous Catholic secondary education. Contact us below and our admissions office will provide all the information you need about the entrance examination and enrolment process.
+            </p>
+            <div class="contact-items">
+              <div class="contact-item">
+                <div class="contact-icon-wrap"><ion-icon name="location-outline"></ion-icon></div>
+                <div>
+                  <span class="contact-label">Address</span>
+                  <span class="contact-value">Eziukwu, Aba North Local Government Area,<br>Abia State, Nigeria</span>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="contact-icon-wrap"><ion-icon name="call-outline"></ion-icon></div>
+                <div>
+                  <span class="contact-label">Phone</span>
+                  <span class="contact-value">+234 706 545 3736</span>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="contact-icon-wrap"><ion-icon name="mail-outline"></ion-icon></div>
+                <div>
+                  <span class="contact-label">Email</span>
+                  <span class="contact-value">info@saharco.com.ng</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="enquiry-form-wrap" data-aos>
+            <h3 class="form-title">Admission Enquiry</h3>
+            <p class="form-subtitle">Fill in your details and our admissions team will be in touch.</p>
+            <form action="#" method="POST" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="firstName">First Name</label>
+                  <input type="text" id="firstName" name="first_name" class="form-input" placeholder="e.g. Chidera" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="lastName">Surname</label>
+                  <input type="text" id="lastName" name="last_name" class="form-input" placeholder="e.g. Okafor" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" class="form-input" placeholder="+234 XXX XXX XXXX" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="parent@email.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="level">Entry Class</label>
+                <select id="level" name="level" class="form-select">
+                  <option value="">— Select class —</option>
+                  <option value="jss1">JSS 1 (Year 7)</option>
+                  <option value="jss2">JSS 2</option>
+                  <option value="jss3">JSS 3</option>
+                  <option value="sss1">SSS 1</option>
+                  <option value="sss2">SSS 2</option>
+                </select>
+              </div>
+              <button type="submit" class="form-btn">
+                Send Enquiry
+                <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="footer-logo-name">Sacred Heart College Eziukwu Aba</span>
+          <span class="footer-logo-tag">SAHARCO · Est. 1957</span>
+          <p class="footer-desc">A Catholic boys' secondary school committed to academic excellence, moral discipline, and forming responsible leaders for the service of God and country.</p>
+          <div class="footer-rule"></div>
+          <p class="footer-desc" style="max-width:28ch;font-style:italic;opacity:0.6">"Testimonium Perhibere Veritati"</p>
+        </div>
+
+        <div>
+          <p class="footer-col-title">Quick Links</p>
+          <ul class="footer-links">
+            <li><a href="#home" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>Home</a></li>
+            <li><a href="#about" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>About the School</a></li>
+            <li><a href="#benefits" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>Programmes</a></li>
+            <li><a href="#classes" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>Academic Structure</a></li>
+            <li><a href="RMS/regForm.html" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>Admissions</a></li>
+            <li><a href="https://saharco.com.ng/" target="_blank" class="footer-link"><ion-icon name="chevron-forward"></ion-icon>Full Website</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-col-title">Contact</p>
+          <address>
+            <div class="footer-address">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>Eziukwu, Aba North L.G.A.,<br>Abia State, Nigeria</span>
+            </div>
+            <div class="footer-address">
+              <ion-icon name="call-outline"></ion-icon>
+              <a href="tel:+234xxxxxxxxxx" style="color:inherit">+234 706 545 3736</a>
+            </div>
+            <div class="footer-address">
+              <ion-icon name="mail-outline"></ion-icon>
+              <a href="mailto:info@saharco.com.ng" style="color:inherit">info@saharco.com.ng</a>
+            </div>
+          </address>
+          <div class="footer-rule" style="margin-top:1.5rem"></div>
+          <p class="footer-col-title">Managed By Leumas IT Nexus</p>
+          <p class="footer-desc" style="font-size:0.75rem">leumasventures@gmail.com</p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="copyright">© 2025 Sacred Heart College Eziukwu Aba. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="#" class="footer-bottom-link">Privacy Policy</a>
+          <a href="#" class="footer-bottom-link">Terms of Use</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- BACK TO TOP -->
+  <a href="#top" class="back-top" id="backTop" aria-label="Back to top">
+    <ion-icon name="arrow-up-outline"></ion-icon>
+  </a>
+
+  <script>
+    'use strict';
+
+    /* Nav toggle */
+    const navToggle  = document.getElementById('navToggle');
+    const mobileNav  = document.getElementById('mobileNav');
+    const navClose   = document.getElementById('navClose');
+    const overlay    = document.getElementById('overlay');
+    const mobLinks   = document.querySelectorAll('[data-mob-link]');
+
+    function openNav() { mobileNav.classList.add('active'); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; }
+    function closeNav() { mobileNav.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow = ''; }
+
+    navToggle?.addEventListener('click', openNav);
+    navClose?.addEventListener('click', closeNav);
+    overlay?.addEventListener('click', closeNav);
+    mobLinks.forEach(l => l.addEventListener('click', closeNav));
+
+    /* Header scroll */
+    const header = document.querySelector('[data-header]');
+    window.addEventListener('scroll', () => {
+      header?.classList.toggle('scrolled', window.scrollY > 50);
+    }, { passive: true });
+
+    /* Back to top */
+    const backTop = document.getElementById('backTop');
+    window.addEventListener('scroll', () => {
+      backTop?.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+
+    /* Active nav link */
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks  = document.querySelectorAll('.navbar-link');
+    const sectionObs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === `#${e.target.id}`));
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    sections.forEach(s => sectionObs.observe(s));
+
+    /* AOS — simple scroll reveal */
+    const aosEls = document.querySelectorAll('[data-aos]');
+    const aosObs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); aosObs.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    aosEls.forEach(el => aosObs.observe(el));
+  </script>
+</body>
+</html>

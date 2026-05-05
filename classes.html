@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sacred Heart College – School Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       CSS VARIABLES & RESET
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0f2444;
+      --navy-mid:   #1e3a5f;
+      --blue:       #2563eb;
+      --blue-light: #3b82f6;
+      --gold:       #c9962c;
+      --gold-light: #f4c542;
+      --emerald:    #059669;
+      --rose:       #e11d48;
+      --slate-50:   #f8fafc;
+      --slate-100:  #f1f5f9;
+      --slate-200:  #e2e8f0;
+      --slate-400:  #94a3b8;
+      --slate-600:  #475569;
+      --slate-700:  #334155;
+      --slate-800:  #1e293b;
+      --white:      #ffffff;
+      --sidebar-w:  260px;
+      --sidebar-collapsed-w: 0px;
+      --topbar-h:   64px;
+      --radius-lg:  14px;
+      --radius-md:  10px;
+      --radius-sm:  7px;
+      --shadow-sm:  0 1px 4px rgba(0,0,0,.08);
+      --shadow-md:  0 4px 16px rgba(0,0,0,.10);
+      --shadow-lg:  0 8px 32px rgba(0,0,0,.14);
+      --transition: .22s ease;
+    }
+
+    html { font-size: 15px; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--slate-100);
+      color: var(--slate-800);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════
+       SIDEBAR
+    ═══════════════════════════════════════════ */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      z-index: 300;
+      transition: width var(--transition), min-width var(--transition), transform var(--transition);
+      overflow: hidden;
+      box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    }
+    #sidebar.collapsed {
+      width: 0;
+      min-width: 0;
+    }
+
+    .sidebar-brand {
+      padding: 1.5rem 1.25rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      flex-shrink: 0;
+    }
+    .sidebar-brand .school-crest {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.35rem; margin-bottom: .7rem;
+      box-shadow: 0 4px 12px rgba(201,150,44,.35);
+    }
+    .sidebar-brand h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: .95rem;
+      color: #fff;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    .sidebar-brand p {
+      font-size: .72rem;
+      color: var(--slate-400);
+      margin-top: .2rem;
+      white-space: nowrap;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.1) transparent;
+    }
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+    .nav-group-label {
+      font-size: .68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: rgba(255,255,255,.28);
+      padding: .9rem 1.25rem .4rem;
+    }
+
+    .sidebar-nav ul { list-style: none; }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .62rem 1.25rem;
+      color: rgba(255,255,255,.72);
+      text-decoration: none;
+      font-size: .875rem;
+      font-weight: 500;
+      border-radius: 0;
+      transition: background var(--transition), color var(--transition);
+      white-space: nowrap;
+      position: relative;
+    }
+    .sidebar-nav a .nav-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .sidebar-nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .sidebar-nav li.active > a {
+      background: linear-gradient(90deg, rgba(37,99,235,.55) 0%, rgba(37,99,235,.15) 100%);
+      color: #fff;
+      border-right: 3px solid var(--blue-light);
+    }
+    .sidebar-nav li.active > a .nav-icon { color: var(--gold-light); }
+
+    .sidebar-footer {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding: 1rem 1.25rem;
+      flex-shrink: 0;
+    }
+    .sidebar-user {
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .sidebar-user-avatar {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-user-info { flex: 1; min-width: 0; }
+    .sidebar-user-info strong { display: block; font-size: .82rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-user-info span { font-size: .72rem; color: var(--slate-400); }
+    #logout-btn {
+      background: none; border: none; color: rgba(255,255,255,.45);
+      cursor: pointer; font-size: 1rem; padding: .25rem; border-radius: 6px;
+      transition: color var(--transition);
+    }
+    #logout-btn:hover { color: var(--rose); }
+
+    /* ═══════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════ */
+    .main-container {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      transition: margin-left var(--transition);
+    }
+    .main-container.sidebar-collapsed { margin-left: 0; }
+
+    /* ═══════════════════════════════════════════
+       TOP BAR
+    ═══════════════════════════════════════════ */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      padding: 0 1.75rem;
+      gap: 1rem;
+      position: sticky; top: 0; z-index: 200;
+      box-shadow: var(--shadow-sm);
+    }
+    #sidebar-toggle-mobile {
+      background: none; border: none;
+      cursor: pointer;
+      color: var(--slate-600);
+      font-size: 1.25rem;
+      padding: .4rem;
+      border-radius: 8px;
+      transition: background var(--transition);
+    }
+    #sidebar-toggle-mobile:hover { background: var(--slate-100); }
+
+    .topbar-breadcrumb {
+      display: flex; align-items: center; gap: .5rem; flex: 1;
+    }
+    .topbar-breadcrumb .bc-home { font-size: .8rem; color: var(--slate-400); text-decoration: none; }
+    .topbar-breadcrumb .bc-sep { color: var(--slate-300); font-size: .8rem; }
+    #page-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .topbar-right {
+      display: flex; align-items: center; gap: 1rem; margin-left: auto;
+    }
+    .topbar-session-badge {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--slate-700);
+      white-space: nowrap;
+    }
+    #current-user-name-role {
+      font-size: .82rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    #logout-btn-top {
+      background: none; border: 1px solid var(--slate-200); color: var(--slate-600);
+      cursor: pointer; font-size: .8rem; padding: .35rem .85rem; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      transition: background var(--transition), color var(--transition);
+    }
+    #logout-btn-top:hover { background: var(--rose); color: #fff; border-color: var(--rose); }
+
+    /* ═══════════════════════════════════════════
+       PAGE CONTENT
+    ═══════════════════════════════════════════ */
+    .page-content {
+      flex: 1;
+      padding: 2rem 1.75rem;
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    .content-section { display: none; animation: fadeIn .22s ease; }
+    .content-section:not(.hidden) { display: block; }
+    .content-section.hidden { display: none !important; }
+
+    /* ═══════════════════════════════════════════
+       DASHBOARD STATS GRID
+    ═══════════════════════════════════════════ */
+    #dashboard-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      padding: 1.4rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .stat-card h4 { font-size: .75rem; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--navy); line-height: 1.1; }
+
+    /* ═══════════════════════════════════════════
+       DASHBOARD QUICK ACTIONS
+    ═══════════════════════════════════════════ */
+    .dash-actions {
+      display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       SCROLLBAR (thin, global)
+    ═══════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
+
+    /* ═══════════════════════════════════════════
+       MOBILE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        transform: translateX(-100%);
+        width: var(--sidebar-w);
+        min-width: var(--sidebar-w);
+      }
+      #sidebar:not(.collapsed) {
+        transform: translateX(0);
+      }
+      .main-container { margin-left: 0 !important; }
+      .page-content { padding: 1.25rem 1rem; }
+    }
+
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ═══════════════════════════════════════════
+       TOAST KEYFRAME
+    ═══════════════════════════════════════════ */
+    @keyframes slideInRight {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* ═══════════════════════════════════════════
+       INLINE HOVER STYLE FOR TABLE ROWS
+    ═══════════════════════════════════════════ */
+    #classes-tbody tr:hover td { background: #f8fafc !important; }
+    button:hover { opacity: .88; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--navy-mid) !important;
+      box-shadow: 0 0 0 3px rgba(30,58,95,.1) !important;
+      outline: none;
+    }
+
+    /* ═══════════════════════════════════════════
+       SIDEBAR MOBILE OVERLAY
+    ═══════════════════════════════════════════ */
+    #sidebar-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 299;
+    }
+    @media (max-width: 768px) {
+      #sidebar-backdrop.show { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════
+     SIDEBAR BACKDROP (mobile)
+══════════════════════════ -->
+<div id="sidebar-backdrop"></div>
+
+<!-- ══════════════════════════
+     SIDEBAR
+══════════════════════════ -->
+<aside id="sidebar">
+
+  <div class="sidebar-brand">
+    <div class="school-crest">✝</div>
+    <h1>Sacred Heart<br>College</h1>
+    <p>Eziukwu Aba</p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <ul>
+      <li class="nav-group-label">Overview</li>
+      <li id="nav-dashboard">
+        <a href="#dashboard">
+          <span class="nav-icon">🏠</span> Dashboard
+        </a>
+      </li>
+
+      <li class="nav-group-label">Academic</li>
+      <li id="nav-classes">
+        <a href="#classes">
+          <span class="nav-icon">🏫</span> Classes
+        </a>
+      </li>
+      <li id="nav-arms">
+        <a href="#arms">
+          <span class="nav-icon">🚪</span> Class Arms
+        </a>
+      </li>
+      <li id="nav-students">
+        <a href="#students">
+          <span class="nav-icon">🎒</span> Students
+        </a>
+      </li>
+      <li id="nav-teachers">
+        <a href="#teachers">
+          <span class="nav-icon">👩‍🏫</span> Staff
+        </a>
+      </li>
+      <li id="nav-subjects">
+        <a href="#subjects">
+          <span class="nav-icon">📚</span> Subjects
+        </a>
+      </li>
+
+      <li class="nav-group-label">Performance</li>
+      <li id="nav-results">
+        <a href="#results">
+          <span class="nav-icon">📊</span> Results
+        </a>
+      </li>
+      <li id="nav-report-cards">
+        <a href="#report-cards">
+          <span class="nav-icon">📄</span> Report Cards
+        </a>
+      </li>
+      <li id="nav-attendance">
+        <a href="#attendance">
+          <span class="nav-icon">✅</span> Attendance
+        </a>
+      </li>
+
+      <li class="nav-group-label">Activities</li>
+      <li id="nav-fixtures">
+        <a href="#fixtures">
+          <span class="nav-icon">🏆</span> Fixtures &amp; Honours
+        </a>
+      </li>
+
+      <li class="nav-group-label">System</li>
+      <li id="nav-settings">
+        <a href="#settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sidebar-avatar">SA</div>
+      <div class="sidebar-user-info">
+        <strong id="sidebar-username">Samuel</strong>
+        <span id="sidebar-role">Admin</span>
+      </div>
+      <button id="logout-btn" title="Logout">⏻</button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ══════════════════════════
+     MAIN CONTAINER
+══════════════════════════ -->
+<div class="main-container" id="main-container">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <button id="sidebar-toggle-mobile" aria-label="Toggle menu">☰</button>
+
+    <nav class="topbar-breadcrumb">
+      <a href="#dashboard" class="bc-home">SHC</a>
+      <span class="bc-sep">›</span>
+      <span id="page-title">Dashboard</span>
+    </nav>
+
+    <div class="topbar-right">
+      <span class="topbar-session-badge" id="session-badge">2025/2026 · Second Term</span>
+      <span id="current-user-name-role">Samuel (Admin)</span>
+      <button id="logout-btn-top">Logout</button>
+    </div>
+  </header>
+
+  <!-- PAGE CONTENT -->
+  <main class="page-content">
+
+    <!-- ══════════════════════════
+         DASHBOARD
+    ══════════════════════════ -->
+    <section id="dashboard" class="content-section">
+      <div style="margin-bottom:1.75rem;">
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--navy);margin-bottom:.25rem;">Good morning! 👋</h2>
+        <p style="color:var(--slate-600);font-size:.9rem;">Welcome back to <strong>Sacred Heart College</strong> School Management System.</p>
+      </div>
+      <div id="dashboard-stats"></div>
+      <div class="dash-actions">
+        <button class="btn-primary" style="">📊 Enter Results</button>
+        <button class="btn-secondary" style="">📄 Report Cards</button>
+        <button class="btn-outline" style="">✅ Attendance</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         CLASSES
+    ══════════════════════════ -->
+    <section id="classes" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         ARMS
+    ══════════════════════════ -->
+    <section id="arms" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         STUDENTS
+    ══════════════════════════ -->
+    <section id="students" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         TEACHERS / STAFF
+    ══════════════════════════ -->
+    <section id="teachers" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         SUBJECTS
+    ══════════════════════════ -->
+    <section id="subjects" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         RESULTS
+    ══════════════════════════ -->
+    <section id="results" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         REPORT CARDS
+    ══════════════════════════ -->
+    <section id="report-cards" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         ATTENDANCE
+    ══════════════════════════ -->
+    <section id="attendance" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         FIXTURES & HONOURS
+    ══════════════════════════ -->
+    <section id="fixtures" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         PARENT PORTAL
+    ══════════════════════════ -->
+    <section id="parent-portal" class="content-section"></section>
+
+    <!-- ══════════════════════════
+         SETTINGS
+    ══════════════════════════ -->
+    <section id="settings" class="content-section"></section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════
+     SCRIPT
+══════════════════════════ -->
+<script>
+  /* ─────────────────────────
+     SIDEBAR COLLAPSE LOGIC
+     (Lightweight version that
+     bridges the HTML to script2.js
+     App.sidebarCollapsed / collapseSidebar)
+  ───────────────────────── */
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const sidebar  = document.getElementById('sidebar');
+  const mainCont = document.getElementById('main-container');
+
+  function toggleSidebarLocal() {
+    const isNowCollapsed = !sidebar.classList.contains('collapsed');
+    sidebar.classList.toggle('collapsed', isNowCollapsed);
+    mainCont.classList.toggle('sidebar-collapsed', isNowCollapsed && window.innerWidth >= 769);
+    if (window.innerWidth < 769) {
+      backdrop.classList.toggle('show', !isNowCollapsed);
+    }
+  }
+
+  document.getElementById('sidebar-toggle-mobile').addEventListener('click', toggleSidebarLocal);
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.add('collapsed');
+    backdrop.classList.remove('show');
+  });
+
+  /* ─────────────────────────
+     ACTIVE NAV HIGHLIGHT
+     (script2.js also manages
+     this via initSidebar())
+  ───────────────────────── */
+  document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.addEventListener('click', () => {
+      if (window.innerWidth < 769) {
+        sidebar.classList.add('collapsed');
+        backdrop.classList.remove('show');
+      }
+    });
+  });
+</script>
+
+<!-- ══════════════════════════
+     MAIN APP SCRIPT
+══════════════════════════ -->
+<script src="script2.js"></script>
+
+<!-- ══════════════════════════
+     POST-INIT STYLE PATCH
+     Applies DM Sans to all
+     dynamically-inserted elements
+══════════════════════════ -->
+<script>
+  /* Override font & small style adjustments for dynamically rendered content */
+  (function injectGlobalPatch() {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* ─ Font normalise across all dynamic content ─ */
+      #dashboard-stats, #classes, #arms, #students,
+      #teachers, #subjects, #results, #report-cards,
+      #attendance, #fixtures, #settings {
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      /* ─ Session badge in topbar ─ */
+      .topbar-session-badge { font-family: 'DM Sans', sans-serif; }
+
+      /* ─ Refined stat-card colours ─ */
+      .stat-card.warning  { border-left-color: #f59e0b !important; }
+      .stat-card.success  { border-left-color: #22c55e !important; }
+      .stat-card.info     { border-left-color: #3b82f6 !important; }
+      .stat-card.alert    { border-left-color: #ef4444 !important; }
+
+      /* ─ Button normalise ─ */
+      .btn-primary, .btn-secondary, .btn-outline {
+        font-family: 'DM Sans', sans-serif;
+        font-size: .875rem;
+        font-weight: 500;
+        padding: .55rem 1.25rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: opacity .15s;
+      }
+      .btn-primary   { background: #1e3a5f; color: #fff; }
+      .btn-secondary { background: #e5e7eb; color: #374151; }
+      .btn-outline   { background: transparent; color: #1e3a5f; border: 1px solid #1e3a5f; }
+
+      /* ─ Modal overlay backdrop ─ */
+      #modal-overlay {
+        backdrop-filter: blur(2px);
+      }
+      #modal-overlay > div {
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      /* ─ Toast container ─ */
+      #toast-container > div {
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      /* ─ Table refinements ─ */
+      table { font-family: 'DM Sans', sans-serif; }
+
+      /* ─ Sidebar nav group labels ─ */
+      .nav-group-label {
+        list-style: none;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: rgba(255,255,255,.28);
+        padding: .9rem 1.25rem .4rem;
+      }
+
+      /* ─ Active nav item refinement from script2.js ─ */
+      .sidebar-nav li.active a {
+        background: linear-gradient(90deg, rgba(37,99,235,.55) 0%, rgba(37,99,235,.15) 100%) !important;
+        color: #fff !important;
+        border-right: 3px solid #3b82f6 !important;
+      }
+
+      /* ─ Smooth section reveal ─ */
+      .content-section:not(.hidden) {
+        display: block;
+        animation: fadeIn .22s ease;
+      }
+
+      /* ─ Report card print style ─ */
+      @media print {
+        #sidebar, .topbar, #sidebar-backdrop { display: none !important; }
+        .main-container { margin-left: 0 !important; }
+        .page-content { padding: 0 !important; }
+      }
+    `;
+    document.head.appendChild(style);
+  })();
+
+  /* ── Session badge sync ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    // Give script2.js a tick to populate App.data
+    setTimeout(() => {
+      if (window.App?.data?.schoolInfo) {
+        const si = App.data.schoolInfo;
+        const badge = document.getElementById('session-badge');
+        if (badge) badge.textContent = `${si.session} · ${si.term}`;
+      }
+    }, 0);
+  });
+</script>
+
+</body>
+</html>

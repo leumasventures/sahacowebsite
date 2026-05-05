@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sacred Heart College – School Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:         #0f2444;
+      --navy-mid:     #1e3a5f;
+      --navy-light:   #2a4f7c;
+      --blue:         #2563eb;
+      --blue-light:   #3b82f6;
+      --blue-pale:    #dbeafe;
+      --gold:         #c9962c;
+      --gold-light:   #f4c542;
+      --emerald:      #059669;
+      --emerald-pale: #d1fae5;
+      --violet:       #7c3aed;
+      --violet-pale:  #ede9fe;
+      --amber:        #d97706;
+      --amber-pale:   #fef3c7;
+      --rose:         #e11d48;
+      --rose-pale:    #fee2e2;
+      --slate-50:     #f8fafc;
+      --slate-100:    #f1f5f9;
+      --slate-200:    #e2e8f0;
+      --slate-300:    #cbd5e1;
+      --slate-400:    #94a3b8;
+      --slate-500:    #64748b;
+      --slate-600:    #475569;
+      --slate-700:    #334155;
+      --slate-800:    #1e293b;
+      --white:        #ffffff;
+      --sidebar-w:    260px;
+      --topbar-h:     64px;
+      --radius-lg:    14px;
+      --radius-md:    10px;
+      --radius-sm:    7px;
+      --shadow-xs:    0 1px 3px rgba(0,0,0,.07);
+      --shadow-sm:    0 1px 4px rgba(0,0,0,.08);
+      --shadow-md:    0 4px 16px rgba(0,0,0,.10);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,.14);
+      --t:            .22s ease;
+    }
+
+    html { font-size: 15px; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--slate-100);
+      color: var(--slate-800);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      height: 100vh; position: fixed; top: 0; left: 0;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      z-index: 300;
+      transition: width var(--t), min-width var(--t), transform var(--t);
+      overflow: hidden;
+      box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    }
+    #sidebar.collapsed { width: 0; min-width: 0; }
+
+    .sidebar-brand { padding: 1.5rem 1.25rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0; }
+    .school-crest {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.35rem; margin-bottom: .7rem;
+      box-shadow: 0 4px 12px rgba(201,150,44,.35);
+    }
+    .sidebar-brand h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: .95rem; font-weight: 700;
+      color: #fff; line-height: 1.3; white-space: nowrap;
+    }
+    .sidebar-brand p { font-size: .72rem; color: var(--slate-400); margin-top: .2rem; white-space: nowrap; }
+
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 1rem 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.1) transparent; }
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+    .sidebar-nav ul { list-style: none; }
+
+    .nav-group-label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+      color: rgba(255,255,255,.28); padding: .9rem 1.25rem .4rem;
+    }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .62rem 1.25rem;
+      color: rgba(255,255,255,.72);
+      text-decoration: none; font-size: .875rem; font-weight: 500;
+      transition: background var(--t), color var(--t); white-space: nowrap;
+    }
+    .sidebar-nav a .nav-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .sidebar-nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
+    .sidebar-nav li.active > a {
+      background: linear-gradient(90deg, rgba(37,99,235,.55) 0%, rgba(37,99,235,.15) 100%);
+      color: #fff; border-right: 3px solid var(--blue-light);
+    }
+    .sidebar-nav li.active > a .nav-icon { color: var(--gold-light); }
+
+    .sidebar-footer { border-top: 1px solid rgba(255,255,255,.07); padding: 1rem 1.25rem; flex-shrink: 0; }
+    .sidebar-user { display: flex; align-items: center; gap: .75rem; }
+    .sidebar-user-avatar {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .sidebar-user-info { flex: 1; min-width: 0; }
+    .sidebar-user-info strong { display: block; font-size: .82rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-user-info span { font-size: .72rem; color: var(--slate-400); }
+    #logout-btn {
+      background: none; border: none; color: rgba(255,255,255,.45);
+      cursor: pointer; font-size: 1rem; padding: .25rem; border-radius: 6px;
+      transition: color var(--t);
+    }
+    #logout-btn:hover { color: var(--rose); }
+
+    /* ── MAIN ── */
+    .main-container {
+      flex: 1; margin-left: var(--sidebar-w);
+      display: flex; flex-direction: column; min-height: 100vh;
+      transition: margin-left var(--t);
+    }
+    .main-container.sidebar-collapsed { margin-left: 0; }
+
+    .topbar {
+      height: var(--topbar-h); background: var(--white);
+      border-bottom: 1px solid var(--slate-200);
+      display: flex; align-items: center;
+      padding: 0 1.75rem; gap: 1rem;
+      position: sticky; top: 0; z-index: 200;
+      box-shadow: var(--shadow-xs);
+    }
+    #sidebar-toggle-mobile {
+      background: none; border: none; cursor: pointer;
+      color: var(--slate-600); font-size: 1.25rem; padding: .4rem; border-radius: 8px;
+      transition: background var(--t);
+    }
+    #sidebar-toggle-mobile:hover { background: var(--slate-100); }
+
+    .topbar-breadcrumb { display: flex; align-items: center; gap: .5rem; flex: 1; }
+    .topbar-breadcrumb .bc-home { font-size: .8rem; color: var(--slate-400); text-decoration: none; }
+    .topbar-breadcrumb .bc-sep  { color: var(--slate-300); font-size: .8rem; }
+    #page-title { font-size: 1.05rem; font-weight: 700; color: var(--navy); }
+
+    .topbar-right { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
+    .topbar-session-badge {
+      background: var(--slate-100); border: 1px solid var(--slate-200);
+      border-radius: 20px; padding: .3rem .9rem;
+      font-size: .75rem; font-weight: 600; color: var(--slate-700); white-space: nowrap;
+    }
+    #current-user-name-role { font-size: .82rem; color: var(--slate-600); font-weight: 500; white-space: nowrap; }
+    #logout-btn-top {
+      background: none; border: 1px solid var(--slate-200); color: var(--slate-600);
+      cursor: pointer; font-size: .8rem; padding: .35rem .85rem; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      transition: background var(--t), color var(--t), border-color var(--t);
+    }
+    #logout-btn-top:hover { background: var(--rose); color: #fff; border-color: var(--rose); }
+
+    .page-content { flex: 1; padding: 2rem 1.75rem; max-width: 1400px; width: 100%; }
+
+    .content-section { display: none; animation: fadeIn .22s ease; }
+    .content-section:not(.hidden) { display: block; }
+    .content-section.hidden { display: none !important; }
+
+    #dashboard-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.25rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--white); border-radius: var(--radius-lg);
+      padding: 1.4rem 1.5rem; box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--t), transform var(--t);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .stat-card h4 { font-size: .75rem; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--navy); line-height: 1.1; }
+
+    #sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 299; }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
+
+    @media (max-width: 768px) {
+      #sidebar { position: fixed; transform: translateX(-100%); width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important; }
+      #sidebar:not(.collapsed) { transform: translateX(0); }
+      .main-container { margin-left: 0 !important; }
+      .page-content { padding: 1.25rem 1rem; }
+      #sidebar-backdrop.show { display: block; }
+      .topbar-session-badge, #current-user-name-role { display: none; }
+    }
+
+    @keyframes fadeIn       { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideInRight { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes slideUp      { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+    button:hover { opacity: .88; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--navy-mid) !important;
+      box-shadow: 0 0 0 3px rgba(30,58,95,.1) !important;
+      outline: none;
+    }
+
+    /* ══════════════════════════════════════════════
+       REPORT CARD PRINT STYLES
+       These apply when script2.js calls window.print()
+       from renderReportCard() / printAllReportCards()
+    ══════════════════════════════════════════════ */
+    @media print {
+      /* Hide entire shell */
+      #sidebar,
+      .topbar,
+      #sidebar-backdrop,
+      .page-content > *:not(#report-cards) { display: none !important; }
+
+      /* Full-width report card area */
+      html, body { background: #fff !important; }
+      .main-container { margin-left: 0 !important; display: block !important; }
+      .page-content   { padding: 0 !important; max-width: 100% !important; }
+
+      /* Show only the report-cards section */
+      #report-cards {
+        display: block !important;
+        width: 100%;
+      }
+
+      /* Each individual report card gets its own page */
+      .report-card-page,
+      [class*="report-card"] { page-break-after: always; }
+
+      /* Restore colour for grade bands even in B&W print */
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      /* Hide action buttons inside the report section */
+      #report-cards button { display: none !important; }
+      #report-cards select { border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-backdrop"></div>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════ -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <div class="school-crest">✝</div>
+    <h1>Sacred Heart<br>College</h1>
+    <p>Eziukwu Aba</p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <ul>
+      <li class="nav-group-label">Overview</li>
+      <li><a href="#dashboard"><span class="nav-icon">🏠</span> Dashboard</a></li>
+
+      <li class="nav-group-label">Academic</li>
+      <li><a href="#classes"><span class="nav-icon">🏫</span> Classes</a></li>
+      <li><a href="#arms"><span class="nav-icon">🚪</span> Class Arms</a></li>
+      <li><a href="#students"><span class="nav-icon">🎒</span> Students</a></li>
+      <li><a href="#teachers"><span class="nav-icon">👩‍🏫</span> Staff</a></li>
+      <li><a href="#subjects"><span class="nav-icon">📚</span> Subjects</a></li>
+
+      <li class="nav-group-label">Performance</li>
+      <li><a href="#results"><span class="nav-icon">📊</span> Results</a></li>
+      <li><a href="#report-cards"><span class="nav-icon">📄</span> Report Cards</a></li>
+      <li><a href="#attendance"><span class="nav-icon">✅</span> Attendance</a></li>
+
+      <li class="nav-group-label">Activities</li>
+      <li><a href="#fixtures"><span class="nav-icon">🏆</span> Fixtures &amp; Honours</a></li>
+
+      <li class="nav-group-label">System</li>
+      <li><a href="#settings"><span class="nav-icon">⚙️</span> Settings</a></li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sidebar-avatar">SA</div>
+      <div class="sidebar-user-info">
+        <strong id="sidebar-username">Samuel</strong>
+        <span id="sidebar-role">Admin</span>
+      </div>
+      <button id="logout-btn" title="Logout">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<div class="main-container" id="main-container">
+
+  <header class="topbar">
+    <button id="sidebar-toggle-mobile" aria-label="Toggle menu">☰</button>
+    <nav class="topbar-breadcrumb">
+      <a href="#dashboard" class="bc-home">SHC</a>
+      <span class="bc-sep">›</span>
+      <span id="page-title">Dashboard</span>
+    </nav>
+    <div class="topbar-right">
+      <span class="topbar-session-badge" id="session-badge">2025/2026 · Second Term</span>
+      <span id="current-user-name-role">Samuel (Admin)</span>
+      <button id="logout-btn-top">Logout</button>
+    </div>
+  </header>
+
+  <main class="page-content">
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="content-section">
+      <div style="margin-bottom:1.75rem;">
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--navy);margin-bottom:.25rem;">Good morning! 👋</h2>
+        <p style="color:var(--slate-600);font-size:.9rem;">Welcome back to <strong>Sacred Heart College</strong> School Management System.</p>
+      </div>
+      <div id="dashboard-stats"></div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+        <button class="btn-primary"   onclick="if(window.navigate)navigate('results')">📊 Enter Results</button>
+        <button class="btn-secondary" onclick="if(window.navigate)navigate('report-cards')">📄 Report Cards</button>
+        <button class="btn-outline"   onclick="if(window.navigate)navigate('attendance')">✅ Attendance</button>
+      </div>
+    </section>
+
+    <section id="classes"       class="content-section"></section>
+    <section id="arms"          class="content-section"></section>
+    <section id="students"      class="content-section"></section>
+    <section id="teachers"      class="content-section"></section>
+    <section id="subjects"      class="content-section"></section>
+    <section id="results"       class="content-section"></section>
+
+    <!-- REPORT CARDS – script2.js renders full card HTML here -->
+    <section id="report-cards"  class="content-section"></section>
+
+    <section id="attendance"    class="content-section"></section>
+    <section id="fixtures"      class="content-section"></section>
+    <section id="parent-portal" class="content-section"></section>
+    <section id="settings"      class="content-section"></section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     BOOTSTRAP
+══════════════════════════════════════════ -->
+<script>
+  'use strict';
+  var backdrop = document.getElementById('sidebar-backdrop');
+  var sidebar  = document.getElementById('sidebar');
+  var mainCont = document.getElementById('main-container');
+
+  function openSidebar() {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth < 769) backdrop.classList.add('show');
+    else mainCont.classList.remove('sidebar-collapsed');
+  }
+  function closeSidebar() {
+    sidebar.classList.add('collapsed');
+    backdrop.classList.remove('show');
+    if (window.innerWidth >= 769) mainCont.classList.add('sidebar-collapsed');
+  }
+  function toggleSidebar() {
+    sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+  }
+
+  document.getElementById('sidebar-toggle-mobile').addEventListener('click', toggleSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      if (window.innerWidth < 769) { sidebar.classList.add('collapsed'); backdrop.classList.remove('show'); }
+    });
+  });
+</script>
+
+<script src="script2.js"></script>
+
+<!-- ══════════════════════════════════════════
+     POST-LOAD POLISH
+══════════════════════════════════════════ -->
+<script>
+  'use strict';
+
+  (function injectStyles() {
+    var s = document.createElement('style');
+    s.textContent = [
+      /* ─ Font normalise ─ */
+      '.content-section, .content-section *,',
+      '#modal-overlay, #modal-overlay *,',
+      '#toast-container > div,',
+      'button, input, select, textarea {',
+      '  font-family: "DM Sans", sans-serif;',
+      '}',
+
+      /* ─ Dashboard buttons ─ */
+      '.btn-primary, .btn-secondary, .btn-outline {',
+      '  font-family: "DM Sans", sans-serif;',
+      '  font-size: .875rem; font-weight: 500;',
+      '  padding: .55rem 1.25rem; border-radius: 8px;',
+      '  border: none; cursor: pointer;',
+      '  transition: opacity .15s, transform .1s;',
+      '}',
+      '.btn-primary:active,.btn-secondary:active,.btn-outline:active{transform:scale(.97);}',
+      '.btn-primary   { background: #1e3a5f; color: #fff; }',
+      '.btn-secondary { background: #e2e8f0; color: #334155; }',
+      '.btn-outline   { background: transparent; color: #1e3a5f; border: 1.5px solid #1e3a5f; }',
+
+      /* ─ Stat card accents ─ */
+      '.stat-card.warning { border-left: 3px solid #f59e0b !important; }',
+      '.stat-card.success { border-left: 3px solid #22c55e !important; }',
+      '.stat-card.info    { border-left: 3px solid #3b82f6 !important; }',
+      '.stat-card.alert   { border-left: 3px solid #ef4444 !important; }',
+
+      /* ══════════════════════════════════════════
+         REPORT CARDS SECTION POLISH
+      ══════════════════════════════════════════ */
+
+      /* Selector / filter bar */
+      '#report-cards input[type="text"],',
+      '#report-cards input[type="search"],',
+      '#report-cards select { border-radius: 8px !important; font-size: .875rem !important; }',
+
+      /* Student selector cards */
+      '#report-cards [style*="background:#fff"] {',
+      '  transition: box-shadow .2s ease, transform .2s ease;',
+      '}',
+      '#report-cards [style*="background:#fff"]:hover {',
+      '  box-shadow: 0 6px 24px rgba(0,0,0,.10) !important;',
+      '  transform: translateY(-2px);',
+      '}',
+
+      /* ── Printed report card itself ──
+         script2.js renders the card with inline styles.
+         These overrides ensure the printed document
+         looks polished: school colours, clear typography.
+      ── */
+
+      /* Card wrapper */
+      '#report-cards .rc-wrapper,',
+      '#report-cards [id^="rc-"] {',
+      '  font-family: "DM Sans", sans-serif !important;',
+      '}',
+
+      /* Card header school name */
+      '#report-cards h2[style*="font-size:1.4rem"],',
+      '#report-cards h2[style*="font-size: 1.4rem"] {',
+      '  font-family: "Playfair Display", serif !important;',
+      '  letter-spacing: -.01em;',
+      '}',
+
+      /* Grade band colour chips */
+      '#report-cards [style*="background:#16a34a"],',
+      '#report-cards [style*="background: #16a34a"] { background: #16a34a !important; color: #fff !important; }',
+      '#report-cards [style*="background:#ca8a04"],',
+      '#report-cards [style*="background: #ca8a04"] { background: #ca8a04 !important; color: #fff !important; }',
+      '#report-cards [style*="background:#dc2626"],',
+      '#report-cards [style*="background: #dc2626"] { background: #dc2626 !important; color: #fff !important; }',
+
+      /* Domain score pips (affective / psychomotor) */
+      '#report-cards [style*="border-radius:50%"][style*="width:28px"],',
+      '#report-cards [style*="border-radius: 50%"][style*="width: 28px"] {',
+      '  font-size: .72rem !important;',
+      '  font-weight: 700 !important;',
+      '}',
+
+      /* Subject results table */
+      '#report-cards table {',
+      '  border-collapse: collapse !important;',
+      '  width: 100% !important;',
+      '}',
+      '#report-cards table th {',
+      '  background: #0f2444 !important;',
+      '  color: #fff !important;',
+      '  font-size: .78rem !important;',
+      '  font-weight: 600 !important;',
+      '  padding: .45rem .65rem !important;',
+      '  letter-spacing: .03em;',
+      '}',
+      '#report-cards table td {',
+      '  font-size: .82rem !important;',
+      '  padding: .4rem .65rem !important;',
+      '  border-bottom: 1px solid #e2e8f0 !important;',
+      '}',
+      '#report-cards table tbody tr:nth-child(even) td {',
+      '  background: #f8fafc !important;',
+      '}',
+      '#report-cards table tbody tr:hover td { background: #eff6ff !important; }',
+
+      /* Total / average row */
+      '#report-cards table tfoot td,',
+      '#report-cards table tr[style*="font-weight:700"] td,',
+      '#report-cards table tr[style*="font-weight: 700"] td {',
+      '  font-weight: 700 !important;',
+      '  background: #f1f5f9 !important;',
+      '  border-top: 2px solid #cbd5e1 !important;',
+      '}',
+
+      /* Teacher / principal signature line */
+      '#report-cards hr { border-color: #cbd5e1 !important; }',
+
+      /* Print action buttons */
+      '#report-cards button[onclick*="print"],',
+      '#report-cards button[onclick*="Print"] {',
+      '  background: #0f2444 !important;',
+      '  color: #fff !important;',
+      '  border-radius: 8px !important;',
+      '  padding: .5rem 1.1rem !important;',
+      '  font-size: .85rem !important;',
+      '  font-weight: 600 !important;',
+      '  border: none !important;',
+      '  cursor: pointer !important;',
+      '  transition: opacity .15s !important;',
+      '}',
+
+      /* Modal */
+      '#modal-overlay { backdrop-filter: blur(3px); }',
+      '#modal-overlay > div {',
+      '  border-radius: 16px !important;',
+      '  box-shadow: 0 20px 60px rgba(0,0,0,.22) !important;',
+      '  animation: slideUp .22s ease;',
+      '}',
+
+      /* Active sidebar nav */
+      '.sidebar-nav li.active > a {',
+      '  background: linear-gradient(90deg,rgba(37,99,235,.55) 0%,rgba(37,99,235,.15) 100%) !important;',
+      '  color: #fff !important;',
+      '  border-right: 3px solid #3b82f6 !important;',
+      '}',
+      '.sidebar-nav li.active > a .nav-icon { color: #f4c542 !important; }',
+
+      /* Sidebar labels */
+      '.nav-group-label {',
+      '  list-style: none;',
+      '  font-size: .68rem; font-weight: 700;',
+      '  text-transform: uppercase; letter-spacing: .1em;',
+      '  color: rgba(255,255,255,.28);',
+      '  padding: .9rem 1.25rem .4rem;',
+      '}'
+    ].join('\n');
+    document.head.appendChild(s);
+  })();
+
+  /* ── Sync session badge & sidebar user ── */
+  window.addEventListener('load', function() {
+    requestAnimationFrame(function() {
+      try {
+        var si = window.App && window.App.data && window.App.data.schoolInfo;
+        if (si) {
+          var b = document.getElementById('session-badge');
+          if (b) b.textContent = si.session + ' \u00b7 ' + si.term;
+        }
+      } catch(e) {}
+      try {
+        var u = window.App && window.App.currentUser;
+        if (u) {
+          var initials = u.name.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
+          var av = document.getElementById('sidebar-avatar');   if (av) av.textContent = initials;
+          var un = document.getElementById('sidebar-username'); if (un) un.textContent = u.name;
+          var ro = document.getElementById('sidebar-role');     if (ro) ro.textContent = u.role;
+          var cr = document.getElementById('current-user-name-role');
+          if (cr) cr.textContent = u.name + ' (' + u.role + ')';
+        }
+      } catch(e) {}
+    });
+  });
+</script>
+
+</body>
+</html>

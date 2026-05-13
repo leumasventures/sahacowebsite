@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Student Attendance Portal - Sacred Heart College Eziukwu Aba (SAHARCO)" />
+  <title>Attendance | Sacred Heart College Eziukwu Aba (SAHARCO)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); line-height: 1.6; }
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+    /* Topbar & Header */
+    .topbar { background: var(--maroon-dark); padding: 8px 0; }
+    .topbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .topbar-item { color: rgba(255,255,255,0.7); font-size: 0.8rem; }
+
+    .header {
+      background: var(--white); border-bottom: 1px solid var(--rule);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-inner { display: flex; align-items: center; padding: 14px 0; }
+
+    .logo-wrap { display: flex; align-items: center; gap: 12px; }
+    .crest { width: 55px; height: 55px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); }
+    .logo-name { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--maroon); }
+    .logo-tag { font-size: 0.65rem; color: var(--gold); font-weight: 600; letter-spacing: 1px; }
+
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--maroon);
+      margin: 2rem 0 1.5rem;
+    }
+
+    /* Main Content */
+    .attendance-container {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      padding: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      align-items: end;
+    }
+    .form-group {
+      flex: 1;
+      min-width: 220px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ink-light);
+    }
+    select, input[type="date"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      background: var(--maroon);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--tr);
+    }
+    .btn:hover { background: var(--maroon-mid); }
+    .btn-gold {
+      background: var(--gold);
+      color: var(--maroon-dark);
+    }
+
+    /* Attendance Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th {
+      background: var(--maroon);
+      color: white;
+      text-align: left;
+      padding: 14px 12px;
+      font-weight: 500;
+    }
+    td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--rule);
+    }
+    tr:hover { background: var(--parchment); }
+
+    .status-present { color: #006400; font-weight: 600; }
+    .status-absent { color: #B91C1C; font-weight: 600; }
+    .status-late { color: #D97706; font-weight: 600; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .summary-card {
+      background: var(--parchment);
+      padding: 1.2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .footer {
+      background: var(--maroon-dark);
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      padding: 2rem 0;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 768px) {
+      .controls { flex-direction: column; }
+      table { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-item">Sacred Heart College Eziukwu Aba (SAHARCO)</div>
+      <div class="topbar-item">Today: <strong id="current-date"></strong></div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" onerror="this.parentNode.innerHTML='<div style=\'background:#6B1212;color:#D4A84B;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;\'>✝</div>'">
+        </div>
+        <div>
+          <div class="logo-name">Sacred Heart College</div>
+          <div class="logo-tag">ATTENDANCE PORTAL</div>
+        </div>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:15px; align-items:center;">
+        <a href="index.html" style="color:var(--maroon); font-weight:500;">← Back to Website</a>
+        <span style="background:var(--gold-pale); color:var(--maroon); padding:6px 14px; border-radius:30px; font-size:0.85rem;">
+          Mr. Okoro
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1 class="page-title">Student Attendance</h1>
+
+    <div class="attendance-container">
+      <div class="controls">
+        <div class="form-group">
+          <label>Class Arm</label>
+          <select id="class-select">
+            <option value="">Select Class</option>
+            <option value="JS1A">JS1A</option>
+            <option value="JS1B">JS1B</option>
+            <option value="JS2A">JS2A</option>
+            <option value="SS1Science">SS1 Science</option>
+            <option value="SS2Arts">SS2 Arts</option>
+            <option value="SS3Science">SS3 Science</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="attendance-date" value="2026-05-07">
+        </div>
+
+        <div>
+          <button class="btn" onclick="loadAttendance()">Load Attendance</button>
+        </div>
+      </div>
+
+      <!-- Attendance Table -->
+      <table id="attendance-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">#</th>
+            <th>Student Name</th>
+            <th style="width:120px;">Admission No.</th>
+            <th style="width:100px;">Status</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+
+      <div class="summary">
+        <div class="summary-card">
+          <strong style="color:#006400; font-size:1.6rem;">28</strong><br>
+          <span>Present</span>
+        </div>
+        <div class="summary-card">
+          <strong style="color:#B91C1C; font-size:1.6rem;">3</strong><br>
+          <span>Absent</span>
+        </div>
+        <div class="summary-card">
+          <strong style="color:#D97706; font-size:1.6rem;">1</strong><br>
+          <span>Late</span>
+        </div>
+        <div class="summary-card">
+          <strong style="font-size:1.6rem;">32</strong><br>
+          <span>Total Students</span>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:2.5rem;">
+        <button class="btn btn-gold" onclick="submitAttendance()">Submit Attendance</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO)<br>
+      Staff Attendance Portal • Catholic Diocese of Aba
+    </div>
+  </div>
+
+  <script>
+    // Set current date
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-NG', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    // Sample students data
+    const students = [
+      {id: 1, name: "Chukwudi Emmanuel", admNo: "SAH/JS1/0241", status: "Present"},
+      {id: 2, name: "Okafor Chinedu", admNo: "SAH/JS1/0242", status: "Present"},
+      {id: 3, name: "Ikechi Michael", admNo: "SAH/JS1/0243", status: "Late"},
+      {id: 4, name: "Nwosu David", admNo: "SAH/JS1/0244", status: "Absent"},
+      {id: 5, name: "Okoroafor James", admNo: "SAH/JS1/0245", status: "Present"},
+    ];
+
+    function loadAttendance() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      students.forEach(student => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${student.id}</td>
+          <td><strong>${student.name}</strong></td>
+          <td>${student.admNo}</td>
+          <td>
+            <select onchange="updateStatus(this)" style="padding:6px; border-radius:4px; border:1px solid #ccc;">
+              <option value="Present" ${student.status === 'Present' ? 'selected' : ''}>Present</option>
+              <option value="Late" ${student.status === 'Late' ? 'selected' : ''}>Late</option>
+              <option value="Absent" ${student.status === 'Absent' ? 'selected' : ''}>Absent</option>
+            </select>
+          </td>
+          <td><input type="text" placeholder="Remark (optional)" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px;"></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateStatus(select) {
+      // You can add logic here if needed
+    }
+
+    function submitAttendance() {
+      alert("✅ Attendance has been successfully submitted for today.");
+    }
+
+    // Load default attendance on page load
+    window.onload = loadAttendance;
+  </script>
+</body>
+</html>

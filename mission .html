@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Mission & Vision — Sacred Heart College Eziukwu Aba (SAHARCO). Our Catholic educational philosophy, core values, motto, and commitment to forming men of faith, character, and excellence." />
+  <title>Mission &amp; Vision | Sacred Heart College Eziukwu Aba — SAHARCO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════
+       TOKENS
+    ═══════════════════════════════════════ */
+    :root {
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img  { max-width: 100%; height: auto; display: block; }
+    a    { text-decoration: none; color: inherit; }
+    ul   { list-style: none; }
+    .container { max-width: 1160px; margin-inline: auto; padding-inline: 28px; }
+
+    /* ═══════════════════════════════════════
+       TOPBAR
+    ═══════════════════════════════════════ */
+    .topbar {
+      background: var(--maroon-dark);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(184,134,42,0.25);
+    }
+    .topbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 500; color: rgba(255,255,255,0.55); letter-spacing: 0.04em; }
+    .topbar-item .ti { color: var(--gold-light); }
+    .topbar-motto { font-family: var(--font-serif); font-style: italic; font-size: 0.75rem; color: var(--gold-light); letter-spacing: 0.02em; }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    .header { position: sticky; top: 0; z-index: 200; background: var(--white); border-bottom: 1px solid var(--rule); transition: box-shadow var(--tr); }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner { display: flex; align-items: center; gap: 1.5rem; padding-block: 12px; }
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+    .crest { width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); box-shadow: 0 0 0 3px rgba(184,134,42,0.15); flex-shrink: 0; }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-text { line-height: 1.2; }
+    .logo-name { display: block; font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; color: var(--maroon); letter-spacing: 0.02em; }
+    .logo-tag  { display: block; font-size: 0.65rem; font-weight: 600; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+    .nav { margin-left: auto; }
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link { padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: var(--ink-light); border-radius: 6px; transition: background var(--tr), color var(--tr); }
+    .nav-link:hover { background: var(--parchment); color: var(--maroon); }
+    .nav-link.active { color: var(--maroon); font-weight: 600; background: var(--gold-pale); }
+    .nav-cta { margin-left: 0.5rem; background: var(--maroon); color: var(--white); padding: 0.45rem 1.1rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; transition: background var(--tr); }
+    .nav-cta:hover { background: var(--maroon-mid); }
+    .hamburger { display: none; margin-left: auto; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2px; background: var(--maroon); border-radius: 2px; }
+    .mobile-nav { display: none; position: fixed; inset: 0; z-index: 300; background: var(--maroon-dark); flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; }
+    .mobile-nav.open { display: flex; }
+    .mobile-nav a { font-family: var(--font-serif); font-size: 1.6rem; color: rgba(255,255,255,0.8); transition: color var(--tr); }
+    .mobile-nav a:hover { color: var(--gold-light); }
+    .mobile-close { position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 1.5rem; }
+
+    /* ═══════════════════════════════════════
+       PAGE HERO — full-bleed, grotto image
+    ═══════════════════════════════════════ */
+    .page-hero {
+      position: relative; overflow: hidden;
+      background: var(--maroon-dark);
+      min-height: 72vh;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .page-hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('images/grotto.jpg');
+      background-size: cover; background-position: center 30%;
+      filter: brightness(0.25) saturate(0.55);
+    }
+    .page-hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(62,8,8,0.3) 0%,
+        rgba(62,8,8,0.65) 55%,
+        rgba(30,4,4,0.96) 100%
+      );
+    }
+    /* large watermark cross */
+    .page-hero::after {
+      content: '✝';
+      position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
+      font-family: var(--font-serif); font-size: clamp(14rem, 25vw, 26rem);
+      color: rgba(255,255,255,0.04); pointer-events: none; line-height: 1;
+      z-index: 1;
+    }
+    .page-hero-content {
+      position: relative; z-index: 2;
+      padding: 5rem 0 0;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .breadcrumb a, .breadcrumb span { font-size: 0.72rem; font-weight: 500; color: rgba(255,255,255,0.45); letter-spacing: 0.06em; }
+    .breadcrumb a:hover { color: var(--gold-light); }
+    .breadcrumb .sep { color: rgba(255,255,255,0.25); }
+    .breadcrumb .current { color: var(--gold-light); }
+    .page-eyebrow { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; }
+    .page-eyebrow-line { width: 32px; height: 1px; background: var(--gold); }
+    .page-eyebrow-text { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-light); }
+    .page-title { font-family: var(--font-serif); font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 700; color: var(--white); line-height: 1.1; margin-bottom: 1.1rem; }
+    .page-title em { color: var(--gold-light); font-style: italic; }
+    .page-subtitle { font-size: 1rem; line-height: 1.75; color: rgba(255,255,255,0.62); max-width: 600px; padding-bottom: 3.5rem; }
+
+    /* In-page tabs anchored to hero bottom */
+    .page-tabs-bar { position: relative; z-index: 2; border-top: 1px solid rgba(184,134,42,0.2); }
+    .page-tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
+    .page-tabs::-webkit-scrollbar { display: none; }
+    .page-tab { padding: 0.9rem 1.3rem; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; color: rgba(255,255,255,0.45); border-bottom: 2px solid transparent; white-space: nowrap; transition: color var(--tr), border-color var(--tr); }
+    .page-tab:hover { color: rgba(255,255,255,0.8); }
+    .page-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+    /* ═══════════════════════════════════════
+       SECTION COMMON
+    ═══════════════════════════════════════ */
+    .section { padding: 5.5rem 0; }
+    .section-eyebrow { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; }
+    .section-eyebrow .rule { flex: none; width: 32px; height: 1.5px; background: var(--gold); }
+    .eyebrow-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); }
+    .section-title { font-family: var(--font-serif); font-size: clamp(1.7rem, 3vw, 2.5rem); font-weight: 700; line-height: 1.15; color: var(--maroon); margin-bottom: 1rem; }
+    .section-body { font-size: 0.93rem; line-height: 1.85; color: var(--ink-light); }
+    .section-body + .section-body { margin-top: 0.9rem; }
+
+    /* ═══════════════════════════════════════
+       MOTTO HERO STRIP
+    ═══════════════════════════════════════ */
+    .motto-strip {
+      background: var(--maroon);
+      padding: 5rem 0;
+      position: relative; overflow: hidden;
+    }
+    .motto-strip::before {
+      content: '"';
+      position: absolute; left: -1rem; top: -2rem;
+      font-family: var(--font-serif); font-size: 28rem;
+      color: rgba(255,255,255,0.03); line-height: 1; pointer-events: none;
+    }
+    .motto-inner { position: relative; z-index: 1; text-align: center; max-width: 820px; margin-inline: auto; }
+    .motto-cross { font-size: 2rem; margin-bottom: 1.5rem; color: var(--gold); }
+    .motto-latin {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-style: italic; font-weight: 700;
+      color: var(--gold-light); line-height: 1.2;
+      margin-bottom: 0.6rem;
+    }
+    .motto-translation {
+      font-size: 1rem; font-weight: 500; letter-spacing: 0.12em;
+      text-transform: uppercase; color: rgba(255,255,255,0.55);
+      margin-bottom: 2.5rem;
+    }
+    .motto-divider { width: 80px; height: 1px; background: rgba(184,134,42,0.4); margin: 0 auto 2.5rem; }
+    .motto-scripture {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 1.15rem; color: rgba(255,255,255,0.7);
+      line-height: 1.7; margin-bottom: 0.5rem;
+    }
+    .motto-scripture-ref { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; color: var(--gold); }
+
+    /* ═══════════════════════════════════════
+       MISSION / VISION LARGE CARDS
+    ═══════════════════════════════════════ */
+    .mv-section { background: var(--cream); }
+    .mv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2.5rem; }
+    .mv-card {
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+      position: relative;
+    }
+    .mv-card-inner { padding: 3rem 2.5rem; height: 100%; display: flex; flex-direction: column; }
+    .mv-card.mission .mv-card-inner { background: var(--maroon); }
+    .mv-card.vision  .mv-card-inner { background: var(--white); border: 1px solid var(--rule); }
+    .mv-card-tag {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase;
+      padding: 0.3rem 0.9rem; border-radius: 20px; margin-bottom: 1.5rem;
+      width: fit-content;
+    }
+    .mv-card.mission .mv-card-tag { background: rgba(184,134,42,0.2); color: var(--gold-light); border: 1px solid rgba(184,134,42,0.3); }
+    .mv-card.vision  .mv-card-tag { background: var(--gold-pale); color: var(--maroon); border: 1px solid rgba(107,18,18,0.15); }
+    .mv-card-icon { font-size: 2.8rem; margin-bottom: 1rem; }
+    .mv-card-heading {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.5vw, 2rem);
+      font-weight: 700; line-height: 1.2; margin-bottom: 1.2rem;
+    }
+    .mv-card.mission .mv-card-heading { color: var(--gold-light); }
+    .mv-card.vision  .mv-card-heading { color: var(--maroon); }
+    .mv-card-body { font-size: 0.92rem; line-height: 1.85; flex: 1; }
+    .mv-card.mission .mv-card-body { color: rgba(255,255,255,0.72); }
+    .mv-card.vision  .mv-card-body { color: var(--ink-light); }
+    .mv-card-footer {
+      margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.78rem; font-style: italic;
+    }
+    .mv-card.mission .mv-card-footer { color: rgba(255,255,255,0.4); border-top-color: rgba(255,255,255,0.1); }
+    .mv-card.vision  .mv-card-footer { color: var(--muted); border-top-color: var(--rule); }
+
+    /* Philosophy card below */
+    .philosophy-card {
+      margin-top: 2rem; background: var(--parchment);
+      border: 1px solid var(--rule); border-radius: 16px;
+      padding: 3rem; display: grid; grid-template-columns: 1fr 2fr; gap: 3rem; align-items: center;
+    }
+    .philosophy-icon-col { text-align: center; }
+    .philosophy-icon-big { font-size: 5rem; margin-bottom: 0.5rem; }
+    .philosophy-icon-label {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--gold);
+    }
+    .philosophy-body h3 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700; color: var(--maroon); margin-bottom: 0.85rem; }
+    .philosophy-body p { font-size: 0.9rem; line-height: 1.85; color: var(--ink-light); }
+    .philosophy-body p + p { margin-top: 0.85rem; }
+
+    /* ═══════════════════════════════════════
+       CORE VALUES — FULL SECTION
+    ═══════════════════════════════════════ */
+    .values-section { background: var(--white); }
+    .values-intro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; margin-bottom: 4rem; }
+    .values-image { border-radius: 14px; overflow: hidden; height: 400px; box-shadow: 0 16px 56px rgba(0,0,0,0.15); position: relative; }
+    .values-image img { width: 100%; height: 100%; object-fit: cover; }
+    .values-image-badge {
+      position: absolute; bottom: 1.5rem; left: 1.5rem;
+      background: rgba(30,4,4,0.82); backdrop-filter: blur(6px);
+      border: 1px solid rgba(184,134,42,0.35);
+      border-radius: 10px; padding: 0.75rem 1.1rem;
+      color: var(--gold-light); font-family: var(--font-serif);
+      font-style: italic; font-size: 0.9rem;
+    }
+    .values-pull {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 1.3rem; color: var(--maroon); line-height: 1.55;
+      border-left: 3px solid var(--gold); padding-left: 1.4rem; margin: 1.5rem 0;
+    }
+    .values-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1.1rem;
+    }
+    .value-card {
+      background: var(--cream); border: 1px solid var(--rule);
+      border-radius: 14px; padding: 1.75rem 1.4rem;
+      position: relative; overflow: hidden;
+      transition: box-shadow var(--tr), transform var(--tr), background var(--tr);
+    }
+    .value-card:hover { box-shadow: 0 10px 32px rgba(0,0,0,0.10); transform: translateY(-3px); background: var(--white); }
+    .value-card-num {
+      position: absolute; top: 1rem; right: 1.1rem;
+      font-family: var(--font-serif); font-size: 2.5rem; font-weight: 700;
+      color: rgba(107,18,18,0.06); line-height: 1; pointer-events: none;
+    }
+    .value-card-icon { font-size: 1.8rem; margin-bottom: 0.85rem; }
+    .value-card-name {
+      font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700;
+      color: var(--maroon); margin-bottom: 0.4rem;
+    }
+    .value-card-desc { font-size: 0.8rem; line-height: 1.65; color: var(--muted); }
+    .value-card-line {
+      margin-top: 1rem; height: 2px; border-radius: 2px; width: 36px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+    }
+
+    /* ═══════════════════════════════════════
+       CATHOLIC EDUCATIONAL PHILOSOPHY
+    ═══════════════════════════════════════ */
+    .philosophy-section { background: var(--parchment); }
+    .phil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; }
+    .phil-image-stack { position: relative; }
+    .phil-img-main { border-radius: 12px; overflow: hidden; height: 360px; box-shadow: 0 16px 48px rgba(0,0,0,0.15); }
+    .phil-img-main img { width: 100%; height: 100%; object-fit: cover; }
+    .phil-img-secondary {
+      position: absolute; bottom: -2rem; right: -1.5rem;
+      width: 58%; border-radius: 10px; overflow: hidden;
+      height: 220px; box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+      border: 4px solid var(--white);
+    }
+    .phil-img-secondary img { width: 100%; height: 100%; object-fit: cover; }
+    .phil-pillars { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 2rem; }
+    .phil-pillar {
+      display: flex; gap: 1.1rem; align-items: flex-start;
+      padding: 1.2rem 1.3rem; background: var(--white);
+      border: 1px solid var(--rule); border-radius: 10px;
+      transition: box-shadow var(--tr);
+    }
+    .phil-pillar:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
+    .phil-pillar-icon {
+      flex-shrink: 0; width: 44px; height: 44px; border-radius: 10px;
+      background: var(--gold-pale); display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .phil-pillar-title { font-family: var(--font-serif); font-size: 1rem; font-weight: 700; color: var(--maroon); margin-bottom: 0.3rem; }
+    .phil-pillar-desc { font-size: 0.8rem; line-height: 1.6; color: var(--muted); }
+
+    /* ═══════════════════════════════════════
+       SPIRITUAL FORMATION
+    ═══════════════════════════════════════ */
+    .spiritual { background: var(--maroon-dark); padding: 5.5rem 0; position: relative; overflow: hidden; }
+    .spiritual::before {
+      content: '✝'; position: absolute; left: -2rem; bottom: -4rem;
+      font-family: var(--font-serif); font-size: 28rem;
+      color: rgba(255,255,255,0.02); pointer-events: none; line-height: 1;
+    }
+    .spiritual .section-eyebrow .rule { background: var(--gold); }
+    .spiritual .eyebrow-label { color: var(--gold-light); }
+    .spiritual .section-title { color: var(--white); }
+    .spiritual-intro { max-width: 640px; font-size: 0.93rem; line-height: 1.85; color: rgba(255,255,255,0.6); margin-bottom: 3rem; }
+    .spiritual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .spiritual-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(184,134,42,0.2);
+      border-radius: 14px; padding: 2rem 1.75rem;
+      transition: background var(--tr), transform var(--tr);
+      position: relative; overflow: hidden;
+    }
+    .spiritual-card:hover { background: rgba(255,255,255,0.09); transform: translateY(-3px); }
+    .spiritual-card-num {
+      position: absolute; top: 1rem; right: 1.2rem;
+      font-family: var(--font-serif); font-size: 3rem; font-weight: 700;
+      color: rgba(184,134,42,0.12); line-height: 1;
+    }
+    .spiritual-card-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+    .spiritual-card-title { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--gold-light); margin-bottom: 0.5rem; }
+    .spiritual-card-body { font-size: 0.82rem; line-height: 1.7; color: rgba(255,255,255,0.55); }
+
+    /* Sacred Heart devotion spotlight */
+    .sacred-heart-bar {
+      margin-top: 4rem; padding: 2.5rem;
+      background: rgba(184,134,42,0.1);
+      border: 1px solid rgba(184,134,42,0.3);
+      border-radius: 16px;
+      display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: center;
+    }
+    .sh-bar-icon { font-size: 3.5rem; }
+    .sh-bar-title { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 700; color: var(--gold-light); margin-bottom: 0.5rem; }
+    .sh-bar-body { font-size: 0.85rem; line-height: 1.75; color: rgba(255,255,255,0.6); }
+
+    /* ═══════════════════════════════════════
+       COMMITMENT TO EXCELLENCE
+    ═══════════════════════════════════════ */
+    .excellence { background: var(--cream); }
+    .excellence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
+    .excellence-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .e-stat {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 14px; padding: 1.75rem 1.5rem;
+      text-align: center;
+      transition: box-shadow var(--tr), transform var(--tr);
+    }
+    .e-stat:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.09); transform: translateY(-2px); }
+    .e-stat-num { font-family: var(--font-serif); font-size: 2.5rem; font-weight: 700; color: var(--maroon); line-height: 1; }
+    .e-stat-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 0.4rem; }
+    .excellence-commitments { display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem; }
+    .commitment-row {
+      display: flex; gap: 1rem; align-items: flex-start;
+      padding: 1rem 1.2rem; background: var(--white);
+      border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0;
+      border-top: 1px solid var(--rule); border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    }
+    .commitment-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .commitment-title { font-weight: 600; font-size: 0.9rem; color: var(--ink); margin-bottom: 0.2rem; }
+    .commitment-desc { font-size: 0.79rem; color: var(--muted); line-height: 1.5; }
+
+    /* ═══════════════════════════════════════
+       SCRIPTURE / QUOTE INTERLUDE
+    ═══════════════════════════════════════ */
+    .scripture-interlude {
+      background: var(--parchment);
+      border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+      padding: 4.5rem 0; text-align: center;
+    }
+    .scripture-text {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: clamp(1.3rem, 2.5vw, 1.9rem);
+      color: var(--maroon); line-height: 1.6;
+      max-width: 760px; margin-inline: auto;
+    }
+    .scripture-ref { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-top: 1.2rem; }
+    .scripture-bar { width: 60px; height: 2px; background: var(--gold); margin: 1.5rem auto 0; }
+
+    /* ═══════════════════════════════════════
+       CTA BANNER
+    ═══════════════════════════════════════ */
+    .cta-banner { background: var(--maroon); padding: 4.5rem 0; }
+    .cta-inner { display: grid; grid-template-columns: 1fr auto; gap: 3rem; align-items: center; }
+    .cta-heading { font-family: var(--font-serif); font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; color: var(--white); margin-bottom: 0.6rem; }
+    .cta-sub { font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    .cta-actions { display: flex; flex-direction: column; gap: 0.8rem; align-items: flex-end; }
+    .btn-gold { display: inline-block; background: var(--gold); color: var(--maroon-dark); padding: 0.8rem 1.8rem; border-radius: 8px; font-size: 0.88rem; font-weight: 700; letter-spacing: 0.04em; transition: background var(--tr), transform var(--tr); white-space: nowrap; }
+    .btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); }
+    .btn-outline-white { display: inline-block; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); padding: 0.8rem 1.8rem; border-radius: 8px; font-size: 0.88rem; font-weight: 500; transition: border-color var(--tr), background var(--tr); white-space: nowrap; }
+    .btn-outline-white:hover { border-color: var(--gold); background: rgba(184,134,42,0.1); }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    .footer-contact { background: var(--maroon); padding: 4.5rem 0; }
+    .footer-inner { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 3rem; }
+    .footer-brand .f-logo-name { color: var(--gold-light); font-size: 1.15rem; display: block; font-family: var(--font-serif); font-weight: 700; }
+    .footer-brand .f-logo-tag  { color: rgba(255,255,255,0.4); font-size: 0.65rem; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+    .footer-motto { font-family: var(--font-serif); font-style: italic; font-size: 0.88rem; color: var(--gold); margin-top: 1rem; line-height: 1.5; }
+    .footer-brand p { font-size: 0.8rem; color: rgba(255,255,255,0.45); line-height: 1.7; margin-top: 0.75rem; }
+    .footer-col h4 { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-light); margin-bottom: 1rem; }
+    .footer-col ul { display: flex; flex-direction: column; gap: 0.55rem; }
+    .footer-col li { font-size: 0.8rem; color: rgba(255,255,255,0.5); display: flex; gap: 0.5rem; line-height: 1.5; }
+    .footer-col a { color: rgba(255,255,255,0.5); transition: color var(--tr); }
+    .footer-col a:hover { color: var(--gold-light); }
+    .footer-bottom { background: var(--maroon-dark); padding: 1.1rem 0; text-align: center; font-size: 0.72rem; color: rgba(255,255,255,0.3); border-top: 1px solid rgba(184,134,42,0.15); }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .mv-grid               { grid-template-columns: 1fr; }
+      .philosophy-card       { grid-template-columns: 1fr; gap: 1.5rem; }
+      .philosophy-icon-col   { text-align: left; display: flex; align-items: center; gap: 1rem; }
+      .values-intro-grid     { grid-template-columns: 1fr; gap: 3rem; }
+      .values-image          { height: 300px; }
+      .values-grid           { grid-template-columns: repeat(2, 1fr); }
+      .phil-grid             { grid-template-columns: 1fr; gap: 3rem; }
+      .phil-img-secondary    { display: none; }
+      .phil-img-main         { height: 300px; }
+      .spiritual-grid        { grid-template-columns: 1fr 1fr; }
+      .excellence-grid       { grid-template-columns: 1fr; gap: 3rem; }
+      .cta-inner             { grid-template-columns: 1fr; }
+      .cta-actions           { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+      .footer-inner          { grid-template-columns: 1fr 1fr; }
+      .footer-brand          { grid-column: span 2; }
+    }
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .hamburger { display: flex; }
+      .topbar-items { gap: 0.75rem; }
+      .topbar-motto { display: none; }
+      .values-grid { grid-template-columns: 1fr 1fr; }
+      .spiritual-grid { grid-template-columns: 1fr; }
+      .excellence-stats { grid-template-columns: 1fr 1fr; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: span 1; }
+      .sacred-heart-bar { grid-template-columns: 1fr; }
+      .sh-bar-icon { font-size: 2.5rem; }
+    }
+    @media (max-width: 480px) {
+      .values-grid { grid-template-columns: 1fr; }
+      .excellence-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════
+       TOPBAR
+  ═══════════════════════════════════════ -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-items">
+        <div class="topbar-item"><span class="ti">✉</span><span>info@saharcoaba.edu.ng</span></div>
+        <div class="topbar-item"><span class="ti">☎</span><span>+234 806 000 0000</span></div>
+        <div class="topbar-item"><span class="ti">📍</span><span>Eziukwu, Aba, Abia State</span></div>
+      </div>
+      <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════ -->
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest"
+               onerror="this.style.display='none';this.parentNode.style.background='var(--maroon)';this.parentNode.innerHTML+='<span style=font-family:var(--font-serif);font-size:1.3rem;color:var(--gold);margin:auto>✝</span>'" />
+        </div>
+        <div class="logo-text">
+          <a href="index.html"><span class="logo-name">Sacred Heart College</span></a>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="#"      class="nav-link">Home</a></li>
+          <li><a href="about.html"     class="nav-link">About</a></li>
+          <li><a href="mission .html"      class="nav-link active">Mission</a></li>
+          <li><a href="contact.html"     class="nav-link">Contact</a></li>
+          <li><a href="admission.html" class="nav-link">Admissions</a></li>
+          <li>
+            <a href="login.html" class="btn-admit nav-cta">
+              Login <ion-icon name="arrow-forward-outline"></ion-icon>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobile-nav">
+    <button class="mobile-close" id="mobile-close">✕</button>
+    <a href="index.html"            onclick="closeMobile()">Home</a>
+    <a href="about.html"            onclick="closeMobile()">About</a>
+    <a href="mission.html"          onclick="closeMobile()">Mission</a>
+    <a href="index.html#campus"     onclick="closeMobile()">Campus</a>
+    <a href="index.html#admissions" onclick="closeMobile()">Admissions</a>
+    <a href="index.html#contact"    onclick="closeMobile()">Contact</a>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       PAGE HERO
+  ═══════════════════════════════════════ -->
+  <div class="page-hero">
+    <div class="page-hero-bg"></div>
+    <div class="page-hero-overlay"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <nav class="breadcrumb">
+          <a href="index.html">Home</a>
+          <span class="sep">›</span>
+          <span class="current">Mission &amp; Vision</span>
+        </nav>
+        <div class="page-eyebrow">
+          <div class="page-eyebrow-line"></div>
+          <span class="page-eyebrow-text">Purpose · Faith · Direction</span>
+        </div>
+        <h1 class="page-title">Our <em>Mission,</em> Vision<br>&amp; Core Values</h1>
+        <p class="page-subtitle">
+          Everything SAHARCO does is anchored to a clear purpose: forming young men of deep faith, strong character, and academic excellence who will go out and bear witness to the truth in the world.
+        </p>
+      </div>
+      <div class="page-tabs-bar">
+        <div class="page-tabs">
+          <a href="#motto"      class="page-tab active">Our Motto</a>
+          <a href="#mv"         class="page-tab">Mission &amp; Vision</a>
+          <a href="#values"     class="page-tab">Core Values</a>
+          <a href="#philosophy" class="page-tab">Our Philosophy</a>
+          <a href="#spiritual"  class="page-tab">Spiritual Formation</a>
+          <a href="#excellence" class="page-tab">Excellence</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       MOTTO STRIP
+  ═══════════════════════════════════════ -->
+  <div class="motto-strip" id="motto">
+    <div class="container">
+      <div class="motto-inner">
+        <div class="motto-cross">✝</div>
+        <div class="motto-latin">Testimonium Perhibere Veritati</div>
+        <div class="motto-translation">To Bear Witness to the Truth</div>
+        <div class="motto-divider"></div>
+        <p class="motto-scripture">
+          "For this I was born, and for this I have come into the world,<br>
+          to bear witness to the truth. Everyone who is of the truth hears my voice."
+        </p>
+        <div class="motto-scripture-ref">— John 18 : 37</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       MISSION & VISION
+  ═══════════════════════════════════════ -->
+  <section class="section mv-section" id="mv">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Purpose &amp; Direction</span>
+      </div>
+      <h2 class="section-title">Mission &amp; Vision</h2>
+      <p class="section-body" style="max-width:620px;">
+        Our mission defines why we exist; our vision describes where we are going. Together they form the compass that orients every decision made at Sacred Heart College — from curriculum design to pastoral care.
+      </p>
+
+      <div class="mv-grid">
+        <!-- Mission -->
+        <div class="mv-card mission">
+          <div class="mv-card-inner">
+            <div class="mv-card-tag">🎯 Mission Statement</div>
+            <div class="mv-card-icon">⛪</div>
+            <h2 class="mv-card-heading">Why We Exist</h2>
+            <p class="mv-card-body">
+              To provide an excellent Catholic secondary education that forms young men of strong faith, sound character, and academic distinction — equipping them to bear witness to truth and to serve God and humanity with integrity, competence, and compassion.
+            </p>
+            <p class="mv-card-body" style="margin-top:1rem;">
+              Rooted in the spirituality of the Sacred Heart of Jesus and guided by the Catholic Diocese of Aba, we believe that a truly educated person is not merely technically proficient but morally formed, spiritually alive, and socially responsible.
+            </p>
+            <div class="mv-card-footer">
+              Founded 1957 · Catholic Diocese of Aba · Eziukwu, Aba
+            </div>
+          </div>
+        </div>
+
+        <!-- Vision -->
+        <div class="mv-card vision">
+          <div class="mv-card-inner">
+            <div class="mv-card-tag">🔭 Vision Statement</div>
+            <div class="mv-card-icon">🌟</div>
+            <h2 class="mv-card-heading">Where We Are Going</h2>
+            <p class="mv-card-body">
+              To be the leading Catholic secondary school in South-East Nigeria — a community of excellence where faith and reason flourish together, where every graduate is prepared for leadership in every arena of life, and where the name of Sacred Heart College stands as a synonym for integrity and distinction.
+            </p>
+            <p class="mv-card-body" style="margin-top:1rem;">
+              We envision a SAHARCO that continues to raise the standard — investing in faculty excellence, modern facilities, digital literacy, and spiritual depth — so that every young man who passes through our gates is equipped for the challenges of the 21st century while remaining firmly anchored in eternal values.
+            </p>
+            <div class="mv-card-footer">
+              A vision pursued since 1957 — and for generations to come
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Philosophy card -->
+      <div class="philosophy-card">
+        <div class="philosophy-icon-col">
+          <div class="philosophy-icon-big">📜</div>
+          <div class="philosophy-icon-label">Our Philosophy</div>
+        </div>
+        <div class="philosophy-body">
+          <h3>The Whole Person: Our Educational Philosophy</h3>
+          <p>
+            Sacred Heart College holds that education is the development of the whole person — mind, soul, and body. We reject the reduction of schooling to mere examination preparation. Academics, spiritual formation, discipline, co-curricular engagement, and community service are not competing priorities; they are facets of one integrated vision of human excellence.
+          </p>
+          <p>
+            This philosophy flows directly from the Catholic intellectual tradition, which has always insisted that faith and reason are not adversaries but partners — that the search for truth in the laboratory and the search for God in prayer are both expressions of the same fundamental human longing. At SAHARCO, that conviction shapes everything from how we teach science to how we conduct morning assembly.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════
+       SCRIPTURE INTERLUDE
+  ═══════════════════════════════════════ -->
+  <div class="scripture-interlude">
+    <div class="container">
+      <p class="scripture-text">
+        "Train up a child in the way he should go,<br>and when he is old he will not depart from it."
+      </p>
+      <div class="scripture-ref">Proverbs 22 : 6</div>
+      <div class="scripture-bar"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       CORE VALUES
+  ═══════════════════════════════════════ -->
+  <section class="section values-section" id="values">
+    <div class="container">
+      <div class="values-intro-grid">
+        <!-- Image side -->
+        <div class="values-image">
+          <img src="images/grotto.jpg" alt="Sacred Heart Grotto — heart of SAHARCO's spiritual identity" loading="lazy" />
+          <div class="values-image-badge">"Character is the foundation of greatness."</div>
+        </div>
+        <!-- Text side -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Core Values</span>
+          </div>
+          <h2 class="section-title">The Eight Pillars<br>of a SAHARCO Man</h2>
+          <blockquote class="values-pull">
+            "We do not simply want men who know things. We want men who are something — men of conscience, courage, and compassion."
+          </blockquote>
+          <p class="section-body">
+            These eight values are not a list of rules. They are a description of the kind of man SAHARCO forms — a man capable of standing for truth when it is inconvenient, of serving others when it is costly, and of pursuing excellence when mediocrity would suffice.
+          </p>
+          <p class="section-body">
+            Every activity, every lesson, every tradition at Sacred Heart College is oriented toward developing these qualities in each student — not because it makes good policy, but because the formation of good men is the reason this school exists.
+          </p>
+        </div>
+      </div>
+
+      <!-- 8 Value Cards -->
+      <div class="values-grid">
+        <div class="value-card">
+          <div class="value-card-num">01</div>
+          <div class="value-card-icon">✝️</div>
+          <div class="value-card-name">Faith</div>
+          <div class="value-card-desc">A living relationship with God, expressed through prayer, the sacraments, and the everyday choices of a Catholic man. Faith at SAHARCO is not an add-on — it is the foundation.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">02</div>
+          <div class="value-card-icon">📖</div>
+          <div class="value-card-name">Excellence</div>
+          <div class="value-card-desc">The relentless pursuit of the highest standard in everything — academic work, sport, art, and service. Excellence is not perfectionism; it is the refusal to accept less than your best.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">03</div>
+          <div class="value-card-icon">⚖️</div>
+          <div class="value-card-name">Integrity</div>
+          <div class="value-card-desc">Honesty and uprightness in all things — especially when no one is watching. A SAHARCO man keeps his word, acknowledges his mistakes, and refuses to compromise his conscience.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">04</div>
+          <div class="value-card-icon">🤝</div>
+          <div class="value-card-name">Service</div>
+          <div class="value-card-desc">Contributing selflessly to family, community, Church, and nation. True education is never merely for personal gain — it is given so that it may be given away to those in need.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">05</div>
+          <div class="value-card-icon">🛡️</div>
+          <div class="value-card-name">Discipline</div>
+          <div class="value-card-desc">Self-mastery: the ability to govern one's desires, emotions, and impulses in accordance with reason and faith. Discipline is freedom — it is what separates the reactive from the purposeful.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">06</div>
+          <div class="value-card-icon">🤲</div>
+          <div class="value-card-name">Compassion</div>
+          <div class="value-card-desc">The Sacred Heart's call to see Christ in every person — especially the marginalised, the suffering, and the forgotten. Compassion transforms knowledge into wisdom and ambition into vocation.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">07</div>
+          <div class="value-card-icon">🏆</div>
+          <div class="value-card-name">Brotherhood</div>
+          <div class="value-card-desc">Solidarity among students, staff, and alumni — the bonds forged at SAHARCO last a lifetime. Brotherhood means that no one is left behind, that we celebrate each other's successes, and bear each other's burdens.</div>
+          <div class="value-card-line"></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-num">08</div>
+          <div class="value-card-icon">💡</div>
+          <div class="value-card-name">Creativity</div>
+          <div class="value-card-desc">The imagination to see new possibilities, the courage to attempt what has not been tried, and the curiosity that keeps a mind alive and growing long after school is over.</div>
+          <div class="value-card-line"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════
+       CATHOLIC EDUCATIONAL PHILOSOPHY
+  ═══════════════════════════════════════ -->
+  <section class="section philosophy-section" id="philosophy">
+    <div class="container">
+      <div class="phil-grid">
+        <!-- Image stack -->
+        <div class="phil-image-stack">
+          <div class="phil-img-main">
+            <img src="images/sahaco academic sections.JPG" alt="SAHARCO Academic Classrooms" loading="lazy" />
+          </div>
+          <div class="phil-img-secondary">
+            <img src="images/inside conference hall.jpg" alt="Conference Hall — Site of Formation" loading="lazy" />
+          </div>
+        </div>
+
+        <!-- Text -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Catholic Education</span>
+          </div>
+          <h2 class="section-title">The Philosophy Behind<br>Everything We Do</h2>
+          <p class="section-body">
+            The Catholic tradition has been producing great schools for centuries — not by accident, but because it holds a rich and coherent understanding of the human person and the purpose of education. Sacred Heart College is proudly heir to that tradition.
+          </p>
+          <div class="phil-pillars">
+            <div class="phil-pillar">
+              <div class="phil-pillar-icon">🧠</div>
+              <div>
+                <div class="phil-pillar-title">Faith &amp; Reason Together</div>
+                <div class="phil-pillar-desc">The Catholic tradition insists that faith and reason are not rivals. SAHARCO teaches students to think rigorously and believe deeply — understanding that the same God who revealed himself in Scripture also wrote the laws of mathematics into the fabric of creation.</div>
+              </div>
+            </div>
+            <div class="phil-pillar">
+              <div class="phil-pillar-icon">🌱</div>
+              <div>
+                <div class="phil-pillar-title">Integral Human Development</div>
+                <div class="phil-pillar-desc">A Catholic school does not educate a student's intellect while leaving his soul and body untouched. Academics, spiritual life, physical development, emotional maturity, and social responsibility are developed together as dimensions of one human person.</div>
+              </div>
+            </div>
+            <div class="phil-pillar">
+              <div class="phil-pillar-icon">🕊️</div>
+              <div>
+                <div class="phil-pillar-title">Education as a Vocation</div>
+                <div class="phil-pillar-desc">Teaching at SAHARCO is understood as a participation in the mission of the Church — not merely a profession. Our teachers are committed to the formation of their students, not merely to the delivery of content.</div>
+              </div>
+            </div>
+            <div class="phil-pillar">
+              <div class="phil-pillar-icon">🌍</div>
+              <div>
+                <div class="phil-pillar-title">Education for the Common Good</div>
+                <div class="phil-pillar-desc">SAHARCO graduates are formed not to extract from society, but to contribute to it. The Church's social teaching — solidarity, subsidiarity, the preferential option for the poor — shapes how we understand the purpose of a good education.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════
+       SPIRITUAL FORMATION
+  ═══════════════════════════════════════ -->
+  <section class="spiritual" id="spiritual">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Spiritual Life</span>
+      </div>
+      <h2 class="section-title">Spiritual Formation<br>at SAHARCO</h2>
+      <p class="spiritual-intro">
+        Spiritual formation is not a department at Sacred Heart College — it is the atmosphere of the whole school. Every aspect of life at SAHARCO is ordered toward helping students grow in their relationship with God and their understanding of what it means to live well.
+      </p>
+
+      <div class="spiritual-grid">
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">01</div>
+          <div class="spiritual-card-icon">🙏</div>
+          <div class="spiritual-card-title">Daily Prayer</div>
+          <div class="spiritual-card-body">Each school day begins and ends with communal prayer. Morning assembly, the Angelus, and evening prayer mark the rhythm of school life and remind students that all they do is offered to God.</div>
+        </div>
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">02</div>
+          <div class="spiritual-card-icon">⛪</div>
+          <div class="spiritual-card-title">Holy Mass</div>
+          <div class="spiritual-card-body">Regular celebration of the Eucharist is central to SAHARCO's Catholic identity. School Mass on feast days, Marian celebrations, and special occasions gather the whole school community around the altar.</div>
+        </div>
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">03</div>
+          <div class="spiritual-card-icon">🕊️</div>
+          <div class="spiritual-card-title">Retreats &amp; Recollections</div>
+          <div class="spiritual-card-body">Annual retreats for each class provide students with space for quiet reflection, confession, spiritual direction, and renewal. These are among the most formative experiences of a SAHARCO education.</div>
+        </div>
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">04</div>
+          <div class="spiritual-card-icon">📿</div>
+          <div class="spiritual-card-title">Marian Devotion</div>
+          <div class="spiritual-card-body">Devotion to Our Lady is woven into school life — the Rosary, Marian hymns, and the month of May celebrations form students in love for the Mother of God and her virtues of humility and service.</div>
+        </div>
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">05</div>
+          <div class="spiritual-card-icon">📖</div>
+          <div class="spiritual-card-title">Christian Religious Studies</div>
+          <div class="spiritual-card-body">CRS is taught not merely as an examinable subject but as genuine formation in Scripture, Church history, and moral theology — equipping students to give a reason for the faith they hold.</div>
+        </div>
+        <div class="spiritual-card">
+          <div class="spiritual-card-num">06</div>
+          <div class="spiritual-card-icon">🤲</div>
+          <div class="spiritual-card-title">Community Service</div>
+          <div class="spiritual-card-body">Students are regularly engaged in service to the surrounding Eziukwu community — visiting the sick, supporting the poor, and participating in diocesan outreach events. Faith without works is dead.</div>
+        </div>
+      </div>
+
+      <!-- Sacred Heart devotion spotlight -->
+      <div class="sacred-heart-bar">
+        <div class="sh-bar-icon">❤️‍🔥</div>
+        <div>
+          <div class="sh-bar-title">The Sacred Heart of Jesus — Our Patron &amp; Inspiration</div>
+          <div class="sh-bar-body">The school takes its name and identity from devotion to the Sacred Heart of Jesus — the heart that loved humanity so much that it offered itself completely. This devotion, central to the spirituality of the Catholic Church, calls SAHARCO students to love as Christ loves: without reservation, without condition, and without counting the cost. The Sacred Heart is not merely a symbol on our crest; it is the spiritual DNA of everything we do.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════
+       COMMITMENT TO EXCELLENCE
+  ═══════════════════════════════════════ -->
+  <section class="section excellence" id="excellence">
+    <div class="container">
+      <div class="excellence-grid">
+        <!-- Stats -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">The Numbers</span>
+          </div>
+          <h2 class="section-title">Excellence in<br>Every Measure</h2>
+          <p class="section-body" style="margin-bottom:1.8rem;">
+            Our mission is not mere aspiration — it has produced measurable results across generations of students who have gone on to distinguish themselves in every field.
+          </p>
+          <div class="excellence-stats">
+            <div class="e-stat">
+              <div class="e-stat-num">67+</div>
+              <div class="e-stat-label">Years of Excellence</div>
+            </div>
+            <div class="e-stat">
+              <div class="e-stat-num">3,000+</div>
+              <div class="e-stat-label">Proud Alumni</div>
+            </div>
+            <div class="e-stat">
+              <div class="e-stat-num">100%</div>
+              <div class="e-stat-label">Catholic Identity</div>
+            </div>
+            <div class="e-stat">
+              <div class="e-stat-num">6</div>
+              <div class="e-stat-label">Class Arms JS–SS</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commitments -->
+        <div>
+          <div class="section-eyebrow" style="margin-bottom:1.4rem;">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Our Commitments</span>
+          </div>
+          <p class="section-body" style="margin-bottom:1.5rem;">
+            These are not promises we make lightly. They represent the standards every teacher, administrator, and student at SAHARCO is held to.
+          </p>
+          <div class="excellence-commitments">
+            <div class="commitment-row">
+              <div class="commitment-icon">📚</div>
+              <div>
+                <div class="commitment-title">Academic Rigour Without Compromise</div>
+                <div class="commitment-desc">Every student is challenged to reach his highest academic potential through structured teaching, regular assessment, and dedicated faculty support.</div>
+              </div>
+            </div>
+            <div class="commitment-row">
+              <div class="commitment-icon">🛡️</div>
+              <div>
+                <div class="commitment-title">A Safe, Ordered Environment</div>
+                <div class="commitment-desc">SAHARCO maintains firm and fair discipline — not to suppress boys, but to create the conditions in which they can flourish, focus, and grow.</div>
+              </div>
+            </div>
+            <div class="commitment-row">
+              <div class="commitment-icon">👨‍🏫</div>
+              <div>
+                <div class="commitment-title">Dedicated, Qualified Staff</div>
+                <div class="commitment-desc">Our teachers are professionals who invest in continuous development and who understand that their vocation extends beyond subject knowledge to human formation.</div>
+              </div>
+            </div>
+            <div class="commitment-row">
+              <div class="commitment-icon">🔬</div>
+              <div>
+                <div class="commitment-title">Modern Facilities &amp; Resources</div>
+                <div class="commitment-desc">From science laboratories to our e-library and ICT centre, SAHARCO invests in the infrastructure that enables 21st-century learning.</div>
+              </div>
+            </div>
+            <div class="commitment-row">
+              <div class="commitment-icon">🤝</div>
+              <div>
+                <div class="commitment-title">Partnership with Parents &amp; Diocese</div>
+                <div class="commitment-desc">The formation of a young man is a shared mission between the school, the family, and the Church. SAHARCO is committed to that partnership.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════
+       CTA BANNER
+  ═══════════════════════════════════════ -->
+  <div class="cta-banner">
+    <div class="container">
+      <div class="cta-inner">
+        <div>
+          <h2 class="cta-heading">Become Part of the<br>SAHARCO Story</h2>
+          <p class="cta-sub">
+            A school is only as strong as the people who believe in its mission. Whether as a student, a parent, or an Old Boy — there is a place for you here.
+          </p>
+        </div>
+        <div class="cta-actions">
+          <a href="index.html#admissions" class="btn-gold">Apply for Admission →</a>
+          <a href="about.html"            class="btn-outline-white">Learn Our History</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════ -->
+  <footer class="footer-contact" id="contact">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="f-logo-name">Sacred Heart College</span>
+          <span class="f-logo-tag">SAHARCO · Eziukwu Aba · Est. 1957</span>
+          <div class="footer-motto">"Testimonium Perhibere Veritati"<br>To Bear Witness to the Truth</div>
+          <p>A Catholic boys' secondary school under the Catholic Diocese of Aba, dedicated to forming young men of faith, character, and academic excellence.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <ul>
+            <li>📍 Eziukwu Road, Aba, Abia State, Nigeria</li>
+            <li>☎ <a href="tel:+2348060000000">+234 806 000 0000</a></li>
+            <li>✉ <a href="mailto:info@saharcoaba.edu.ng">info@saharcoaba.edu.ng</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Explore</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About SAHARCO</a></li>
+            <li><a href="mission.html">Mission &amp; Vision</a></li>
+            <li><a href="index.html#campus">Campus &amp; Facilities</a></li>
+            <li><a href="index.html#admissions">Admissions</a></li>
+            <li><a href="school-management.html">Staff Portal</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <div class="footer-bottom">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO) · All rights reserved · Catholic Diocese of Aba
+    </div>
+  </div>
+
+  <script>
+    // Header scroll shadow
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // Mobile nav
+    document.getElementById('hamburger').addEventListener('click', () =>
+      document.getElementById('mobile-nav').classList.add('open'));
+    document.getElementById('mobile-close').addEventListener('click', () =>
+      document.getElementById('mobile-nav').classList.remove('open'));
+    function closeMobile() { document.getElementById('mobile-nav').classList.remove('open'); }
+
+    // Active page tab on scroll
+    const tabIds = ['motto','mv','values','philosophy','spiritual','excellence'];
+    const tabs    = document.querySelectorAll('.page-tab');
+    window.addEventListener('scroll', () => {
+      let current = tabIds[0];
+      tabIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && window.scrollY >= el.offsetTop - 160) current = id;
+      });
+      tabs.forEach(t => {
+        t.classList.toggle('active', t.getAttribute('href') === '#' + current);
+      });
+    }, { passive: true });
+  </script>
+
+</body>
+</html>

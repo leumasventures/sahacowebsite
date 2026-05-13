@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Contact Sacred Heart College Eziukwu Aba (SAHARCO). Reach out to us for admissions, inquiries, or visits. Catholic boys' secondary school in Aba, Abia State." />
+  <title>Contact Us | Sacred Heart College Eziukwu Aba (SAHARCO)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img  { max-width: 100%; height: auto; display: block; }
+    a    { text-decoration: none; color: inherit; }
+    ul   { list-style: none; }
+
+    .container { max-width: 1160px; margin-inline: auto; padding-inline: 28px; }
+
+    /* ═══════════════════════════════════════
+       TOPBAR & HEADER (Same as main site)
+    ═══════════════════════════════════════ */
+    .topbar {
+      background: var(--maroon-dark);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(184,134,42,0.25);
+    }
+    .topbar .container {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; font-weight: 500;
+      color: rgba(255,255,255,0.55); letter-spacing: 0.04em;
+    }
+    .topbar-item .ti { color: var(--gold-light); font-size: 0.9rem; }
+    .topbar-motto {
+      font-family: var(--font-serif);
+      font-style: italic; font-size: 0.75rem;
+      color: var(--gold-light); letter-spacing: 0.02em;
+    }
+
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--white);
+      border-bottom: 1px solid var(--rule);
+      transition: box-shadow var(--tr);
+    }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner {
+      display: flex; align-items: center; gap: 1.5rem;
+      padding-block: 12px;
+    }
+
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+    .crest {
+      width: 58px; height: 58px; border-radius: 50%; overflow: hidden;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 3px rgba(184,134,42,0.15);
+      flex-shrink: 0;
+    }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .crest-placeholder {
+      width: 100%; height: 100%;
+      background: var(--maroon);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 1.4rem; color: var(--gold);
+    }
+    .logo-text { line-height: 1.2; }
+    .logo-name {
+      display: block;
+      font-family: var(--font-serif);
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--maroon); letter-spacing: 0.02em;
+    }
+    .logo-tag {
+      display: block;
+      font-size: 0.65rem; font-weight: 600;
+      color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav { margin-left: auto; }
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-light); border-radius: 6px;
+      transition: background var(--tr), color var(--tr);
+    }
+    .nav-link:hover { background: var(--parchment); color: var(--maroon); }
+    .nav-link.active { color: var(--maroon); font-weight: 600; background: var(--parchment); }
+
+    .nav-cta {
+      margin-left: 0.5rem;
+      background: var(--maroon); color: var(--white);
+      padding: 0.45rem 1.1rem; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 600;
+      transition: background var(--tr);
+    }
+    .nav-cta:hover { background: var(--maroon-mid); }
+
+    .hamburger {
+      display: none; margin-left: auto;
+      background: none; border: none; cursor: pointer;
+      flex-direction: column; gap: 5px; padding: 4px;
+    }
+    .hamburger span {
+      display: block; width: 24px; height: 2px;
+      background: var(--maroon); border-radius: 2px;
+      transition: transform var(--tr), opacity var(--tr);
+    }
+
+    /* ═══════════════════════════════════════
+       CONTACT HERO
+    ═══════════════════════════════════════ */
+    .contact-hero {
+      background: var(--maroon-dark);
+      min-height: 65vh;
+      display: flex; align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .contact-hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('images/sahaco gate.JPG');
+      background-size: cover; background-position: center;
+      filter: brightness(0.35) saturate(0.75);
+    }
+    .contact-hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(62,8,8,0.85) 0%, rgba(107,18,18,0.6) 100%);
+    }
+    .contact-hero-content {
+      position: relative; z-index: 2;
+      max-width: 720px;
+    }
+    .contact-hero .hero-eyebrow-text { color: var(--gold-light); }
+    .contact-hero .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.6rem, 5vw, 3.8rem);
+      line-height: 1.1;
+      color: var(--white);
+    }
+
+    /* ═══════════════════════════════════════
+       CONTACT SECTION
+    ═══════════════════════════════════════ */
+    .contact-section {
+      padding: 6rem 0;
+      background: var(--white);
+    }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .contact-info h3 {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      color: var(--maroon);
+      margin-bottom: 1.5rem;
+    }
+    .contact-block {
+      margin-bottom: 2.5rem;
+    }
+    .contact-block h4 {
+      font-size: 0.95rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .contact-item {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+      font-size: 0.95rem;
+      color: var(--ink-light);
+    }
+    .contact-item .icon {
+      font-size: 1.4rem;
+      color: var(--gold);
+      width: 28px;
+    }
+
+    .contact-form {
+      background: var(--parchment);
+      padding: 2.5rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+    }
+    .contact-form h3 {
+      font-family: var(--font-serif);
+      color: var(--maroon);
+      margin-bottom: 1.5rem;
+    }
+    .form-group {
+      margin-bottom: 1.4rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink-light);
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.9rem 1.1rem;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    .form-group textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+    .submit-btn {
+      background: var(--maroon);
+      color: var(--white);
+      padding: 0.95rem 2.2rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: var(--tr);
+      width: 100%;
+    }
+    .submit-btn:hover {
+      background: var(--maroon-mid);
+      transform: translateY(-2px);
+    }
+
+    /* Map */
+    .map-container {
+      margin-top: 3rem;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .map-container iframe {
+      width: 100%;
+      height: 380px;
+      border: none;
+    }
+
+    /* Footer */
+    .contact-strip {
+      background: var(--maroon);
+      padding: 4.5rem 0;
+    }
+    .contact-inner {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 3rem;
+    }
+    .contact-brand .logo-name { color: var(--gold-light); font-size: 1.2rem; display: block; font-family: var(--font-serif); font-weight: 700; }
+    .contact-brand .logo-tag  { color: rgba(255,255,255,0.45); font-size: 0.65rem; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+    .contact-motto {
+      font-family: var(--font-serif);
+      font-style: italic; font-size: 0.88rem;
+      color: var(--gold); margin-top: 1rem;
+      line-height: 1.5;
+    }
+    .contact-brand p {
+      font-size: 0.8rem; color: rgba(255,255,255,0.45);
+      line-height: 1.7; margin-top: 0.75rem;
+    }
+    .contact-col h4 {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--gold-light); margin-bottom: 1rem;
+    }
+    .contact-col ul { display: flex; flex-direction: column; gap: 0.55rem; }
+    .contact-col li {
+      font-size: 0.8rem; color: rgba(255,255,255,0.55);
+      display: flex; gap: 0.5rem; line-height: 1.5;
+    }
+    .contact-col a { color: rgba(255,255,255,0.55); transition: color var(--tr); }
+    .contact-col a:hover { color: var(--gold-light); }
+    .footer-bottom {
+      background: var(--maroon-dark);
+      padding: 1.1rem 0;
+      text-align: center;
+      font-size: 0.72rem; color: rgba(255,255,255,0.3);
+      border-top: 1px solid rgba(184,134,42,0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .contact-grid { grid-template-columns: 1fr; gap: 4rem; }
+    }
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .hamburger { display: flex; }
+      .contact-hero { min-height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-items">
+        <div class="topbar-item">
+          <span class="ti">✉</span>
+          <span>sacredheartcollege1957@gmail.com</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">☎</span>
+          <span>+234 802 541 1061</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">📍</span>
+          <span>Eziukwu, Aba, Abia State</span>
+        </div>
+      </div>
+      <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" onerror="this.parentNode.innerHTML='<div class=\'crest-placeholder\'>✝</div>'" />
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="#"      class="nav-link">Home</a></li>
+          <li><a href="about.html"     class="nav-link">About</a></li>
+          <li><a href="mission .html"      class="nav-link">Mission</a></li>
+          <li><a href="contact.html"     class="nav-link active">Contact</a></li>
+          <li><a href="admission.html" class="nav-link">Admissions</a></li>
+          <li>
+            <a href="login.html" class="btn-admit nav-cta">
+              Login <ion-icon name="arrow-forward-outline"></ion-icon>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobile-nav" style="display:none; position:fixed; inset:0; z-index:300; background:var(--maroon-dark); flex-direction:column; align-items:center; justify-content:center; gap:1.5rem;">
+    <button class="mobile-close" id="mobile-close" style="position:absolute; top:1.5rem; right:1.5rem; background:none; border:none; color:white; font-size:2rem;">✕</button>
+    <a href="index.html" style="color:white; font-size:1.6rem;">Home</a>
+    <a href="index.html#about" style="color:white; font-size:1.6rem;">About Us</a>
+    <a href="index.html#faith" style="color:white; font-size:1.6rem;">Mission</a>
+    <a href="#" style="color:white; font-size:1.6rem;">Contact</a>
+    <a href="index.html#admissions" style="color:white; font-size:1.6rem;">Admissions</a>
+  </div>
+
+  <!-- CONTACT HERO -->
+  <section class="contact-hero">
+    <div class="contact-hero-bg"></div>
+    <div class="contact-hero-overlay"></div>
+    <div class="container" style="position:relative; z-index:2;">
+      <div class="contact-hero-content">
+        <div class="hero-eyebrow" style="margin-bottom:1rem;">
+          <span class="hero-eyebrow-text" style="font-size:0.8rem; letter-spacing:0.2em;">GET IN TOUCH</span>
+        </div>
+        <h1 class="hero-title">Contact SAHARCO</h1>
+        <p style="color:rgba(255,255,255,0.85); font-size:1.1rem; max-width:520px; margin-top:1rem;">
+          We are always happy to hear from prospective parents, alumni, and friends of the college.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN CONTACT SECTION -->
+  <section class="contact-section">
+    <div class="container">
+      <div class="contact-grid">
+        
+        <!-- Contact Information -->
+        <div class="contact-info">
+          <h3>Visit or Reach Us</h3>
+          
+          <div class="contact-block">
+            <h4>Physical Address</h4>
+            <div class="contact-item">
+              <span class="icon">📍</span>
+              <div>
+                Sacred Heart College Eziukwu Aba<br>
+                Eziukwu Road, Aba<br>
+                Abia State, Nigeria
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-block">
+            <h4>Phone Numbers</h4>
+            <div class="contact-item">
+              <span class="icon">☎</span>
+              <div>
+                <a href="tel:+2348025411061">+234 802 541 1061</a><br>
+                <a href="tel:+234803xxx xxxx">+234 803 123 4567</a> (Admissions)
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-block">
+            <h4>Email</h4>
+            <div class="contact-item">
+              <span class="icon">✉</span>
+              <div>
+                <a href="mailto:sacredheartcollege1957@gmail.com">sacredheartcollege1957@gmail.com</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-block">
+            <h4>Office Hours</h4>
+            <p style="color:var(--muted); line-height:1.7;">
+              Monday – Friday: 8:00 AM – 4:00 PM<br>
+              Saturday: 9:00 AM – 1:00 PM<br>
+              <strong>School Hours:</strong> 7:30 AM – 3:30 PM
+            </p>
+          </div>
+        </div>
+
+        <!-- Contact Form -->
+        <div>
+          <div class="contact-form">
+            <h3>Send us a Message</h3>
+            <form id="contactForm">
+              <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" required placeholder="Your full name">
+              </div>
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" required placeholder="your@email.com">
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="+234">
+              </div>
+              <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" required placeholder="e.g. Admission Inquiry">
+              </div>
+              <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" required placeholder="How can we help you?"></textarea>
+              </div>
+              <button type="submit" class="submit-btn">Send Message</button>
+            </form>
+          </div>
+
+          <!-- Map -->
+          <div class="map-container">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.123456789012!2d7.123456!3d5.123456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNXN5Yg!5e0!3m2!1sen!2sng!4v1234567890" allowfullscreen="" loading="lazy"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="contact-strip" id="contact">
+    <div class="container">
+      <div class="contact-inner">
+        <div class="contact-brand">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba · Est. 1957</span>
+          <div class="contact-motto">"Testimonium Perhibere Veritati"<br>To Bear Witness to the Truth</div>
+          <p>A Catholic boys' secondary school under the Catholic Diocese of Aba.</p>
+        </div>
+        <div class="contact-col">
+          <h4>Contact</h4>
+          <ul>
+            <li>📍 Eziukwu Road, Aba, Abia State</li>
+            <li>☎ <a href="tel:+2348025411061">+234 802 541 1061</a></li>
+            <li>✉ <a href="mailto:sacredheartcollege1957@gmail.com">sacredheartcollege1957@gmail.com</a></li>
+          </ul>
+        </div>
+        <div class="contact-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html#about">About SAHARCO</a></li>
+            <li><a href="index.html#campus">Campus Facilities</a></li>
+            <li><a href="index.html#faith">Our Mission</a></li>
+            <li><a href="index.html#admissions">Admissions</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <div class="footer-bottom">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO) · All rights reserved · Catholic Diocese of Aba 
+      <p style="margin-top:6px;">Created by: Chigbo Samuel (Leumas IT Nexus)</p>
+    </div>
+  </div>
+
+  <script>
+    // Header scroll
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Mobile nav
+    const hamburger = document.getElementById('hamburger');
+    const mobileNav = document.getElementById('mobile-nav');
+    const mobileClose = document.getElementById('mobile-close');
+
+    hamburger.addEventListener('click', () => mobileNav.style.display = 'flex');
+    mobileClose.addEventListener('click', () => mobileNav.style.display = 'none');
+
+    // Simple form handling
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      alert("Thank you! Your message has been received. We will respond shortly.");
+      this.reset();
+    });
+  </script>
+
+</body>
+</html>

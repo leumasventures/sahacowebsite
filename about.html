@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="About Sacred Heart College Eziukwu Aba (SAHARCO) — Our history, mission, values, leadership, and the people who make SAHARCO a beacon of excellence since 1957." />
+  <title>About Us | Sacred Heart College Eziukwu Aba — SAHARCO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════ */
+    :root {
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img  { max-width: 100%; height: auto; display: block; }
+    a    { text-decoration: none; color: inherit; }
+    ul   { list-style: none; }
+
+    .container { max-width: 1160px; margin-inline: auto; padding-inline: 28px; }
+
+    /* ═══════════════════════════════════════
+       TOPBAR
+    ═══════════════════════════════════════ */
+    .topbar {
+      background: var(--maroon-dark);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(184,134,42,0.25);
+    }
+    .topbar .container {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; font-weight: 500;
+      color: rgba(255,255,255,0.55); letter-spacing: 0.04em;
+    }
+    .topbar-item .ti { color: var(--gold-light); }
+    .topbar-motto {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 0.75rem; color: var(--gold-light); letter-spacing: 0.02em;
+    }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--white);
+      border-bottom: 1px solid var(--rule);
+      transition: box-shadow var(--tr);
+    }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner { display: flex; align-items: center; gap: 1.5rem; padding-block: 12px; }
+
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+    .crest {
+      width: 58px; height: 58px; border-radius: 50%; overflow: hidden;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 3px rgba(184,134,42,0.15); flex-shrink: 0;
+    }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-text { line-height: 1.2; }
+    .logo-name {
+      display: block; font-family: var(--font-serif);
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--maroon); letter-spacing: 0.02em;
+    }
+    .logo-tag {
+      display: block; font-size: 0.65rem; font-weight: 600;
+      color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px;
+    }
+
+    .nav { margin-left: auto; }
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link {
+      padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-light); border-radius: 6px;
+      transition: background var(--tr), color var(--tr);
+    }
+    .nav-link:hover { background: var(--parchment); color: var(--maroon); }
+    .nav-link.active { color: var(--maroon); font-weight: 600; background: var(--gold-pale); }
+    .nav-cta {
+      margin-left: 0.5rem; background: var(--maroon); color: var(--white);
+      padding: 0.45rem 1.1rem; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 600; transition: background var(--tr);
+    }
+    .nav-cta:hover { background: var(--maroon-mid); }
+
+    .hamburger {
+      display: none; margin-left: auto; background: none; border: none; cursor: pointer;
+      flex-direction: column; gap: 5px; padding: 4px;
+    }
+    .hamburger span {
+      display: block; width: 24px; height: 2px;
+      background: var(--maroon); border-radius: 2px;
+    }
+
+    /* Mobile Nav */
+    .mobile-nav {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: var(--maroon-dark);
+      flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem;
+    }
+    .mobile-nav.open { display: flex; }
+    .mobile-nav a { font-family: var(--font-serif); font-size: 1.6rem; color: rgba(255,255,255,0.8); transition: color var(--tr); }
+    .mobile-nav a:hover { color: var(--gold-light); }
+    .mobile-close { position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 1.5rem; }
+
+    /* ═══════════════════════════════════════
+       PAGE HERO (banner style — not full-screen)
+    ═══════════════════════════════════════ */
+    .page-hero {
+      position: relative; overflow: hidden;
+      background: var(--maroon-dark);
+      padding: 5rem 0 4rem;
+    }
+    .page-hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('images/sahaco academic sections.JPG');
+      background-size: cover; background-position: center 40%;
+      filter: brightness(0.22) saturate(0.6);
+    }
+    .page-hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(100deg, rgba(62,8,8,0.9) 0%, rgba(107,18,18,0.5) 60%, rgba(30,4,4,0.85) 100%);
+    }
+    .page-hero-content { position: relative; z-index: 2; }
+    .breadcrumb {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .breadcrumb a, .breadcrumb span {
+      font-size: 0.72rem; font-weight: 500;
+      color: rgba(255,255,255,0.45); letter-spacing: 0.06em;
+    }
+    .breadcrumb a:hover { color: var(--gold-light); }
+    .breadcrumb .sep { color: rgba(255,255,255,0.25); }
+    .breadcrumb .current { color: var(--gold-light); }
+    .page-eyebrow {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem;
+    }
+    .page-eyebrow-line { width: 32px; height: 1px; background: var(--gold); }
+    .page-eyebrow-text {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold-light);
+    }
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 700; color: var(--white); line-height: 1.1;
+      margin-bottom: 1.1rem;
+    }
+    .page-title em { color: var(--gold-light); font-style: italic; }
+    .page-subtitle {
+      font-size: 1rem; line-height: 1.75;
+      color: rgba(255,255,255,0.65); max-width: 580px;
+    }
+
+    /* Page nav tabs anchored inside hero bottom */
+    .page-tabs-bar {
+      position: relative; z-index: 2;
+      margin-top: 3rem;
+      border-top: 1px solid rgba(184,134,42,0.2);
+      padding-top: 0;
+    }
+    .page-tabs {
+      display: flex; gap: 0; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .page-tabs::-webkit-scrollbar { display: none; }
+    .page-tab {
+      padding: 0.9rem 1.3rem;
+      font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.45);
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color var(--tr), border-color var(--tr);
+    }
+    .page-tab:hover { color: rgba(255,255,255,0.8); }
+    .page-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
+
+    /* ═══════════════════════════════════════
+       SECTION COMMON
+    ═══════════════════════════════════════ */
+    .section { padding: 5.5rem 0; }
+    .section-eyebrow { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; }
+    .section-eyebrow .rule { flex: none; width: 32px; height: 1.5px; background: var(--gold); }
+    .eyebrow-label {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold);
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+      font-weight: 700; line-height: 1.15; color: var(--maroon);
+      margin-bottom: 1rem;
+    }
+    .section-body {
+      font-size: 0.93rem; line-height: 1.85; color: var(--ink-light);
+    }
+    .section-body + .section-body { margin-top: 0.9rem; }
+
+    /* ═══════════════════════════════════════
+       HISTORY TIMELINE
+    ═══════════════════════════════════════ */
+    .history { background: var(--cream); }
+    .history-intro-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 5rem; align-items: center; margin-bottom: 5rem;
+    }
+    .history-image {
+      position: relative; border-radius: 12px; overflow: hidden;
+      height: 420px; box-shadow: 0 20px 56px rgba(0,0,0,0.16);
+    }
+    .history-image img { width: 100%; height: 100%; object-fit: cover; }
+    .history-image-caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(30,4,4,0.8));
+      padding: 2rem 1.2rem 1.2rem;
+      font-size: 0.75rem; color: rgba(255,255,255,0.7);
+      font-style: italic;
+    }
+    .history-pull {
+      font-family: var(--font-serif);
+      font-size: 1.35rem; font-style: italic;
+      color: var(--maroon); line-height: 1.55;
+      border-left: 3px solid var(--gold);
+      padding-left: 1.4rem; margin: 1.5rem 0;
+    }
+
+    /* Timeline */
+    .timeline { position: relative; padding-left: 2.2rem; }
+    .timeline::before {
+      content: ''; position: absolute;
+      left: 8px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(to bottom, var(--gold), rgba(184,134,42,0.1));
+    }
+    .tl-item { position: relative; margin-bottom: 2.2rem; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-dot {
+      position: absolute; left: -2.2rem; top: 4px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--white); border: 2.5px solid var(--gold);
+      box-shadow: 0 0 0 3px rgba(184,134,42,0.15);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tl-dot.major { background: var(--gold); border-color: var(--maroon); }
+    .tl-dot.major::after {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--white);
+    }
+    .tl-year {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem;
+    }
+    .tl-title {
+      font-family: var(--font-serif); font-size: 1.05rem; font-weight: 600;
+      color: var(--maroon); margin-bottom: 0.3rem;
+    }
+    .tl-desc { font-size: 0.82rem; line-height: 1.65; color: var(--muted); }
+
+    /* ═══════════════════════════════════════
+       MISSION / VISION / VALUES
+    ═══════════════════════════════════════ */
+    .mvv { background: var(--parchment); }
+    .mvv-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem; margin-top: 2.5rem;
+    }
+    .mvv-card {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 14px; padding: 2rem 1.75rem;
+      position: relative; overflow: hidden;
+      transition: box-shadow var(--tr), transform var(--tr);
+    }
+    .mvv-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.10); transform: translateY(-3px); }
+    .mvv-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--maroon), var(--gold));
+    }
+    .mvv-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .mvv-label {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem;
+    }
+    .mvv-heading {
+      font-family: var(--font-serif); font-size: 1.35rem; font-weight: 700;
+      color: var(--maroon); margin-bottom: 0.85rem;
+    }
+    .mvv-body { font-size: 0.85rem; line-height: 1.75; color: var(--muted); }
+
+    /* Values grid under MVV */
+    .values-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1rem; margin-top: 2rem;
+    }
+    .value-item {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 10px; padding: 1.2rem 1rem; text-align: center;
+      transition: background var(--tr);
+    }
+    .value-item:hover { background: var(--gold-pale); }
+    .value-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .value-name {
+      font-family: var(--font-serif); font-size: 0.95rem; font-weight: 600;
+      color: var(--maroon); margin-bottom: 0.2rem;
+    }
+    .value-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+
+    /* ═══════════════════════════════════════
+       BISHOP / PROPRIETOR SPOTLIGHT
+    ═══════════════════════════════════════ */
+    .bishop-section {
+      background: var(--maroon-dark); padding: 5.5rem 0;
+      position: relative; overflow: hidden;
+    }
+    .bishop-section::before {
+      content: '✝'; position: absolute; top: -40px; right: -30px;
+      font-size: 22rem; color: rgba(255,255,255,0.025);
+      pointer-events: none; line-height: 1; font-family: var(--font-serif);
+    }
+    .bishop-grid {
+      display: grid; grid-template-columns: 300px 1fr;
+      gap: 4.5rem; align-items: center;
+    }
+    .bishop-photo-col { display: flex; flex-direction: column; gap: 1.2rem; }
+    .bishop-photo-frame { position: relative; }
+    .bishop-photo-frame::before {
+      content: ''; position: absolute;
+      inset: -10px -10px 10px 10px;
+      border: 1.5px solid rgba(184,134,42,0.35);
+      border-radius: 14px; pointer-events: none;
+    }
+    .bishop-photo-frame img {
+      width: 100%; border-radius: 10px; object-fit: cover; object-position: top center;
+      box-shadow: 0 20px 56px rgba(0,0,0,0.45);
+    }
+    .bishop-name-plate {
+      background: rgba(184,134,42,0.12); border: 1px solid rgba(184,134,42,0.3);
+      border-radius: 10px; padding: 1rem 1.2rem;
+    }
+    .bishop-title-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
+    .bishop-fullname { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; color: var(--white); line-height: 1.3; }
+    .bishop-see { font-size: 0.72rem; color: rgba(255,255,255,0.45); margin-top: 0.25rem; }
+    .bishop-content .eyebrow-label { color: var(--gold-light); }
+    .bishop-content .section-eyebrow .rule { background: var(--gold); }
+    .bishop-heading {
+      font-family: var(--font-serif); font-size: clamp(1.7rem, 3vw, 2.4rem);
+      font-weight: 700; color: var(--white); line-height: 1.15; margin-bottom: 1.5rem;
+    }
+    .bishop-quote {
+      font-family: var(--font-serif); font-size: 1.2rem; font-style: italic;
+      color: var(--gold-light); line-height: 1.6;
+      padding-left: 1.4rem; border-left: 3px solid var(--gold); margin-bottom: 1.4rem;
+    }
+    .bishop-body { font-size: 0.9rem; line-height: 1.85; color: rgba(255,255,255,0.6); }
+    .bishop-body + .bishop-body { margin-top: 0.9rem; }
+    .bishop-sig {
+      margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid rgba(184,134,42,0.2);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .bishop-sig-cross {
+      flex-shrink: 0; width: 38px; height: 38px;
+      background: rgba(184,134,42,0.15); border: 1px solid var(--gold);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; color: var(--gold);
+    }
+    .bishop-sig-text strong { display: block; font-size: 0.88rem; color: var(--gold-light); font-weight: 600; }
+    .bishop-sig-text span { font-size: 0.72rem; color: rgba(255,255,255,0.4); }
+
+    /* ═══════════════════════════════════════
+       LEADERSHIP / PRINCIPAL
+    ═══════════════════════════════════════ */
+    .leadership { background: var(--cream); }
+    .leadership-intro {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 5rem; align-items: center; margin-bottom: 4rem;
+    }
+    .principal-card {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .principal-card-top {
+      background: var(--maroon); padding: 2.5rem 2rem 1.5rem;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .principal-avatar {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(184,134,42,0.2); border: 3px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 2rem; color: var(--gold);
+      margin-bottom: 1rem;
+    }
+    .principal-name { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; color: var(--white); }
+    .principal-role { font-size: 0.72rem; color: var(--gold-light); font-weight: 600; letter-spacing: 0.08em; margin-top: 0.3rem; text-transform: uppercase; }
+    .principal-card-body { padding: 1.5rem 2rem 2rem; }
+    .principal-quote {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 1rem; color: var(--maroon); line-height: 1.6;
+      border-left: 2px solid var(--gold); padding-left: 1rem; margin-bottom: 1rem;
+    }
+    .principal-bio { font-size: 0.82rem; line-height: 1.7; color: var(--muted); }
+
+    .staff-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    .staff-card {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 12px; padding: 1.5rem; text-align: center;
+      transition: box-shadow var(--tr), transform var(--tr);
+    }
+    .staff-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.09); transform: translateY(-2px); }
+    .staff-avatar {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--gold-pale); border: 2px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 1.2rem; color: var(--maroon);
+      margin: 0 auto 0.75rem;
+    }
+    .staff-name { font-family: var(--font-serif); font-size: 0.98rem; font-weight: 600; color: var(--ink); }
+    .staff-role { font-size: 0.72rem; color: var(--gold); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 0.2rem; }
+    .staff-dept { font-size: 0.77rem; color: var(--muted); margin-top: 0.3rem; }
+
+    /* ═══════════════════════════════════════
+       SCHOOL IDENTITY — MOTTO, COLOURS, HYMN
+    ═══════════════════════════════════════ */
+    .identity { background: var(--parchment); }
+    .identity-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem; margin-top: 2.5rem;
+    }
+    .identity-card {
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--rule); background: var(--white);
+    }
+    .identity-card-head {
+      background: var(--maroon); padding: 1.2rem 1.5rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .identity-card-icon { font-size: 1.4rem; }
+    .identity-card-title {
+      font-family: var(--font-serif); font-size: 1rem; font-weight: 700; color: var(--gold-light);
+    }
+    .identity-card-body { padding: 1.5rem; }
+    .identity-card-body p { font-size: 0.84rem; line-height: 1.75; color: var(--ink-light); }
+    .identity-card-body strong { color: var(--maroon); font-weight: 600; }
+
+    .colours-row { display: flex; gap: 0.6rem; margin-top: 1rem; }
+    .colour-chip {
+      flex: 1; height: 36px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+    }
+    .hymn-lines { font-family: var(--font-serif); font-style: italic; font-size: 0.9rem; line-height: 2; color: var(--maroon); }
+
+    /* ═══════════════════════════════════════
+       AFFILIATION STRIP
+    ═══════════════════════════════════════ */
+    .affiliations {
+      background: var(--white); padding: 3.5rem 0;
+      border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    }
+    .affiliations-label {
+      text-align: center; font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 2rem;
+    }
+    .affiliations-row {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      align-items: center; gap: 2.5rem;
+    }
+    .affil-item {
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      opacity: 0.55; transition: opacity var(--tr);
+    }
+    .affil-item:hover { opacity: 1; }
+    .affil-icon { font-size: 2rem; }
+    .affil-name { font-size: 0.7rem; font-weight: 600; color: var(--ink); letter-spacing: 0.04em; text-align: center; }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    .footer-contact {
+      background: var(--maroon); padding: 4.5rem 0;
+    }
+    .footer-inner {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 3rem;
+    }
+    .footer-brand .logo-name { color: var(--gold-light); font-size: 1.15rem; display: block; font-family: var(--font-serif); font-weight: 700; }
+    .footer-brand .logo-tag  { color: rgba(255,255,255,0.4); font-size: 0.65rem; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+    .footer-motto { font-family: var(--font-serif); font-style: italic; font-size: 0.88rem; color: var(--gold); margin-top: 1rem; line-height: 1.5; }
+    .footer-brand p { font-size: 0.8rem; color: rgba(255,255,255,0.45); line-height: 1.7; margin-top: 0.75rem; }
+    .footer-col h4 { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-light); margin-bottom: 1rem; }
+    .footer-col ul { display: flex; flex-direction: column; gap: 0.55rem; }
+    .footer-col li { font-size: 0.8rem; color: rgba(255,255,255,0.5); display: flex; gap: 0.5rem; line-height: 1.5; }
+    .footer-col a { color: rgba(255,255,255,0.5); transition: color var(--tr); }
+    .footer-col a:hover { color: var(--gold-light); }
+    .footer-bottom {
+      background: var(--maroon-dark); padding: 1.1rem 0; text-align: center;
+      font-size: 0.72rem; color: rgba(255,255,255,0.3);
+      border-top: 1px solid rgba(184,134,42,0.15);
+    }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .history-intro-grid,
+      .leadership-intro   { grid-template-columns: 1fr; gap: 3rem; }
+      .history-image      { height: 320px; }
+      .mvv-grid           { grid-template-columns: 1fr 1fr; }
+      .values-grid        { grid-template-columns: repeat(2, 1fr); }
+      .identity-grid      { grid-template-columns: 1fr 1fr; }
+      .staff-grid         { grid-template-columns: 1fr 1fr; }
+      .bishop-grid        { grid-template-columns: 260px 1fr; gap: 3rem; }
+      .footer-inner       { grid-template-columns: 1fr 1fr; }
+      .footer-brand       { grid-column: span 2; }
+    }
+    @media (max-width: 768px) {
+      .nav                { display: none; }
+      .hamburger          { display: flex; }
+      .topbar-items       { gap: 0.75rem; }
+      .topbar-motto       { display: none; }
+      .mvv-grid           { grid-template-columns: 1fr; }
+      .values-grid        { grid-template-columns: 1fr 1fr; }
+      .identity-grid      { grid-template-columns: 1fr; }
+      .staff-grid         { grid-template-columns: 1fr; }
+      .bishop-grid        { grid-template-columns: 1fr; }
+      .footer-inner       { grid-template-columns: 1fr; }
+      .footer-brand       { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-items">
+        <div class="topbar-item"><span class="ti">✉</span><span>info@saharcoaba.edu.ng</span></div>
+        <div class="topbar-item"><span class="ti">☎</span><span>+234 806 000 0000</span></div>
+        <div class="topbar-item"><span class="ti">📍</span><span>Eziukwu, Aba, Abia State</span></div>
+      </div>
+      <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest"
+               onerror="this.style.display='none';this.parentNode.style.background='var(--maroon)';this.parentNode.innerHTML+='<span style=\'font-family:var(--font-serif);font-size:1.3rem;color:var(--gold);margin:auto\'>✝</span>'" />
+        </div>
+        <div class="logo-text">
+          <a href="index.html"><span class="logo-name">Sacred Heart College</span></a>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="#"      class="nav-link">Home</a></li>
+          <li><a href="about.html"     class="nav-link active">About</a></li>
+          <li><a href="mission .html"      class="nav-link">Mission</a></li>
+          <li><a href="contact.html"     class="nav-link">Contact</a></li>
+          <li><a href="admission.html" class="nav-link">Admissions</a></li>
+          <li>
+            <a href="login.html" class="btn-admit nav-cta">
+              Login <ion-icon name="arrow-forward-outline"></ion-icon>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobile-nav">
+    <button class="mobile-close" id="mobile-close">✕</button>
+    <a href="index.html"            onclick="closeMobile()">Home</a>
+    <a href="about.html"            onclick="closeMobile()">About</a>
+    <a href="index.html#campus"     onclick="closeMobile()">Campus</a>
+    <a href="index.html#admissions" onclick="closeMobile()">Admissions</a>
+    <a href="index.html#contact"    onclick="closeMobile()">Contact</a>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       PAGE HERO
+  ═══════════════════════════════════════ -->
+  <div class="page-hero">
+    <div class="page-hero-bg"></div>
+    <div class="page-hero-overlay"></div>
+    <div class="container">
+      <div class="page-hero-content">
+        <nav class="breadcrumb">
+          <a href="index.html">Home</a>
+          <span class="sep">›</span>
+          <span class="current">About SAHARCO</span>
+        </nav>
+        <div class="page-eyebrow">
+          <div class="page-eyebrow-line"></div>
+          <span class="page-eyebrow-text">Catholic Diocese of Aba · Est. 1957</span>
+        </div>
+        <h1 class="page-title">About <em>Sacred Heart</em><br>College Aba</h1>
+        <p class="page-subtitle">
+          Discover our story — from humble beginnings in 1957 to one of Nigeria's most respected Catholic secondary schools. A community of faith, scholarship, and brotherhood.
+        </p>
+      </div>
+      <div class="page-tabs-bar">
+        <div class="page-tabs">
+          <a href="#history"     class="page-tab active">Our History</a>
+          <a href="#mvv"         class="page-tab">Mission &amp; Values</a>
+          <a href="#bishop"      class="page-tab">Bishop's Message</a>
+          <a href="#leadership"  class="page-tab">Leadership</a>
+          <a href="#identity"    class="page-tab">School Identity</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       HISTORY
+  ═══════════════════════════════════════ -->
+  <section class="section history" id="history">
+    <div class="container">
+      <div class="history-intro-grid">
+        <!-- Image -->
+        <div class="history-image">
+          <img src="images/sahaco gate.JPG" alt="The Historic SAHARCO Main Gate" loading="lazy" />
+          <div class="history-image-caption">The main gate of Sacred Heart College — a landmark in Eziukwu, Aba since 1957.</div>
+        </div>
+        <!-- Text -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Our Story</span>
+          </div>
+          <h2 class="section-title">Over Six Decades of<br>Shaping Young Men</h2>
+          <blockquote class="history-pull">
+            "A school is not merely a building. It is a tradition — and SAHARCO's tradition is one of truth, excellence, and service."
+          </blockquote>
+          <p class="section-body">
+            Sacred Heart College Eziukwu Aba — fondly known as SAHARCO — was established in 1957 by the Catholic Diocese of Aba. From the outset, the school was conceived as more than an academic institution; it was to be a place where boys from across Abia State and beyond would be formed in character, faith, and intellectual excellence.
+          </p>
+          <p class="section-body">
+            The school takes its name and inspiration from the Sacred Heart of Jesus, a devotion central to the Catholic tradition that emphasises love, compassion, and self-giving service. This spirituality has animated SAHARCO's approach to education for over six decades.
+          </p>
+          <p class="section-body">
+            Today, SAHARCO stands as one of the foremost secondary schools in Abia State, with a distinguished alumni network spanning academia, business, medicine, law, the church, and public service — men whose lives bear witness to the school's motto: <em>Testimonium Perhibere Veritati</em>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="section-eyebrow" style="margin-bottom:2rem;">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Key Milestones</span>
+      </div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot major"></div>
+          <div class="tl-year">1957</div>
+          <div class="tl-title">Founding of Sacred Heart College</div>
+          <div class="tl-desc">Established by the Catholic Diocese of Aba, the school opens its doors in Eziukwu, admitting its first set of boys into the junior secondary programme. The motto <em>Testimonium Perhibere Veritati</em> is adopted from the outset.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1960s</div>
+          <div class="tl-title">Early Growth &amp; Academic Identity</div>
+          <div class="tl-desc">The school expands its academic programme, introduces the Senior Secondary classes, and begins to build a reputation for academic rigour and discipline in Abia and beyond.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">1970s</div>
+          <div class="tl-title">Post-Civil War Rebuilding</div>
+          <div class="tl-desc">After the disruption of the Nigerian Civil War, SAHARCO leads the region's educational recovery. Infrastructure is rebuilt and enrolment grows, restoring the school's place as a pillar of the Aba community.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot major"></div>
+          <div class="tl-year">1980s – 1990s</div>
+          <div class="tl-title">Golden Era of Academic Excellence</div>
+          <div class="tl-desc">SAHARCO records a string of outstanding WAEC results and national examination distinctions. Old Boys associations are formalised, beginning the school's tradition of alumni-driven development — including the endowment of the Old Boys Library.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-year">2000s</div>
+          <div class="tl-title">Infrastructure &amp; Modernisation</div>
+          <div class="tl-desc">New classroom blocks, a modern science laboratory complex, and improved boarding facilities are commissioned. The school expands co-curricular activities including debate, cultural dance, and the school cadet corps.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot major"></div>
+          <div class="tl-year">2010s</div>
+          <div class="tl-title">Digital Transformation Begins</div>
+          <div class="tl-desc">The E-Library and ICT Centre is inaugurated, bringing computer literacy and digital research tools to SAHARCO students. A modern conference hall is built, hosting inter-school events and diocesan gatherings.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot major"></div>
+          <div class="tl-year">2020 – Present</div>
+          <div class="tl-title">SAHARCO at 60+ Years Strong</div>
+          <div class="tl-desc">Under the proprietorship of Most Rev. Prof. Augustin Ndubueze Echema, Catholic Bishop of Aba, SAHARCO continues to raise the standard — investing in faculty, facilities, and faith formation as it prepares young men for leadership in the 21st century.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       MISSION / VISION / VALUES
+  ═══════════════════════════════════════ -->
+  <section class="section mvv" id="mvv">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Who We Are</span>
+      </div>
+      <h2 class="section-title">Mission, Vision &amp; Core Values</h2>
+      <p class="section-body" style="max-width:640px;">
+        Everything at SAHARCO flows from three foundational commitments: a clear mission, an inspiring vision, and a set of core values that govern how we treat each other, pursue knowledge, and serve the world.
+      </p>
+
+      <div class="mvv-grid">
+        <div class="mvv-card">
+          <div class="mvv-icon">🎯</div>
+          <div class="mvv-label">Mission</div>
+          <div class="mvv-heading">Why We Exist</div>
+          <p class="mvv-body">
+            To provide an excellent Catholic secondary education that forms young men of strong faith, sound character, and academic distinction — equipping them to bear witness to truth and serve God and humanity with integrity and competence.
+          </p>
+        </div>
+        <div class="mvv-card">
+          <div class="mvv-icon">🔭</div>
+          <div class="mvv-label">Vision</div>
+          <div class="mvv-heading">Where We Are Going</div>
+          <p class="mvv-body">
+            To be the leading Catholic secondary school in South-East Nigeria — a community of excellence where faith and reason flourish together, and where every graduate is prepared for leadership in every arena of life.
+          </p>
+        </div>
+        <div class="mvv-card">
+          <div class="mvv-icon">⚖️</div>
+          <div class="mvv-label">Philosophy</div>
+          <div class="mvv-heading">How We Educate</div>
+          <p class="mvv-body">
+            We hold that education is the development of the whole person: mind, soul, and body. Academics, spiritual formation, discipline, and co-curricular engagement are not separate concerns — they are facets of a single, integrated formation.
+          </p>
+        </div>
+      </div>
+
+      <!-- Core values -->
+      <div style="margin-top:3.5rem;">
+        <div class="section-eyebrow">
+          <span class="rule"></span>
+          <span class="eyebrow-label">Core Values</span>
+        </div>
+        <h3 style="font-family:var(--font-serif);font-size:1.5rem;font-weight:700;color:var(--maroon);margin-bottom:1.5rem;">
+          The Eight Pillars of SAHARCO
+        </h3>
+        <div class="values-grid">
+          <div class="value-item">
+            <div class="value-icon">✝️</div>
+            <div class="value-name">Faith</div>
+            <div class="value-desc">Grounded in Catholic tradition and love of God</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">📖</div>
+            <div class="value-name">Excellence</div>
+            <div class="value-desc">Relentless pursuit of the highest academic standard</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">⚖️</div>
+            <div class="value-name">Integrity</div>
+            <div class="value-desc">Honesty and uprightness in all things</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">🤝</div>
+            <div class="value-name">Service</div>
+            <div class="value-desc">Contributing selflessly to community and Church</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">🛡️</div>
+            <div class="value-name">Discipline</div>
+            <div class="value-desc">Self-mastery and respect for order and authority</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">🤲</div>
+            <div class="value-name">Compassion</div>
+            <div class="value-desc">The Sacred Heart's call to love and care for others</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">🏆</div>
+            <div class="value-name">Brotherhood</div>
+            <div class="value-desc">Solidarity among students, staff, and alumni</div>
+          </div>
+          <div class="value-item">
+            <div class="value-icon">💡</div>
+            <div class="value-name">Creativity</div>
+            <div class="value-desc">Imagination and innovation in learning and life</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       BISHOP'S MESSAGE
+  ═══════════════════════════════════════ -->
+  <section class="bishop-section" id="bishop">
+    <div class="container">
+      <div class="bishop-grid">
+        <div class="bishop-photo-col">
+          <div class="bishop-photo-frame">
+            <img src="images/most_rev_prof_A_N_Echema.png"
+                 alt="Most Rev. Prof. Augustin Ndubueze Echema — Catholic Bishop of Aba" />
+          </div>
+          <div class="bishop-name-plate">
+            <div class="bishop-title-label">Most Rev. Prof.</div>
+            <div class="bishop-fullname">Augustin Ndubueze Echema</div>
+            <div class="bishop-see">Catholic Bishop of Aba · Proprietor, SAHARCO</div>
+          </div>
+        </div>
+        <div class="bishop-content">
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Bishop's Message</span>
+          </div>
+          <h2 class="bishop-heading">A Word from Our<br>Bishop &amp; Proprietor</h2>
+          <blockquote class="bishop-quote">
+            "Education is not merely the transmission of knowledge — it is the formation of conscience, the lighting of a flame that no darkness can extinguish."
+          </blockquote>
+          <p class="bishop-body">
+            Sacred Heart College Eziukwu Aba stands as one of the finest expressions of the Catholic Diocese of Aba's commitment to the integral formation of young men. Since 1957, this institution has been a place where faith and reason, discipline and creativity, tradition and aspiration are held together in fruitful tension.
+          </p>
+          <p class="bishop-body">
+            I encourage every student, parent, teacher, and alumnus to remain steadfast in the values that define SAHARCO: truth, integrity, service, and love of God. May every young man who passes through these gates go forth to bear witness to the truth in every arena of life — in the home, the workplace, the Church, and the public square.
+          </p>
+          <p class="bishop-body">
+            To the students: study hard, pray faithfully, and treat one another with the respect due to sons of the Sacred Heart. You carry not only the name of this school — you carry its honour.
+          </p>
+          <div class="bishop-sig">
+            <div class="bishop-sig-cross">✝</div>
+            <div class="bishop-sig-text">
+              <strong>Most Rev. Prof. Augustin N. Echema</strong>
+              <span>Catholic Bishop of Aba · Proprietor, Sacred Heart College</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       LEADERSHIP
+  ═══════════════════════════════════════ -->
+  <section class="section leadership" id="leadership">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">School Leadership</span>
+      </div>
+      <h2 class="section-title">The People Who<br>Lead SAHARCO</h2>
+
+      <div class="leadership-intro">
+        <!-- Principal card -->
+        <div class="principal-card">
+          <div class="principal-card-top">
+            <div class="principal-avatar">P</div>
+            <div class="principal-name">The Principal</div>
+            <div class="principal-role">Head of School · SAHARCO</div>
+          </div>
+          <div class="principal-card-body">
+            <blockquote class="principal-quote">
+              "We do not simply teach subjects — we shape souls. Every lesson, every correction, every act of encouragement is an investment in a future Nigeria needs."
+            </blockquote>
+            <p class="principal-bio">
+              The Principal of Sacred Heart College provides academic and pastoral leadership for the entire school community. Working closely with the Catholic Diocese of Aba, the Principal ensures that SAHARCO's standards of excellence, discipline, and faith formation are maintained and advanced in every term. Please visit the school office for the current Principal's details and biography.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <p class="section-body">
+            SAHARCO is led by a dedicated team of experienced educators and administrators committed to the school's mission. Our leadership structure ensures that every aspect of student life — academic, spiritual, co-curricular, and pastoral — is given the attention it deserves.
+          </p>
+          <p class="section-body" style="margin-top:0.9rem;">
+            The school's governance is overseen by the Catholic Diocese of Aba under the proprietorship of the Most Rev. Bishop, with the day-to-day management entrusted to the Principal and a team of senior staff, department heads, and form masters.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:0.85rem;margin-top:1.75rem;">
+            <div style="display:flex;align-items:center;gap:0.85rem;padding:0.9rem 1rem;background:var(--white);border:1px solid var(--rule);border-radius:10px;">
+              <span style="font-size:1.3rem;">⛪</span>
+              <div>
+                <div style="font-weight:600;font-size:0.88rem;color:var(--ink);">Catholic Diocese of Aba</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Proprietor — Provides governance, values oversight and pastoral direction</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.85rem;padding:0.9rem 1rem;background:var(--white);border:1px solid var(--rule);border-radius:10px;">
+              <span style="font-size:1.3rem;">🏫</span>
+              <div>
+                <div style="font-weight:600;font-size:0.88rem;color:var(--ink);">Principal's Office</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Academic and administrative leadership of the school</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.85rem;padding:0.9rem 1rem;background:var(--white);border:1px solid var(--rule);border-radius:10px;">
+              <span style="font-size:1.3rem;">👩‍🏫</span>
+              <div>
+                <div style="font-weight:600;font-size:0.88rem;color:var(--ink);">Vice Principal (Academics)</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Curriculum management, timetabling, and results oversight</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.85rem;padding:0.9rem 1rem;background:var(--white);border:1px solid var(--rule);border-radius:10px;">
+              <span style="font-size:1.3rem;">🛡️</span>
+              <div>
+                <div style="font-weight:600;font-size:0.88rem;color:var(--ink);">Vice Principal (Administration)</div>
+                <div style="font-size:0.75rem;color:var(--muted);">Discipline, boarding, welfare and general administration</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Departments -->
+      <div style="margin-top:1rem;">
+        <div class="section-eyebrow">
+          <span class="rule"></span>
+          <span class="eyebrow-label">Academic Departments</span>
+        </div>
+        <h3 style="font-family:var(--font-serif);font-size:1.5rem;font-weight:700;color:var(--maroon);margin-bottom:1.5rem;">Our Faculties &amp; Departments</h3>
+        <div class="staff-grid">
+          <div class="staff-card">
+            <div class="staff-avatar">🔬</div>
+            <div class="staff-name">Sciences Department</div>
+            <div class="staff-role">Sciences</div>
+            <div class="staff-dept">Biology · Chemistry · Physics · Further Maths</div>
+          </div>
+          <div class="staff-card">
+            <div class="staff-avatar">📐</div>
+            <div class="staff-name">Mathematics Department</div>
+            <div class="staff-role">Mathematics</div>
+            <div class="staff-dept">Core Maths · Statistics · Further Mathematics</div>
+          </div>
+          <div class="staff-card">
+            <div class="staff-avatar">📝</div>
+            <div class="staff-name">English &amp; Literature</div>
+            <div class="staff-role">Languages</div>
+            <div class="staff-dept">English Language · Literature-in-English · Igbo</div>
+          </div>
+          <div class="staff-card">
+            <div class="staff-avatar">📊</div>
+            <div class="staff-name">Commercial Department</div>
+            <div class="staff-role">Commerce</div>
+            <div class="staff-dept">Economics · Accounting · Commerce · Government</div>
+          </div>
+          <div class="staff-card">
+            <div class="staff-avatar">🎨</div>
+            <div class="staff-name">Arts &amp; Humanities</div>
+            <div class="staff-role">Humanities</div>
+            <div class="staff-dept">History · Geography · Fine Arts · CRS</div>
+          </div>
+          <div class="staff-card">
+            <div class="staff-avatar">💻</div>
+            <div class="staff-name">ICT &amp; Technical</div>
+            <div class="staff-role">Technology</div>
+            <div class="staff-dept">Computer Science · Technical Drawing · Data Processing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       SCHOOL IDENTITY
+  ═══════════════════════════════════════ -->
+  <section class="section identity" id="identity">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">School Identity</span>
+      </div>
+      <h2 class="section-title">Motto, Colours &amp;<br>School Traditions</h2>
+      <p class="section-body" style="max-width:600px;margin-bottom:0.5rem;">
+        The symbols, colours, and traditions of SAHARCO are not mere decoration — they are the visible expression of values and identity accumulated over six decades.
+      </p>
+
+      <div class="identity-grid">
+        <!-- Motto -->
+        <div class="identity-card">
+          <div class="identity-card-head">
+            <span class="identity-card-icon">✝</span>
+            <span class="identity-card-title">School Motto</span>
+          </div>
+          <div class="identity-card-body">
+            <p style="font-family:var(--font-serif);font-size:1.25rem;font-style:italic;color:var(--maroon);margin-bottom:0.75rem;font-weight:600;">
+              "Testimonium Perhibere Veritati"
+            </p>
+            <p>A Latin phrase meaning <strong>To Bear Witness to the Truth</strong>. Drawn from the Gospel of John (18:37), these words were spoken by Christ before Pilate — a reminder that every SAHARCO man is called to stand for truth at all costs, in all circumstances.</p>
+          </div>
+        </div>
+
+        <!-- School Colours -->
+        <div class="identity-card">
+          <div class="identity-card-head">
+            <span class="identity-card-icon">🎨</span>
+            <span class="identity-card-title">School Colours</span>
+          </div>
+          <div class="identity-card-body">
+            <p>SAHARCO's official colours are <strong>Maroon and Gold</strong> — colours of dignity, faith, and excellence. Maroon symbolises the Sacred Heart and the courage to stand firm; Gold represents the pursuit of excellence and the light of truth.</p>
+            <div class="colours-row">
+              <div class="colour-chip" style="background:#6B1212;color:#fff;">Maroon</div>
+              <div class="colour-chip" style="background:#B8862A;color:#fff;">Gold</div>
+              <div class="colour-chip" style="background:#FAF8F4;color:#6B1212;border:1px solid #ddd;">White</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alma Mater / Traditions -->
+        <div class="identity-card">
+          <div class="identity-card-head">
+            <span class="identity-card-icon">🎵</span>
+            <span class="identity-card-title">Traditions &amp; Spirit</span>
+          </div>
+          <div class="identity-card-body">
+            <p>SAHARCO's rich traditions include the annual Speech Day &amp; Prize Giving, Inter-House Sports, the Feast of the Sacred Heart, school Masses, and the graduation ceremony for final-year students. These events bind generations of SAHARCO men in a shared sense of belonging and pride.</p>
+            <p style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted);">
+              The school crest features the Sacred Heart at its centre — a constant reminder of the love and courage that every SAHARCO man is called to embody.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Crest explanation -->
+      <div style="margin-top:3rem;background:var(--white);border:1px solid var(--rule);border-radius:14px;overflow:hidden;display:grid;grid-template-columns:auto 1fr;">
+        <div style="background:var(--maroon);padding:2.5rem 2rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;min-width:180px;">
+          <div style="width:90px;height:90px;border-radius:50%;border:2px solid var(--gold);overflow:hidden;">
+            <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" style="width:100%;height:100%;object-fit:cover;" />
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--font-serif);font-size:0.9rem;font-weight:700;color:var(--gold-light);">SAHARCO Crest</div>
+            <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-top:2px;">Est. 1957</div>
+          </div>
+        </div>
+        <div style="padding:2rem 2.5rem;">
+          <div class="section-eyebrow" style="margin-bottom:0.5rem;">
+            <span class="rule"></span>
+            <span class="eyebrow-label">The School Crest</span>
+          </div>
+          <h3 style="font-family:var(--font-serif);font-size:1.3rem;font-weight:700;color:var(--maroon);margin-bottom:0.75rem;">Symbols of Our Identity</h3>
+          <p style="font-size:0.87rem;line-height:1.8;color:var(--ink-light);">
+            The SAHARCO crest is a symbol of the school's Catholic identity and educational purpose. At its heart is the Sacred Heart of Jesus — the source of the school's name and spirituality. The crest appears on all official documents, uniforms, and school property, reminding every student of the values they are called to uphold. The motto scroll beneath the central image carries the school's defining commitment: <em>Testimonium Perhibere Veritati</em> — To Bear Witness to the Truth.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       AFFILIATIONS
+  ═══════════════════════════════════════ -->
+  <div class="affiliations">
+    <div class="container">
+      <div class="affiliations-label">Affiliations, Examinations &amp; Memberships</div>
+      <div class="affiliations-row">
+        <div class="affil-item">
+          <div class="affil-icon">📋</div>
+          <div class="affil-name">WAEC<br>West Africa Examinations Council</div>
+        </div>
+        <div class="affil-item">
+          <div class="affil-icon">📋</div>
+          <div class="affil-name">NECO<br>National Examinations Council</div>
+        </div>
+        <div class="affil-item">
+          <div class="affil-icon">⛪</div>
+          <div class="affil-name">Catholic Diocese of Aba<br>Proprietor</div>
+        </div>
+        <div class="affil-item">
+          <div class="affil-icon">🏛️</div>
+          <div class="affil-name">Abia State Ministry<br>of Education</div>
+        </div>
+        <div class="affil-item">
+          <div class="affil-icon">🇳🇬</div>
+          <div class="affil-name">Federal Ministry<br>of Education</div>
+        </div>
+        <div class="affil-item">
+          <div class="affil-icon">🎓</div>
+          <div class="affil-name">SAHARCO Old Boys<br>Association</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════ -->
+  <footer class="footer-contact" id="contact">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba · Est. 1957</span>
+          <div class="footer-motto">"Testimonium Perhibere Veritati"<br>To Bear Witness to the Truth</div>
+          <p>A Catholic boys' secondary school under the Catholic Diocese of Aba, dedicated to forming young men of faith, character, and academic excellence.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <ul>
+            <li>📍 Eziukwu Road, Aba, Abia State, Nigeria</li>
+            <li>☎ <a href="tel:+2348060000000">+234 806 000 0000</a></li>
+            <li>✉ <a href="mailto:info@saharcoaba.edu.ng">info@saharcoaba.edu.ng</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About SAHARCO</a></li>
+            <li><a href="index.html#campus">Campus &amp; Facilities</a></li>
+            <li><a href="index.html#admissions">Admissions</a></li>
+            <li><a href="school-management.html">Staff Portal</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <div class="footer-bottom">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO) · All rights reserved · Catholic Diocese of Aba
+    </div>
+  </div>
+
+  <script>
+    // Header scroll shadow
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Mobile nav
+    document.getElementById('hamburger').addEventListener('click', () =>
+      document.getElementById('mobile-nav').classList.add('open'));
+    document.getElementById('mobile-close').addEventListener('click', () =>
+      document.getElementById('mobile-nav').classList.remove('open'));
+    function closeMobile() { document.getElementById('mobile-nav').classList.remove('open'); }
+
+    // Sync active page tab on scroll
+    const tabs = document.querySelectorAll('.page-tab');
+    const anchors = ['history','mvv','bishop','leadership','identity'].map(id => document.getElementById(id));
+    window.addEventListener('scroll', () => {
+      let current = 'history';
+      anchors.forEach(sec => {
+        if (sec && window.scrollY >= sec.offsetTop - 160) current = sec.id;
+      });
+      tabs.forEach(t => {
+        t.classList.toggle('active', t.getAttribute('href') === '#' + current);
+      });
+    }, { passive: true });
+  </script>
+
+</body>
+</html>

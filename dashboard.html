@@ -634,7 +634,11 @@
           <span class="ni">📝</span> New Registration
         </a>
       </li>
-
+      <li id="nav-li-enroll">
+        <a href="enroll.html">
+          <span class="ni">🎓</span> Enroll Students
+        </a>
+      </li>
       <li class="nav-section">Performance</li>
       <li id="nav-li-results">
         <a href="#results" data-section="results">
@@ -755,7 +759,7 @@
         <div class="stat-card alert">
           <h4>Low Attendance</h4>
           <div class="number" id="stat-low-att">—</div>
-          <span class="trend">Students &lt; 75%</span>
+          <span class="trend">Students &lt; </span>
         </div>
       </div>
 
@@ -782,18 +786,18 @@
             <ul class="activity-list" id="dash-activity">
               <li class="activity-item">
                 <span class="activity-dot" style="background:var(--emerald)"></span>
-                <span class="activity-text">Results saved for <strong>JSS 1A</strong> — Mathematics</span>
-                <span class="activity-time">2m ago</span>
+                <span class="activity-text"><strong></strong> </span>
+                <span class="activity-time"></span>
               </li>
               <li class="activity-item">
                 <span class="activity-dot" style="background:var(--blue)"></span>
-                <span class="activity-text"><strong>3 new students</strong> enrolled in SS 2B</span>
-                <span class="activity-time">1h ago</span>
+                <span class="activity-text"><strong>\</strong> enrolled in SS 2B</span>
+                <span class="activity-time"></span>
               </li>
               <li class="activity-item">
                 <span class="activity-dot" style="background:var(--amber)"></span>
-                <span class="activity-text">Attendance marked for <strong>SS 3A</strong></span>
-                <span class="activity-time">3h ago</span>
+                <span class="activity-text"> <strong></strong></span>
+                <span class="activity-time"></span>
               </li>
               <li class="activity-item">
                 <span class="activity-dot" style="background:var(--violet)"></span>
@@ -810,7 +814,7 @@
         </div>
 
         <!-- Class performance mini-bars -->
-        <div class="widget-card">
+        <!-- <div class="widget-card">
           <div class="widget-head">
             <h3>Class Performance</h3>
             <a href="#report-cards" onclick="if(window.navigate)navigate('report-cards');return false;">Full report</a>
@@ -818,34 +822,34 @@
           <div class="widget-body">
             <div class="perf-list" id="dash-perf">
               <div class="perf-row">
-                <div class="perf-label"><span>SS 3A</span><span>78%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:78%"></div></div>
               </div>
               <div class="perf-row">
-                <div class="perf-label"><span>SS 2B</span><span>72%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:72%"></div></div>
               </div>
               <div class="perf-row">
-                <div class="perf-label"><span>SS 1A</span><span>69%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:69%"></div></div>
               </div>
               <div class="perf-row">
-                <div class="perf-label"><span>JSS 3A</span><span>65%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:65%"></div></div>
               </div>
               <div class="perf-row">
-                <div class="perf-label"><span>JSS 2B</span><span>61%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:61%"></div></div>
               </div>
               <div class="perf-row">
-                <div class="perf-label"><span>JSS 1C</span><span>58%</span></div>
+                <div class="perf-label"><span></span><span></span></div>
                 <div class="perf-track"><div class="perf-fill" style="width:58%"></div></div>
               </div>
             </div>
           </div>
         </div>
 
-      </div>
+      </div> -->
     </section>
 
     <!-- ════════════════════════════════════
@@ -868,6 +872,7 @@
 
   <footer class="main-footer">
     <span>© 2026 Sacred Heart College Eziukwu Aba</span>
+    <span> <p>Created by: Chigbo Samuel (Leumas IT Nexus)</p></span>
     <span id="footer-session"></span>
   </footer>
 
@@ -1297,10 +1302,14 @@ window.addEventListener('load', function() {
 
 </script>
 <script src="login.js"></script>
+<script src="api.js" type="module"></script>
+<script src="api-bridge.js" type="module"></script>  <!-- ← add this -->
 <script src="script.js"></script>
+<script src="persistence-patch.js"></script> 
 <script src="script2.js"></script>
 <script src="script3.js"></script>
 <script type="module" src="auth.js"></script>
+
 
 </body>
 </html>

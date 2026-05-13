@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Admissions into Sacred Heart College Eziukwu Aba (SAHARCO). Apply for JS1 and SS1. Catholic boys' secondary school in Aba, Abia State." />
+  <title>Admissions | Sacred Heart College Eziukwu Aba (SAHARCO)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img  { max-width: 100%; height: auto; display: block; }
+    a    { text-decoration: none; color: inherit; }
+    ul   { list-style: none; }
+
+    .container { max-width: 1160px; margin-inline: auto; padding-inline: 28px; }
+
+    /* Topbar & Header */
+    .topbar { background: var(--maroon-dark); padding: 7px 0; border-bottom: 1px solid rgba(184,134,42,0.25); }
+    .topbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 500; color: rgba(255,255,255,0.55); }
+    .topbar-item .ti { color: var(--gold-light); font-size: 0.9rem; }
+    .topbar-motto { font-family: var(--font-serif); font-style: italic; font-size: 0.75rem; color: var(--gold-light); }
+
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--white); border-bottom: 1px solid var(--rule);
+    }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner { display: flex; align-items: center; gap: 1.5rem; padding-block: 12px; }
+
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; }
+    .crest { width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-name { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; color: var(--maroon); }
+    .logo-tag { font-size: 0.65rem; font-weight: 600; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; }
+
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link {
+      padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-light); border-radius: 6px;
+    }
+    .nav-link:hover, .nav-link.active { background: var(--parchment); color: var(--maroon); font-weight: 600; }
+
+    .nav-cta {
+      background: var(--maroon); color: white;
+      padding: 0.45rem 1.1rem; border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .hamburger { display: none; margin-left: auto; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; }
+
+    /* Hero */
+    .admission-hero {
+      background: var(--maroon-dark); min-height: 70vh; display: flex; align-items: center;
+      position: relative; overflow: hidden;
+    }
+    .admission-hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('images/sahaco gate.JPG');
+      background-size: cover; background-position: center;
+      filter: brightness(0.38) saturate(0.8);
+    }
+    .admission-hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(62,8,8,0.88) 0%, rgba(107,18,18,0.65) 100%);
+    }
+    .hero-content { position: relative; z-index: 2; max-width: 700px; }
+
+    /* Section Styles */
+    .section { padding: 6rem 0; }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.9rem, 4vw, 2.8rem);
+      color: var(--maroon); line-height: 1.15;
+    }
+    .section-eyebrow {
+      display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .rule { width: 32px; height: 2px; background: var(--gold); }
+    .eyebrow-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--gold);
+    }
+
+    .class-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-top: 2rem;
+    }
+    .class-card {
+      background: white; border: 1px solid var(--rule); border-radius: 12px;
+      padding: 1.8rem 1.5rem; transition: all 0.3s ease;
+    }
+    .class-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+
+    .process-steps {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; margin-top: 3rem;
+    }
+    .step {
+      background: white; padding: 2rem 1.5rem; border-radius: 12px;
+      border-left: 5px solid var(--gold);
+    }
+    .step-num {
+      width: 45px; height: 45px; background: var(--gold-pale); color: var(--maroon);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem;
+    }
+
+    .btn-gold {
+      background: var(--gold); color: var(--maroon-dark);
+      padding: 1rem 2rem; border-radius: 6px; font-weight: 700;
+      display: inline-block; margin-top: 1.5rem;
+    }
+
+    /* Footer */
+    .contact-strip { background: var(--maroon); padding: 4.5rem 0; }
+    .footer-bottom { background: var(--maroon-dark); padding: 1.2rem 0; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.35); }
+
+    @media (max-width: 768px) {
+      .nav { display: none; }
+      .hamburger { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-items">
+        <div class="topbar-item"><span class="ti">✉</span> sacredheartcollege1957@gmail.com</div>
+        <div class="topbar-item"><span class="ti">☎</span> +234 802 541 1061</div>
+        <div class="topbar-item"><span class="ti">📍</span> Eziukwu, Aba, Abia State</div>
+      </div>
+      <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" onerror="this.parentNode.innerHTML='<div style=\'background:#6B1212;color:#D4A84B;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8rem\'>✝</div>'" />
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="#"      class="nav-link">Home</a></li>
+          <li><a href="about.html"     class="nav-link">About</a></li>
+          <li><a href="mission .html"      class="nav-link">Mission</a></li>
+          <li><a href="contact.html"     class="nav-link">Contact</a></li>
+          <li><a href="admission.html" class="nav-link active">Admissions</a></li>
+          <li>
+            <a href="login.html" class="btn-admit nav-cta">
+              Login <ion-icon name="arrow-forward-outline"></ion-icon>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <button class="hamburger" id="hamburger">☰</button>
+    </div>
+  </header>
+
+  <!-- Admission Hero -->
+  <section class="admission-hero">
+    <div class="admission-hero-bg"></div>
+    <div class="admission-hero-overlay"></div>
+    <div class="container" style="position:relative; z-index:2;">
+      <div class="hero-content">
+        <div class="section-eyebrow">
+          <span class="rule"></span>
+          <span class="eyebrow-label" style="color:#D4A84B;">ADMISSIONS 2026/2027</span>
+        </div>
+        <h1 style="font-family:var(--font-serif); font-size:clamp(2.8rem, 6vw, 4.2rem); color:white; line-height:1.1;">
+          Join the SAHARCO Family
+        </h1>
+        <p style="color:rgba(255,255,255,0.9); font-size:1.15rem; max-width:580px; margin:1.5rem 0;">
+          Shaping young men of faith, discipline, and excellence since 1957.
+        </p>
+        <a href="#apply" class="btn-gold">Begin Application Process</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Classes Offered -->
+  <section class="section" style="background:var(--white);">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">ACADEMIC PROGRAMME</span>
+      </div>
+      <h2 class="section-title">Classes Offered</h2>
+
+      <div class="class-grid">
+        <div class="class-card">
+          <h3 style="color:var(--maroon);">Junior Secondary (JS1 – JS3)</h3>
+          <ul style="margin-top:1rem; line-height:2;">
+            <li>JS1 (Entry Class)</li>
+            <li>JS2</li>
+            <li>JS3 (BECE)</li>
+          </ul>
+        </div>
+        <div class="class-card">
+          <h3 style="color:var(--maroon);">Senior Secondary (SS1 – SS3)</h3>
+          <ul style="margin-top:1rem; line-height:2;">
+            <li>Science</li>
+            <li>Arts</li>
+            <li>Commercial</li>
+          </ul>
+          <small style="color:var(--muted);">WAEC & NECO Examination Classes</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Admission Process -->
+  <section class="section" id="apply" style="background:var(--parchment);">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">HOW TO APPLY</span>
+      </div>
+      <h2 class="section-title">Admission Process</h2>
+
+      <div class="process-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Obtain Form</h4>
+          <p>Collect admission forms from the school administrative office or apply online.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Submit Documents</h4>
+          <p>Birth certificate, Primary 6 Leaving Certificate (JS1) or BECE Result (SS1), and passport photographs.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>Entrance Examination</h4>
+          <p>Candidates sit for the entrance exam on the scheduled date.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h4>Admission Offer</h4>
+          <p>Successful candidates receive admission letters and proceed to pay acceptance and school fees.</p>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:3rem;">
+        <a href="regForm.html" class="btn-gold">Start Registration</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="contact-strip">
+    <div class="container">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:3rem;">
+        <div>
+          <span class="logo-name" style="color:var(--gold-light); font-size:1.3rem;">Sacred Heart College</span>
+          <span class="logo-tag" style="color:rgba(255,255,255,0.5);">SAHARCO · Eziukwu Aba</span>
+          <p style="color:rgba(255,255,255,0.6); margin-top:1rem;">Forming Men of Faith, Character & Excellence since 1957.</p>
+        </div>
+        <div>
+          <h4 style="color:var(--gold-light);">Contact Info</h4>
+          <p style="color:rgba(255,255,255,0.7); margin-top:1rem;">
+            Eziukwu Road, Aba<br>
+            Abia State, Nigeria<br><br>
+            +234 802 541 1061<br>
+            sacredheartcollege1957@gmail.com
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="footer-bottom">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO) · All Rights Reserved<br>
+      Created by: Chigbo Samuel (Leumas IT Nexus)
+    </div>
+  </div>
+
+  <script>
+    // Header scroll effect
+    window.addEventListener('scroll', () => {
+      document.getElementById('header').classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // Simple mobile menu (you can expand later)
+    document.getElementById('hamburger').addEventListener('click', () => {
+      alert("Mobile menu coming soon. Please use desktop navigation for now.");
+    });
+  </script>
+</body>
+</html>

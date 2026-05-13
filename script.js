@@ -166,12 +166,25 @@ function navigate(sectionId) {
   });
 
   const titleMap = {
-    dashboard: 'School Dashboard', classes: 'Classes', arms: 'Class Arms',
-    students: 'Students', teachers: 'Staff', subjects: 'Subjects',
-    results: 'Results', 'report-cards': 'Report Cards',
-    attendance: 'Attendance', fixtures: 'Fixtures & Honours',
-    'parent-portal': 'Parent Portal', settings: 'Settings',
+    dashboard:       'School Dashboard',
+    classes:         'Classes',
+    arms:            'Class Arms',
+    students:        'Students',
+    teachers:        'Staff',
+    subjects:        'Subjects',
+    results:         'Results',
+    'report-cards':  'Report Cards',
+    attendance:      'Attendance',
+    fixtures:        'Fixtures & Honours',
+    'parent-portal': 'Parent Portal',
+    settings:        'Settings',
+
+    // ── Admission pages (external — title only, no renderSection needed) ──
+    admissions:      'Admission List',
+    'new-admission': 'New Registration',
+    enroll:          'Enroll Students',
   };
+
   const titleEl = document.getElementById('page-title');
   if (titleEl) titleEl.textContent = titleMap[sectionId] || sectionId;
 
@@ -180,17 +193,22 @@ function navigate(sectionId) {
 
 function renderSection(id) {
   switch (id) {
-    case 'dashboard':     renderDashboard();    break;
-    case 'classes':       renderClasses();      break;
-    case 'arms':          renderArms();         break;
-    case 'students':      renderStudents();     break;
-    case 'teachers':      renderTeachers();     break;
-    case 'subjects':      renderSubjects();     break;
-    case 'results':       renderResults();      break;
-    case 'report-cards':  renderReportCards();  break;
-    case 'attendance':    renderAttendance();   break;
-    case 'fixtures':      renderFixtures();     break;
-    case 'settings':      renderSettings();     break;
+    case 'dashboard':       renderDashboard();    break;
+    case 'classes':         renderClasses();      break;
+    case 'arms':            renderArms();         break;
+    case 'students':        renderStudents();     break;
+    case 'teachers':        renderTeachers();     break;
+    case 'subjects':        renderSubjects();     break;
+    case 'results':         renderResults();      break;
+    case 'report-cards':    renderReportCards();  break;
+    case 'attendance':      renderAttendance();   break;
+    case 'fixtures':        renderFixtures();     break;
+    case 'settings':        renderSettings();     break;
+
+    // ── Admission pages live on their own HTML files ──
+    case 'admissions':      window.location.href = 'admissionList.html'; break;
+    case 'new-admission':   window.location.href = 'regForm.html';       break;
+    case 'enroll':          window.location.href = 'enroll.html';        break;
   }
 }
 
@@ -250,12 +268,12 @@ function renderDashboard() {
     ? (s.students.reduce((a, b) => a + b.attendance, 0) / s.students.length).toFixed(1) : 0;
 
   const statsMap = {
-    'Total Students':        { val: s.students.length,     trend: `${s.classes.length} classes`, cls: '' },
-    'Pending Results':       { val: 47,                    trend: '3 classes overdue',           cls: 'warning' },
-    'Average Attendance':    { val: avgAtt + '%',          trend: '↑ 2.1% this week',            cls: 'success' },
-    'Active Staff':          { val: s.teachers.length,     trend: `${s.teachers.length} teachers`, cls: '' },
+    'Total Students':        { val: s.students.length,     trend: `${s.classes.length} `, cls: '' },
+    'Pending Results':       { val: 0,                    trend: '',           cls: 'warning' },
+    'Average Attendance':    { val: avgAtt + '%',          trend: '',            cls: 'success' },
+    'Active Staff':          { val: s.teachers.length,     trend: `${s.teachers.length} `, cls: '' },
     'Subjects Offered':      { val: s.subjects.length,     trend: '',                             cls: 'info' },
-    'Low Attendance Alerts': { val: lowAttendance,         trend: 'Students < 75%',              cls: 'alert' },
+    'Low Attendance Alerts': { val: lowAttendance,         trend: '',              cls: 'alert' },
   };
 
   const grid = document.getElementById('dashboard-stats');

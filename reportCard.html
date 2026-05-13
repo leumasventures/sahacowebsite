@@ -1,589 +1,1091 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sacred Heart College – School Management</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sacred Heart College Eziukwu Aba (SAHARCO) — A leading Catholic boys' secondary school in Aba, Abia State, Nigeria. Excellence in academics, discipline, and moral formation since 1957." />
+  <title>Sacred Heart College Eziukwu Aba | SAHARCO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --navy:         #0f2444;
-      --navy-mid:     #1e3a5f;
-      --navy-light:   #2a4f7c;
-      --blue:         #2563eb;
-      --blue-light:   #3b82f6;
-      --blue-pale:    #dbeafe;
-      --gold:         #c9962c;
-      --gold-light:   #f4c542;
-      --emerald:      #059669;
-      --emerald-pale: #d1fae5;
-      --violet:       #7c3aed;
-      --violet-pale:  #ede9fe;
-      --amber:        #d97706;
-      --amber-pale:   #fef3c7;
-      --rose:         #e11d48;
-      --rose-pale:    #fee2e2;
-      --slate-50:     #f8fafc;
-      --slate-100:    #f1f5f9;
-      --slate-200:    #e2e8f0;
-      --slate-300:    #cbd5e1;
-      --slate-400:    #94a3b8;
-      --slate-500:    #64748b;
-      --slate-600:    #475569;
-      --slate-700:    #334155;
-      --slate-800:    #1e293b;
-      --white:        #ffffff;
-      --sidebar-w:    260px;
-      --topbar-h:     64px;
-      --radius-lg:    14px;
-      --radius-md:    10px;
-      --radius-sm:    7px;
-      --shadow-xs:    0 1px 3px rgba(0,0,0,.07);
-      --shadow-sm:    0 1px 4px rgba(0,0,0,.08);
-      --shadow-md:    0 4px 16px rgba(0,0,0,.10);
-      --shadow-lg:    0 8px 32px rgba(0,0,0,.14);
-      --t:            .22s ease;
+      --maroon:       #6B1212;
+      --maroon-dark:  #3E0808;
+      --maroon-mid:   #8B1A1A;
+      --gold:         #B8862A;
+      --gold-light:   #D4A84B;
+      --gold-pale:    #F5E8CC;
+      --cream:        #FAF8F4;
+      --parchment:    #F2EDE3;
+      --white:        #FFFFFF;
+      --ink:          #1C1612;
+      --ink-light:    #3D3028;
+      --muted:        #7A6E65;
+      --rule:         rgba(107,18,18,0.12);
+      --font-serif:   'EB Garamond', Georgia, serif;
+      --font-sans:    'DM Sans', system-ui, sans-serif;
+      --tr:           0.3s ease;
     }
 
-    html { font-size: 15px; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--slate-100);
-      color: var(--slate-800);
-      min-height: 100vh;
-      display: flex;
-      overflow-x: hidden;
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { font-family: var(--font-sans); background: var(--cream); color: var(--ink); overflow-x: hidden; }
+    img  { max-width: 100%; height: auto; display: block; }
+    a    { text-decoration: none; color: inherit; }
+    ul   { list-style: none; }
+
+    .container { max-width: 1160px; margin-inline: auto; padding-inline: 28px; }
+
+    /* ═══════════════════════════════════════
+       TOPBAR
+    ═══════════════════════════════════════ */
+    .topbar {
+      background: var(--maroon-dark);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(184,134,42,0.25);
+    }
+    .topbar .container {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.7rem; font-weight: 500;
+      color: rgba(255,255,255,0.55); letter-spacing: 0.04em;
+    }
+    .topbar-item .ti { color: var(--gold-light); font-size: 0.9rem; }
+    .topbar-motto {
+      font-family: var(--font-serif);
+      font-style: italic; font-size: 0.75rem;
+      color: var(--gold-light); letter-spacing: 0.02em;
     }
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      width: var(--sidebar-w); min-width: var(--sidebar-w);
-      height: 100vh; position: fixed; top: 0; left: 0;
-      background: var(--navy);
-      display: flex; flex-direction: column;
-      z-index: 300;
-      transition: width var(--t), min-width var(--t), transform var(--t);
-      overflow: hidden;
-      box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    /* ═══════════════════════════════════════
+       HEADER / NAV
+    ═══════════════════════════════════════ */
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--white);
+      border-bottom: 1px solid var(--rule);
+      transition: box-shadow var(--tr);
     }
-    #sidebar.collapsed { width: 0; min-width: 0; }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner {
+      display: flex; align-items: center; gap: 1.5rem;
+      padding-block: 12px;
+    }
 
-    .sidebar-brand { padding: 1.5rem 1.25rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0; }
-    .school-crest {
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-radius: 10px;
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+    .crest {
+      width: 58px; height: 58px; border-radius: 50%; overflow: hidden;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 3px rgba(184,134,42,0.15);
+      flex-shrink: 0;
+    }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .crest-placeholder {
+      width: 100%; height: 100%;
+      background: var(--maroon);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.35rem; margin-bottom: .7rem;
-      box-shadow: 0 4px 12px rgba(201,150,44,.35);
+      font-family: var(--font-serif); font-size: 1.4rem; color: var(--gold);
     }
-    .sidebar-brand h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: .95rem; font-weight: 700;
-      color: #fff; line-height: 1.3; white-space: nowrap;
+    .logo-text { line-height: 1.2; }
+    .logo-name {
+      display: block;
+      font-family: var(--font-serif);
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--maroon); letter-spacing: 0.02em;
     }
-    .sidebar-brand p { font-size: .72rem; color: var(--slate-400); margin-top: .2rem; white-space: nowrap; }
+    .logo-tag {
+      display: block;
+      font-size: 0.65rem; font-weight: 600;
+      color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-top: 2px;
+    }
 
-    .sidebar-nav { flex: 1; overflow-y: auto; padding: 1rem 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.1) transparent; }
-    .sidebar-nav::-webkit-scrollbar { width: 4px; }
-    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-    .sidebar-nav ul { list-style: none; }
+    .nav { margin-left: auto; }
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-light); border-radius: 6px;
+      transition: background var(--tr), color var(--tr);
+    }
+    .nav-link:hover { background: var(--parchment); color: var(--maroon); }
+    .nav-link.active { color: var(--maroon); font-weight: 600; }
 
-    .nav-group-label {
-      font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
-      color: rgba(255,255,255,.28); padding: .9rem 1.25rem .4rem;
+    .nav-cta {
+      margin-left: 0.5rem;
+      background: var(--maroon); color: var(--white);
+      padding: 0.45rem 1.1rem; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 600;
+      transition: background var(--tr);
     }
-    .sidebar-nav a {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .62rem 1.25rem;
-      color: rgba(255,255,255,.72);
-      text-decoration: none; font-size: .875rem; font-weight: 500;
-      transition: background var(--t), color var(--t); white-space: nowrap;
-    }
-    .sidebar-nav a .nav-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
-    .sidebar-nav a:hover { background: rgba(255,255,255,.07); color: #fff; }
-    .sidebar-nav li.active > a {
-      background: linear-gradient(90deg, rgba(37,99,235,.55) 0%, rgba(37,99,235,.15) 100%);
-      color: #fff; border-right: 3px solid var(--blue-light);
-    }
-    .sidebar-nav li.active > a .nav-icon { color: var(--gold-light); }
+    .nav-cta:hover { background: var(--maroon-mid); }
 
-    .sidebar-footer { border-top: 1px solid rgba(255,255,255,.07); padding: 1rem 1.25rem; flex-shrink: 0; }
-    .sidebar-user { display: flex; align-items: center; gap: .75rem; }
-    .sidebar-user-avatar {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--blue), var(--blue-light));
+    .hamburger {
+      display: none; margin-left: auto;
+      background: none; border: none; cursor: pointer;
+      flex-direction: column; gap: 5px; padding: 4px;
+    }
+    .hamburger span {
+      display: block; width: 24px; height: 2px;
+      background: var(--maroon); border-radius: 2px;
+      transition: transform var(--tr), opacity var(--tr);
+    }
+
+    /* ═══════════════════════════════════════
+       HERO
+    ═══════════════════════════════════════ */
+    .hero {
+      position: relative; overflow: hidden;
+      background: var(--maroon-dark);
+      min-height: 92vh;
+      display: flex; align-items: center;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('images/sahaco gate.JPG');
+      background-size: cover; background-position: center 30%;
+      filter: brightness(0.32) saturate(0.7);
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(62,8,8,0.82) 0%,
+        rgba(107,18,18,0.55) 50%,
+        rgba(30,4,4,0.78) 100%
+      );
+    }
+    .hero-content {
+      position: relative; z-index: 2;
+      padding: 6rem 0 5rem;
+      max-width: 700px;
+    }
+    .hero-eyebrow {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow-line { width: 36px; height: 1px; background: var(--gold); }
+    .hero-eyebrow-text {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold-light);
+    }
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 700; line-height: 1.1;
+      color: var(--white); margin-bottom: 1.4rem;
+    }
+    .hero-title em { color: var(--gold-light); font-style: italic; }
+    .hero-sub {
+      font-size: 1.02rem; line-height: 1.7;
+      color: rgba(255,255,255,0.72);
+      max-width: 540px; margin-bottom: 2.5rem;
+    }
+    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn-gold {
+      background: var(--gold); color: var(--maroon-dark);
+      padding: 0.75rem 1.8rem; border-radius: 6px;
+      font-size: 0.88rem; font-weight: 700; letter-spacing: 0.04em;
+      transition: background var(--tr), transform var(--tr);
+      border: none; cursor: pointer;
+    }
+    .btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); }
+    .btn-outline-white {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.45);
+      color: var(--white);
+      padding: 0.75rem 1.8rem; border-radius: 6px;
+      font-size: 0.88rem; font-weight: 500;
+      transition: border-color var(--tr), background var(--tr);
+    }
+    .btn-outline-white:hover { border-color: var(--gold); background: rgba(184,134,42,0.1); }
+
+    .hero-stats {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+      background: rgba(30,4,4,0.75);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(184,134,42,0.25);
+    }
+    .hero-stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      divide-x: 1px solid rgba(184,134,42,0.2);
+    }
+    .hero-stat {
+      padding: 1.25rem 1.5rem;
+      border-right: 1px solid rgba(184,134,42,0.18);
+      text-align: center;
+    }
+    .hero-stat:last-child { border-right: none; }
+    .hero-stat-num {
+      font-family: var(--font-serif);
+      font-size: 1.9rem; font-weight: 700;
+      color: var(--gold); line-height: 1;
+    }
+    .hero-stat-label {
+      font-size: 0.65rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); margin-top: 4px;
+    }
+
+    /* ═══════════════════════════════════════
+       SECTION COMMON
+    ═══════════════════════════════════════ */
+    .section { padding: 5.5rem 0; }
+    .section-eyebrow {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .section-eyebrow .rule {
+      flex: none; width: 32px; height: 1.5px;
+      background: var(--gold);
+    }
+    .eyebrow-label {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--gold);
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(1.8rem, 3.5vw, 2.7rem);
+      font-weight: 700; line-height: 1.15;
+      color: var(--maroon); margin-bottom: 1rem;
+    }
+    .section-desc {
+      font-size: 0.95rem; line-height: 1.8;
+      color: var(--muted); max-width: 540px;
+    }
+
+    /* ═══════════════════════════════════════
+       ABOUT
+    ═══════════════════════════════════════ */
+    .about { background: var(--cream); }
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 5rem; align-items: center;
+    }
+    .about-pillars {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem; margin-top: 2.2rem;
+    }
+    .pillar {
+      background: var(--white);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+    }
+    .pillar-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .pillar-title {
+      font-family: var(--font-serif);
+      font-size: 0.95rem; font-weight: 600;
+      color: var(--maroon); margin-bottom: 0.2rem;
+    }
+    .pillar-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    /* Photo collage */
+    .about-visual { position: relative; height: 460px; }
+    .photo-main {
+      position: absolute; top: 0; left: 0;
+      width: 72%; height: 78%;
+      border-radius: 10px; overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+    }
+    .photo-main img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-accent {
+      position: absolute; bottom: 0; right: 0;
+      width: 50%; height: 52%;
+      border-radius: 10px; overflow: hidden;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.16);
+      border: 4px solid var(--white);
+    }
+    .photo-accent img { width: 100%; height: 100%; object-fit: cover; }
+    .year-badge {
+      position: absolute; top: 50%; left: 58%;
+      transform: translate(-50%, -50%);
+      background: var(--maroon);
+      color: var(--white);
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(107,18,18,0.4);
+      border: 3px solid var(--gold);
+      z-index: 2;
+    }
+    .yr { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; color: var(--gold); line-height: 1; }
+    .yr-label { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-top: 3px; }
+
+    /* ═══════════════════════════════════════
+       CAMPUS GALLERY
+    ═══════════════════════════════════════ */
+    .campus { background: var(--white); }
+    .campus .section-title { text-align: center; max-width: 640px; margin: 0 auto 2.5rem; }
+    .campus .section-eyebrow { justify-content: center; }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 260px 260px;
+      gap: 1rem;
+    }
+    .gallery-item {
+      position: relative; overflow: hidden; border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    }
+    .gallery-item.tall { grid-row: span 2; }
+    .gallery-item img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .gallery-item:hover img { transform: scale(1.06); }
+    .gallery-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(30,4,4,0.78) 0%, transparent 55%);
+      display: flex; align-items: flex-end;
+      padding: 1.1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .gallery-item:hover .gallery-overlay { opacity: 1; }
+    .gallery-label {
+      color: var(--white);
+      font-family: var(--font-serif);
+      font-size: 1rem; font-weight: 600;
+    }
+    .gallery-sublabel {
+      color: var(--gold-light);
+      font-size: 0.7rem; font-weight: 500;
+      letter-spacing: 0.06em; display: block;
+      margin-top: 2px;
+    }
+
+    /* ═══════════════════════════════════════
+       FEATURES STRIP
+    ═══════════════════════════════════════ */
+    .features-strip {
+      background: var(--maroon-dark);
+      padding: 4rem 0;
+    }
+    .features-strip .section-title { color: var(--white); }
+    .features-strip .eyebrow-label { color: var(--gold-light); }
+    .features-strip .section-eyebrow .rule { background: var(--gold); }
+    .features-strip .section-title { text-align: center; max-width: 600px; margin: 0 auto 2.5rem; }
+    .features-strip .section-eyebrow { justify-content: center; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(184,134,42,0.2);
+      border-radius: 12px; padding: 1.75rem 1.5rem;
+      transition: background var(--tr), transform var(--tr);
+    }
+    .feature-card:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 0.85rem; }
+    .feature-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem; font-weight: 600; color: var(--gold-light);
+      margin-bottom: 0.4rem;
+    }
+    .feature-desc { font-size: 0.8rem; line-height: 1.6; color: rgba(255,255,255,0.55); }
+
+    /* ═══════════════════════════════════════
+       GROTTO / FAITH SECTION
+    ═══════════════════════════════════════ */
+    .faith { background: var(--parchment); }
+    .faith-grid {
+      display: grid; grid-template-columns: 1fr 1.1fr;
+      gap: 5rem; align-items: center;
+    }
+    .faith-image-wrap {
+      position: relative; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 20px 56px rgba(0,0,0,0.15);
+      height: 420px;
+    }
+    .faith-image-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .faith-image-wrap::after {
+      content: '';
+      position: absolute; inset: 0;
+      border: 2px solid rgba(184,134,42,0.4);
+      border-radius: 12px; pointer-events: none;
+    }
+    .faith-quote {
+      font-family: var(--font-serif);
+      font-size: 1.5rem; font-style: italic;
+      color: var(--maroon); line-height: 1.5;
+      margin: 1.5rem 0;
+      padding-left: 1.5rem;
+      border-left: 3px solid var(--gold);
+    }
+    .faith-body { font-size: 0.93rem; line-height: 1.8; color: var(--ink-light); }
+    .faith-values { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+    .faith-tag {
+      background: var(--white); border: 1px solid var(--rule);
+      color: var(--maroon); font-size: 0.75rem; font-weight: 600;
+      padding: 0.3rem 0.8rem; border-radius: 20px; letter-spacing: 0.04em;
+    }
+
+    /* ═══════════════════════════════════════
+       CLASSES / ADMISSIONS
+    ═══════════════════════════════════════ */
+    .admissions { background: var(--cream); }
+    .admissions-grid {
+      display: grid; grid-template-columns: 1.2fr 1fr;
+      gap: 5rem; align-items: start;
+    }
+    .class-cards { display: flex; flex-direction: column; gap: 0.85rem; }
+    .class-card {
+      background: var(--white);
+      border: 1px solid var(--rule);
+      border-radius: 10px; padding: 1.1rem 1.3rem;
+      display: flex; align-items: center; gap: 1.1rem;
+      transition: box-shadow var(--tr), transform var(--tr);
+    }
+    .class-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateX(4px); }
+    .class-num {
+      flex-shrink: 0; width: 48px; height: 48px;
+      background: var(--gold-pale); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700;
+      color: var(--maroon);
+    }
+    .class-info { flex: 1; }
+    .class-name { font-weight: 600; font-size: 0.92rem; color: var(--ink); }
+    .class-desc { font-size: 0.77rem; color: var(--muted); margin-top: 2px; }
+    .class-badge {
+      font-size: 0.65rem; font-weight: 700;
+      padding: 0.2rem 0.6rem; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .badge-js { background: var(--gold-pale); color: var(--gold); }
+    .badge-ss { background: rgba(107,18,18,0.1); color: var(--maroon); }
+
+    .admissions-info { position: sticky; top: 100px; }
+    .adm-card {
+      background: var(--maroon);
+      border-radius: 14px; padding: 2.2rem;
+      color: var(--white);
+      box-shadow: 0 16px 48px rgba(107,18,18,0.3);
+    }
+    .adm-card h3 {
+      font-family: var(--font-serif);
+      font-size: 1.4rem; color: var(--gold-light);
+      margin-bottom: 0.5rem;
+    }
+    .adm-card p { font-size: 0.85rem; color: rgba(255,255,255,0.65); line-height: 1.6; margin-bottom: 1.5rem; }
+    .adm-steps { display: flex; flex-direction: column; gap: 0.8rem; }
+    .adm-step { display: flex; gap: 0.75rem; align-items: flex-start; }
+    .adm-step-num {
+      flex-shrink: 0; width: 26px; height: 26px;
+      background: rgba(184,134,42,0.25); border: 1px solid var(--gold);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: .8rem; font-weight: 700; color: #fff; flex-shrink: 0;
+      font-size: 0.72rem; font-weight: 700; color: var(--gold);
     }
-    .sidebar-user-info { flex: 1; min-width: 0; }
-    .sidebar-user-info strong { display: block; font-size: .82rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sidebar-user-info span { font-size: .72rem; color: var(--slate-400); }
-    #logout-btn {
-      background: none; border: none; color: rgba(255,255,255,.45);
-      cursor: pointer; font-size: 1rem; padding: .25rem; border-radius: 6px;
-      transition: color var(--t);
+    .adm-step-text { font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.5; padding-top: 3px; }
+    .adm-btn {
+      display: block; width: 100%;
+      margin-top: 1.8rem;
+      background: var(--gold); color: var(--maroon-dark);
+      padding: 0.85rem; border-radius: 8px; text-align: center;
+      font-weight: 700; font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      transition: background var(--tr);
     }
-    #logout-btn:hover { color: var(--rose); }
+    .adm-btn:hover { background: var(--gold-light); }
 
-    /* ── MAIN ── */
-    .main-container {
-      flex: 1; margin-left: var(--sidebar-w);
-      display: flex; flex-direction: column; min-height: 100vh;
-      transition: margin-left var(--t);
+    /* ═══════════════════════════════════════
+       CONTACT / FOOTER
+    ═══════════════════════════════════════ */
+    .contact-strip {
+      background: var(--maroon);
+      padding: 4.5rem 0;
     }
-    .main-container.sidebar-collapsed { margin-left: 0; }
+    .contact-inner {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 3rem;
+    }
+    .contact-brand .logo-name { color: var(--gold-light); font-size: 1.2rem; display: block; font-family: var(--font-serif); font-weight: 700; }
+    .contact-brand .logo-tag  { color: rgba(255,255,255,0.45); font-size: 0.65rem; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+    .contact-motto {
+      font-family: var(--font-serif);
+      font-style: italic; font-size: 0.88rem;
+      color: var(--gold); margin-top: 1rem;
+      line-height: 1.5;
+    }
+    .contact-brand p {
+      font-size: 0.8rem; color: rgba(255,255,255,0.45);
+      line-height: 1.7; margin-top: 0.75rem;
+    }
+    .contact-col h4 {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--gold-light); margin-bottom: 1rem;
+    }
+    .contact-col ul { display: flex; flex-direction: column; gap: 0.55rem; }
+    .contact-col li {
+      font-size: 0.8rem; color: rgba(255,255,255,0.55);
+      display: flex; gap: 0.5rem; line-height: 1.5;
+    }
+    .contact-col a { color: rgba(255,255,255,0.55); transition: color var(--tr); }
+    .contact-col a:hover { color: var(--gold-light); }
+    .footer-bottom {
+      background: var(--maroon-dark);
+      padding: 1.1rem 0;
+      text-align: center;
+      font-size: 0.72rem; color: rgba(255,255,255,0.3);
+      border-top: 1px solid rgba(184,134,42,0.15);
+    }
 
-    .topbar {
-      height: var(--topbar-h); background: var(--white);
-      border-bottom: 1px solid var(--slate-200);
-      display: flex; align-items: center;
-      padding: 0 1.75rem; gap: 1rem;
-      position: sticky; top: 0; z-index: 200;
-      box-shadow: var(--shadow-xs);
+    /* ═══════════════════════════════════════
+       MOBILE NAV OVERLAY
+    ═══════════════════════════════════════ */
+    .mobile-nav {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: var(--maroon-dark);
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.5rem;
     }
-    #sidebar-toggle-mobile {
+    .mobile-nav.open { display: flex; }
+    .mobile-nav a {
+      font-family: var(--font-serif);
+      font-size: 1.6rem; color: rgba(255,255,255,0.8);
+      transition: color var(--tr);
+    }
+    .mobile-nav a:hover { color: var(--gold-light); }
+    .mobile-close {
+      position: absolute; top: 1.5rem; right: 1.5rem;
       background: none; border: none; cursor: pointer;
-      color: var(--slate-600); font-size: 1.25rem; padding: .4rem; border-radius: 8px;
-      transition: background var(--t);
+      color: rgba(255,255,255,0.6); font-size: 1.5rem;
     }
-    #sidebar-toggle-mobile:hover { background: var(--slate-100); }
 
-    .topbar-breadcrumb { display: flex; align-items: center; gap: .5rem; flex: 1; }
-    .topbar-breadcrumb .bc-home { font-size: .8rem; color: var(--slate-400); text-decoration: none; }
-    .topbar-breadcrumb .bc-sep  { color: var(--slate-300); font-size: .8rem; }
-    #page-title { font-size: 1.05rem; font-weight: 700; color: var(--navy); }
-
-    .topbar-right { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
-    .topbar-session-badge {
-      background: var(--slate-100); border: 1px solid var(--slate-200);
-      border-radius: 20px; padding: .3rem .9rem;
-      font-size: .75rem; font-weight: 600; color: var(--slate-700); white-space: nowrap;
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .about-grid, .faith-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .about-visual { height: 360px; }
+      .admissions-grid { grid-template-columns: 1fr; }
+      .admissions-info { position: static; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .contact-inner { grid-template-columns: 1fr 1fr; }
+      .contact-brand { grid-column: span 2; }
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
+      .gallery-item.tall { grid-row: span 1; }
     }
-    #current-user-name-role { font-size: .82rem; color: var(--slate-600); font-weight: 500; white-space: nowrap; }
-    #logout-btn-top {
-      background: none; border: 1px solid var(--slate-200); color: var(--slate-600);
-      cursor: pointer; font-size: .8rem; padding: .35rem .85rem; border-radius: 8px;
-      font-family: 'DM Sans', sans-serif; font-weight: 500;
-      transition: background var(--t), color var(--t), border-color var(--t);
-    }
-    #logout-btn-top:hover { background: var(--rose); color: #fff; border-color: var(--rose); }
-
-    .page-content { flex: 1; padding: 2rem 1.75rem; max-width: 1400px; width: 100%; }
-
-    .content-section { display: none; animation: fadeIn .22s ease; }
-    .content-section:not(.hidden) { display: block; }
-    .content-section.hidden { display: none !important; }
-
-    #dashboard-stats {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1.25rem; margin-bottom: 2rem;
-    }
-    .stat-card {
-      background: var(--white); border-radius: var(--radius-lg);
-      padding: 1.4rem 1.5rem; box-shadow: var(--shadow-sm);
-      transition: box-shadow var(--t), transform var(--t);
-    }
-    .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-    .stat-card h4 { font-size: .75rem; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
-    .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--navy); line-height: 1.1; }
-
-    #sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 299; }
-
-    ::-webkit-scrollbar { width: 7px; height: 7px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--slate-200); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--slate-400); }
-
     @media (max-width: 768px) {
-      #sidebar { position: fixed; transform: translateX(-100%); width: var(--sidebar-w) !important; min-width: var(--sidebar-w) !important; }
-      #sidebar:not(.collapsed) { transform: translateX(0); }
-      .main-container { margin-left: 0 !important; }
-      .page-content { padding: 1.25rem 1rem; }
-      #sidebar-backdrop.show { display: block; }
-      .topbar-session-badge, #current-user-name-role { display: none; }
-    }
-
-    @keyframes fadeIn       { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes slideInRight { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
-    @keyframes slideUp      { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
-
-    button:hover { opacity: .88; }
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--navy-mid) !important;
-      box-shadow: 0 0 0 3px rgba(30,58,95,.1) !important;
-      outline: none;
-    }
-
-    /* ══════════════════════════════════════════════
-       REPORT CARD PRINT STYLES
-       These apply when script2.js calls window.print()
-       from renderReportCard() / printAllReportCards()
-    ══════════════════════════════════════════════ */
-    @media print {
-      /* Hide entire shell */
-      #sidebar,
-      .topbar,
-      #sidebar-backdrop,
-      .page-content > *:not(#report-cards) { display: none !important; }
-
-      /* Full-width report card area */
-      html, body { background: #fff !important; }
-      .main-container { margin-left: 0 !important; display: block !important; }
-      .page-content   { padding: 0 !important; max-width: 100% !important; }
-
-      /* Show only the report-cards section */
-      #report-cards {
-        display: block !important;
-        width: 100%;
-      }
-
-      /* Each individual report card gets its own page */
-      .report-card-page,
-      [class*="report-card"] { page-break-after: always; }
-
-      /* Restore colour for grade bands even in B&W print */
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-      /* Hide action buttons inside the report section */
-      #report-cards button { display: none !important; }
-      #report-cards select { border: 1px solid #ccc !important; }
+      .nav { display: none; }
+      .hamburger { display: flex; }
+      .topbar-items { gap: 0.75rem; }
+      .topbar-motto { display: none; }
+      .hero-stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .features-grid { grid-template-columns: 1fr; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .contact-inner { grid-template-columns: 1fr; }
+      .contact-brand { grid-column: span 1; }
+      .about-pillars { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<div id="sidebar-backdrop"></div>
-
-<!-- ══════════════════════════════════════════
-     SIDEBAR
-══════════════════════════════════════════ -->
-<aside id="sidebar">
-  <div class="sidebar-brand">
-    <div class="school-crest">✝</div>
-    <h1>Sacred Heart<br>College</h1>
-    <p>Eziukwu Aba</p>
-  </div>
-
-  <nav class="sidebar-nav">
-    <ul>
-      <li class="nav-group-label">Overview</li>
-      <li><a href="#dashboard"><span class="nav-icon">🏠</span> Dashboard</a></li>
-
-      <li class="nav-group-label">Academic</li>
-      <li><a href="#classes"><span class="nav-icon">🏫</span> Classes</a></li>
-      <li><a href="#arms"><span class="nav-icon">🚪</span> Class Arms</a></li>
-      <li><a href="#students"><span class="nav-icon">🎒</span> Students</a></li>
-      <li><a href="#teachers"><span class="nav-icon">👩‍🏫</span> Staff</a></li>
-      <li><a href="#subjects"><span class="nav-icon">📚</span> Subjects</a></li>
-
-      <li class="nav-group-label">Performance</li>
-      <li><a href="#results"><span class="nav-icon">📊</span> Results</a></li>
-      <li><a href="#report-cards"><span class="nav-icon">📄</span> Report Cards</a></li>
-      <li><a href="#attendance"><span class="nav-icon">✅</span> Attendance</a></li>
-
-      <li class="nav-group-label">Activities</li>
-      <li><a href="#fixtures"><span class="nav-icon">🏆</span> Fixtures &amp; Honours</a></li>
-
-      <li class="nav-group-label">System</li>
-      <li><a href="#settings"><span class="nav-icon">⚙️</span> Settings</a></li>
-    </ul>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sidebar-avatar">SA</div>
-      <div class="sidebar-user-info">
-        <strong id="sidebar-username">Samuel</strong>
-        <span id="sidebar-role">Admin</span>
+  <!-- ═══════════════════════════════════════
+       TOPBAR
+  ═══════════════════════════════════════ -->
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <div class="topbar-items">
+        <div class="topbar-item">
+          <span class="ti">✉</span>
+          <span>info@saharcoaba.edu.ng</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">☎</span>
+          <span>+234 806 000 0000</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">📍</span>
+          <span>Eziukwu, Aba, Abia State</span>
+        </div>
       </div>
-      <button id="logout-btn" title="Logout">⏻</button>
+      <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
     </div>
   </div>
-</aside>
 
-<!-- ══════════════════════════════════════════
-     MAIN
-══════════════════════════════════════════ -->
-<div class="main-container" id="main-container">
+  <!-- ═══════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════ -->
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" onerror="this.parentNode.innerHTML='<div class=\'crest-placeholder\'>✝</div>'" />
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div>
+      </div>
 
-  <header class="topbar">
-    <button id="sidebar-toggle-mobile" aria-label="Toggle menu">☰</button>
-    <nav class="topbar-breadcrumb">
-      <a href="#dashboard" class="bc-home">SHC</a>
-      <span class="bc-sep">›</span>
-      <span id="page-title">Dashboard</span>
-    </nav>
-    <div class="topbar-right">
-      <span class="topbar-session-badge" id="session-badge">2025/2026 · Second Term</span>
-      <span id="current-user-name-role">Samuel (Admin)</span>
-      <button id="logout-btn-top">Logout</button>
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="#about"      class="nav-link">About</a></li>
+          <li><a href="#campus"     class="nav-link">Campus</a></li>
+          <li><a href="#faith"      class="nav-link">Mission</a></li>
+          <li><a href="#admissions" class="nav-link">Admissions</a></li>
+          <li><a href="#contact"    class="nav-cta">Contact Us</a></li>
+        </ul>
+      </nav>
+
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </header>
 
-  <main class="page-content">
+  <!-- Mobile Nav -->
+  <div class="mobile-nav" id="mobile-nav">
+    <button class="mobile-close" id="mobile-close">✕</button>
+    <a href="#about"      onclick="closeMobile()">About</a>
+    <a href="#campus"     onclick="closeMobile()">Campus</a>
+    <a href="#faith"      onclick="closeMobile()">Mission</a>
+    <a href="#admissions" onclick="closeMobile()">Admissions</a>
+    <a href="#contact"    onclick="closeMobile()">Contact</a>
+  </div>
 
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="content-section">
-      <div style="margin-bottom:1.75rem;">
-        <h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--navy);margin-bottom:.25rem;">Good morning! 👋</h2>
-        <p style="color:var(--slate-600);font-size:.9rem;">Welcome back to <strong>Sacred Heart College</strong> School Management System.</p>
+  <!-- ═══════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <div class="hero-eyebrow-line"></div>
+          <span class="hero-eyebrow-text">Catholic Diocese of Aba · Est. 1957</span>
+        </div>
+        <h1 class="hero-title">
+          Forming <em>Men of</em><br>Faith, Character<br>&amp; Excellence
+        </h1>
+        <p class="hero-sub">
+          Sacred Heart College Eziukwu Aba (SAHARCO) has nurtured generations of exemplary young men through rigorous academics, moral discipline, and Catholic values for over six decades.
+        </p>
+        <div class="hero-actions">
+          <a href="#admissions" class="btn-gold">Apply for Admission</a>
+          <a href="#about" class="btn-outline-white">Discover SAHARCO</a>
+        </div>
       </div>
-      <div id="dashboard-stats"></div>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
-        <button class="btn-primary"   onclick="if(window.navigate)navigate('results')">📊 Enter Results</button>
-        <button class="btn-secondary" onclick="if(window.navigate)navigate('report-cards')">📄 Report Cards</button>
-        <button class="btn-outline"   onclick="if(window.navigate)navigate('attendance')">✅ Attendance</button>
+    </div>
+    <div class="hero-stats">
+      <div class="container">
+        <div class="hero-stats-grid">
+          <div class="hero-stat">
+            <div class="hero-stat-num">67+</div>
+            <div class="hero-stat-label">Years of Excellence</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">3,000+</div>
+            <div class="hero-stat-label">Alumni Worldwide</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">6</div>
+            <div class="hero-stat-label">Class Arms</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">100%</div>
+            <div class="hero-stat-label">Catholic Identity</div>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section id="classes"       class="content-section"></section>
-    <section id="arms"          class="content-section"></section>
-    <section id="students"      class="content-section"></section>
-    <section id="teachers"      class="content-section"></section>
-    <section id="subjects"      class="content-section"></section>
-    <section id="results"       class="content-section"></section>
+  <!-- ═══════════════════════════════════════
+       ABOUT
+  ═══════════════════════════════════════ -->
+  <section class="section about" id="about">
+    <div class="container">
+      <div class="about-grid">
+        <!-- Text -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Est. 1957</span>
+          </div>
+          <h2 class="section-title">A Legacy of Faith,<br>Discipline &amp; Excellence</h2>
+          <p class="section-desc">
+            Sacred Heart College Eziukwu Aba (SAHARCO) is a prestigious Catholic boys' secondary school founded in 1957 by the Catholic Diocese of Aba. Nestled in the heart of Aba, Abia State, we form young men of character, competence, and compassion — equipped to lead in every sphere of life.
+          </p>
+          <p class="section-desc" style="margin-top:0.9rem;">
+            Our mission is rooted in the Sacred Heart of Jesus: to bear witness to truth through academic rigor, spiritual formation, and service to humanity.
+          </p>
+          <div class="about-pillars">
+            <div class="pillar">
+              <div class="pillar-icon">📖</div>
+              <div class="pillar-title">Academic Excellence</div>
+              <div class="pillar-desc">Consistently outstanding WAEC & NECO results through dedicated teaching and structured learning.</div>
+            </div>
+            <div class="pillar">
+              <div class="pillar-icon">✝️</div>
+              <div class="pillar-title">Catholic Formation</div>
+              <div class="pillar-desc">Faith and values at the centre of everything — daily Mass, retreats, and moral instruction.</div>
+            </div>
+            <div class="pillar">
+              <div class="pillar-icon">⚖️</div>
+              <div class="pillar-title">Discipline</div>
+              <div class="pillar-desc">A structured, orderly environment that builds character and prepares boys for life beyond school.</div>
+            </div>
+            <div class="pillar">
+              <div class="pillar-icon">🏆</div>
+              <div class="pillar-title">Co-curricular Depth</div>
+              <div class="pillar-desc">Sports, debate, music, scouts, and cultural activities that develop the whole person.</div>
+            </div>
+          </div>
+        </div>
 
-    <!-- REPORT CARDS – script2.js renders full card HTML here -->
-    <section id="report-cards"  class="content-section"></section>
+        <!-- Visual collage -->
+        <div class="about-visual">
+          <div class="photo-main">
+            <img src="images/sahaco gate.JPG" alt="SAHARCO Main Gate" />
+          </div>
+          <div class="photo-accent">
+            <img src="images/grotto.jpg" alt="School Grotto" />
+          </div>
+          <div class="year-badge">
+            <div class="yr">1957</div>
+            <div class="yr-label">Founded</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <section id="attendance"    class="content-section"></section>
-    <section id="fixtures"      class="content-section"></section>
-    <section id="parent-portal" class="content-section"></section>
-    <section id="settings"      class="content-section"></section>
+  <!-- ═══════════════════════════════════════
+       FEATURES STRIP
+  ═══════════════════════════════════════ -->
+  <div class="features-strip">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Why SAHARCO</span>
+      </div>
+      <h2 class="section-title" style="color:var(--white);">What Sets Us Apart</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔬</div>
+          <div class="feature-title">Modern Science Labs</div>
+          <div class="feature-desc">Fully equipped biology, chemistry, and physics laboratories enabling hands-on scientific exploration.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💻</div>
+          <div class="feature-title">E-Library &amp; ICT</div>
+          <div class="feature-desc">A state-of-the-art e-library and computer centre providing digital literacy and research resources.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <div class="feature-title">Old Boys Library</div>
+          <div class="feature-desc">A rich physical library endowed by our proud alumni — thousands of volumes across every discipline.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎓</div>
+          <div class="feature-title">Experienced Faculty</div>
+          <div class="feature-desc">Dedicated and qualified teachers who invest in every student's academic and personal growth.</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  </main>
-</div>
+  <!-- ═══════════════════════════════════════
+       CAMPUS GALLERY
+  ═══════════════════════════════════════ -->
+  <section class="section campus" id="campus">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Our Campus</span>
+      </div>
+      <h2 class="section-title">Modern Facilities &amp;<br>Conducive Learning Spaces</h2>
 
-<!-- ══════════════════════════════════════════
-     BOOTSTRAP
-══════════════════════════════════════════ -->
-<script>
-  'use strict';
-  var backdrop = document.getElementById('sidebar-backdrop');
-  var sidebar  = document.getElementById('sidebar');
-  var mainCont = document.getElementById('main-container');
+      <div class="gallery-grid">
+        <!-- Tall feature item -->
+        <div class="gallery-item tall">
+          <img src="images/libry frontview.jpg" alt="Library Front View" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">SAHARCO Library</span>
+              <span class="gallery-sublabel">Old Boys' Endowed Library</span>
+            </div>
+          </div>
+        </div>
 
-  function openSidebar() {
-    sidebar.classList.remove('collapsed');
-    if (window.innerWidth < 769) backdrop.classList.add('show');
-    else mainCont.classList.remove('sidebar-collapsed');
-  }
-  function closeSidebar() {
-    sidebar.classList.add('collapsed');
-    backdrop.classList.remove('show');
-    if (window.innerWidth >= 769) mainCont.classList.add('sidebar-collapsed');
-  }
-  function toggleSidebar() {
-    sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
-  }
+        <div class="gallery-item">
+          <img src="images/sahaco e-library.jpg" alt="E-Library Interior" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">E-Library</span>
+              <span class="gallery-sublabel">Digital Resources &amp; ICT Centre</span>
+            </div>
+          </div>
+        </div>
 
-  document.getElementById('sidebar-toggle-mobile').addEventListener('click', toggleSidebar);
-  backdrop.addEventListener('click', closeSidebar);
-  document.querySelectorAll('.sidebar-nav a').forEach(function(a) {
-    a.addEventListener('click', function() {
-      if (window.innerWidth < 769) { sidebar.classList.add('collapsed'); backdrop.classList.remove('show'); }
+        <div class="gallery-item">
+          <img src="images/sahaco science laboratories.JPG" alt="Science Laboratories" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">Science Laboratories</span>
+              <span class="gallery-sublabel">Biology · Chemistry · Physics</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gallery-item">
+          <img src="images/inside conference hall.jpg" alt="ICT / Conference Hall" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">Conference &amp; Computer Hall</span>
+              <span class="gallery-sublabel">Events, Assemblies &amp; ICT</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gallery-item">
+          <img src="images/libry sideview.jpg" alt="Library Side View" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">Library Side Wing</span>
+              <span class="gallery-sublabel">Reading &amp; Study Halls</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gallery-item">
+          <img src="images/sahaco academic sections.JPG" alt="Academic Blocks" loading="lazy" />
+          <div class="gallery-overlay">
+            <div>
+              <span class="gallery-label">Academic Classrooms</span>
+              <span class="gallery-sublabel">JS1 – SS3 Learning Blocks</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       FAITH / MISSION
+  ═══════════════════════════════════════ -->
+  <section class="section faith" id="faith">
+    <div class="container">
+      <div class="faith-grid">
+        <div class="faith-image-wrap">
+          <img src="images/grotto.jpg" alt="Sacred Heart Grotto at SAHARCO" loading="lazy" />
+        </div>
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Our Mission</span>
+          </div>
+          <h2 class="section-title">Rooted in the<br>Sacred Heart</h2>
+          <blockquote class="faith-quote">
+            "Testimonium Perhibere Veritati" — To Bear Witness to the Truth
+          </blockquote>
+          <p class="faith-body">
+            Our motto captures the spirit of SAHARCO. Every dimension of school life — from classroom instruction to chapel worship, from sports fields to community service — is oriented toward forming young men who will bear witness to truth and integrity in the world.
+          </p>
+          <p class="faith-body" style="margin-top:0.85rem;">
+            Founded under the Catholic Diocese of Aba, Sacred Heart College holds fast to the educational philosophy of the Church: that the development of faith, reason, and character are inseparable. We are not merely an academic institution; we are a community of formation.
+          </p>
+          <div class="faith-values">
+            <span class="faith-tag">Catholic Identity</span>
+            <span class="faith-tag">Integrity</span>
+            <span class="faith-tag">Service</span>
+            <span class="faith-tag">Academic Rigor</span>
+            <span class="faith-tag">Brotherhood</span>
+            <span class="faith-tag">Discipline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       ADMISSIONS
+  ═══════════════════════════════════════ -->
+  <section class="section admissions" id="admissions">
+    <div class="container">
+      <div class="admissions-grid">
+        <!-- Class list -->
+        <div>
+          <div class="section-eyebrow">
+            <span class="rule"></span>
+            <span class="eyebrow-label">Classes Offered</span>
+          </div>
+          <h2 class="section-title">From Junior Secondary<br>to Senior Secondary</h2>
+          <p class="section-desc" style="margin-bottom:1.8rem;">
+            SAHARCO offers a complete secondary education spanning six years across the Junior and Senior Secondary programmes, fully aligned with the Nigerian National Curriculum.
+          </p>
+          <div class="class-cards">
+            <div class="class-card">
+              <div class="class-num">JS1</div>
+              <div class="class-info">
+                <div class="class-name">Junior Secondary 1</div>
+                <div class="class-desc">Entry level · Foundation academic year · New entrants</div>
+              </div>
+              <span class="class-badge badge-js">JS</span>
+            </div>
+            <div class="class-card">
+              <div class="class-num">JS2</div>
+              <div class="class-info">
+                <div class="class-name">Junior Secondary 2</div>
+                <div class="class-desc">Building literacy, numeracy, and scientific thinking</div>
+              </div>
+              <span class="class-badge badge-js">JS</span>
+            </div>
+            <div class="class-card">
+              <div class="class-num">JS3</div>
+              <div class="class-info">
+                <div class="class-name">Junior Secondary 3</div>
+                <div class="class-desc">BECE examination class · Subject specialisation preparation</div>
+              </div>
+              <span class="class-badge badge-js">JS</span>
+            </div>
+            <div class="class-card">
+              <div class="class-num">SS1</div>
+              <div class="class-info">
+                <div class="class-name">Senior Secondary 1</div>
+                <div class="class-desc">Science, Arts, or Commercial track begins</div>
+              </div>
+              <span class="class-badge badge-ss">SS</span>
+            </div>
+            <div class="class-card">
+              <div class="class-num">SS2</div>
+              <div class="class-info">
+                <div class="class-name">Senior Secondary 2</div>
+                <div class="class-desc">Deepening subject mastery · Exam preparation begins</div>
+              </div>
+              <span class="class-badge badge-ss">SS</span>
+            </div>
+            <div class="class-card">
+              <div class="class-num">SS3</div>
+              <div class="class-info">
+                <div class="class-name">Senior Secondary 3</div>
+                <div class="class-desc">WAEC &amp; NECO examination class · Final year</div>
+              </div>
+              <span class="class-badge badge-ss">SS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admission card -->
+        <div class="admissions-info">
+          <div class="adm-card">
+            <h3>How to Apply</h3>
+            <p>Admissions into JS1 and SS1 are conducted annually. Follow the steps below to begin your son's SAHARCO journey.</p>
+            <div class="adm-steps">
+              <div class="adm-step">
+                <div class="adm-step-num">1</div>
+                <div class="adm-step-text">Obtain and complete the admission form from the school's administrative office or online portal.</div>
+              </div>
+              <div class="adm-step">
+                <div class="adm-step-num">2</div>
+                <div class="adm-step-text">Submit the form with copies of birth certificate, Primary 6 leaving certificate (for JS1), and BECE results (for SS1).</div>
+              </div>
+              <div class="adm-step">
+                <div class="adm-step-num">3</div>
+                <div class="adm-step-text">Sit the entrance examination conducted by the school on a designated date.</div>
+              </div>
+              <div class="adm-step">
+                <div class="adm-step-num">4</div>
+                <div class="adm-step-text">Await results and, upon offer of admission, complete the acceptance and payment of school fees.</div>
+              </div>
+            </div>
+            <a href="#contact" class="adm-btn">Contact Admissions Office →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
+       CONTACT / FOOTER
+  ═══════════════════════════════════════ -->
+  <footer class="contact-strip" id="contact">
+    <div class="container">
+      <div class="contact-inner">
+        <div class="contact-brand">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba · Est. 1957</span>
+          <div class="contact-motto">"Testimonium Perhibere Veritati"<br>To Bear Witness to the Truth</div>
+          <p>A Catholic boys' secondary school under the Catholic Diocese of Aba, dedicated to forming young men of faith, character, and academic excellence.</p>
+        </div>
+        <div class="contact-col">
+          <h4>Contact</h4>
+          <ul>
+            <li>📍 Eziukwu Road, Aba, Abia State, Nigeria</li>
+            <li>☎ <a href="tel:+2348060000000">+234 806 000 0000</a></li>
+            <li>✉ <a href="mailto:info@saharcoaba.edu.ng">info@saharcoaba.edu.ng</a></li>
+          </ul>
+        </div>
+        <div class="contact-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="#about">About SAHARCO</a></li>
+            <li><a href="#campus">Campus Facilities</a></li>
+            <li><a href="#faith">Our Mission</a></li>
+            <li><a href="#admissions">Admissions</a></li>
+            <li><a href="school-management.html">Staff Portal</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <div class="footer-bottom">
+    <div class="container">
+      &copy; 2025 Sacred Heart College Eziukwu Aba (SAHARCO) · All rights reserved · Catholic Diocese of Aba
+    </div>
+  </div>
+
+  <script>
+    // Header scroll shadow
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 40);
     });
-  });
-</script>
 
-<script src="script2.js"></script>
+    // Mobile nav
+    const hamburger = document.getElementById('hamburger');
+    const mobileNav = document.getElementById('mobile-nav');
+    const mobileClose = document.getElementById('mobile-close');
 
-<!-- ══════════════════════════════════════════
-     POST-LOAD POLISH
-══════════════════════════════════════════ -->
-<script>
-  'use strict';
+    hamburger.addEventListener('click', () => mobileNav.classList.add('open'));
+    mobileClose.addEventListener('click', () => mobileNav.classList.remove('open'));
 
-  (function injectStyles() {
-    var s = document.createElement('style');
-    s.textContent = [
-      /* ─ Font normalise ─ */
-      '.content-section, .content-section *,',
-      '#modal-overlay, #modal-overlay *,',
-      '#toast-container > div,',
-      'button, input, select, textarea {',
-      '  font-family: "DM Sans", sans-serif;',
-      '}',
+    function closeMobile() { mobileNav.classList.remove('open'); }
 
-      /* ─ Dashboard buttons ─ */
-      '.btn-primary, .btn-secondary, .btn-outline {',
-      '  font-family: "DM Sans", sans-serif;',
-      '  font-size: .875rem; font-weight: 500;',
-      '  padding: .55rem 1.25rem; border-radius: 8px;',
-      '  border: none; cursor: pointer;',
-      '  transition: opacity .15s, transform .1s;',
-      '}',
-      '.btn-primary:active,.btn-secondary:active,.btn-outline:active{transform:scale(.97);}',
-      '.btn-primary   { background: #1e3a5f; color: #fff; }',
-      '.btn-secondary { background: #e2e8f0; color: #334155; }',
-      '.btn-outline   { background: transparent; color: #1e3a5f; border: 1.5px solid #1e3a5f; }',
-
-      /* ─ Stat card accents ─ */
-      '.stat-card.warning { border-left: 3px solid #f59e0b !important; }',
-      '.stat-card.success { border-left: 3px solid #22c55e !important; }',
-      '.stat-card.info    { border-left: 3px solid #3b82f6 !important; }',
-      '.stat-card.alert   { border-left: 3px solid #ef4444 !important; }',
-
-      /* ══════════════════════════════════════════
-         REPORT CARDS SECTION POLISH
-      ══════════════════════════════════════════ */
-
-      /* Selector / filter bar */
-      '#report-cards input[type="text"],',
-      '#report-cards input[type="search"],',
-      '#report-cards select { border-radius: 8px !important; font-size: .875rem !important; }',
-
-      /* Student selector cards */
-      '#report-cards [style*="background:#fff"] {',
-      '  transition: box-shadow .2s ease, transform .2s ease;',
-      '}',
-      '#report-cards [style*="background:#fff"]:hover {',
-      '  box-shadow: 0 6px 24px rgba(0,0,0,.10) !important;',
-      '  transform: translateY(-2px);',
-      '}',
-
-      /* ── Printed report card itself ──
-         script2.js renders the card with inline styles.
-         These overrides ensure the printed document
-         looks polished: school colours, clear typography.
-      ── */
-
-      /* Card wrapper */
-      '#report-cards .rc-wrapper,',
-      '#report-cards [id^="rc-"] {',
-      '  font-family: "DM Sans", sans-serif !important;',
-      '}',
-
-      /* Card header school name */
-      '#report-cards h2[style*="font-size:1.4rem"],',
-      '#report-cards h2[style*="font-size: 1.4rem"] {',
-      '  font-family: "Playfair Display", serif !important;',
-      '  letter-spacing: -.01em;',
-      '}',
-
-      /* Grade band colour chips */
-      '#report-cards [style*="background:#16a34a"],',
-      '#report-cards [style*="background: #16a34a"] { background: #16a34a !important; color: #fff !important; }',
-      '#report-cards [style*="background:#ca8a04"],',
-      '#report-cards [style*="background: #ca8a04"] { background: #ca8a04 !important; color: #fff !important; }',
-      '#report-cards [style*="background:#dc2626"],',
-      '#report-cards [style*="background: #dc2626"] { background: #dc2626 !important; color: #fff !important; }',
-
-      /* Domain score pips (affective / psychomotor) */
-      '#report-cards [style*="border-radius:50%"][style*="width:28px"],',
-      '#report-cards [style*="border-radius: 50%"][style*="width: 28px"] {',
-      '  font-size: .72rem !important;',
-      '  font-weight: 700 !important;',
-      '}',
-
-      /* Subject results table */
-      '#report-cards table {',
-      '  border-collapse: collapse !important;',
-      '  width: 100% !important;',
-      '}',
-      '#report-cards table th {',
-      '  background: #0f2444 !important;',
-      '  color: #fff !important;',
-      '  font-size: .78rem !important;',
-      '  font-weight: 600 !important;',
-      '  padding: .45rem .65rem !important;',
-      '  letter-spacing: .03em;',
-      '}',
-      '#report-cards table td {',
-      '  font-size: .82rem !important;',
-      '  padding: .4rem .65rem !important;',
-      '  border-bottom: 1px solid #e2e8f0 !important;',
-      '}',
-      '#report-cards table tbody tr:nth-child(even) td {',
-      '  background: #f8fafc !important;',
-      '}',
-      '#report-cards table tbody tr:hover td { background: #eff6ff !important; }',
-
-      /* Total / average row */
-      '#report-cards table tfoot td,',
-      '#report-cards table tr[style*="font-weight:700"] td,',
-      '#report-cards table tr[style*="font-weight: 700"] td {',
-      '  font-weight: 700 !important;',
-      '  background: #f1f5f9 !important;',
-      '  border-top: 2px solid #cbd5e1 !important;',
-      '}',
-
-      /* Teacher / principal signature line */
-      '#report-cards hr { border-color: #cbd5e1 !important; }',
-
-      /* Print action buttons */
-      '#report-cards button[onclick*="print"],',
-      '#report-cards button[onclick*="Print"] {',
-      '  background: #0f2444 !important;',
-      '  color: #fff !important;',
-      '  border-radius: 8px !important;',
-      '  padding: .5rem 1.1rem !important;',
-      '  font-size: .85rem !important;',
-      '  font-weight: 600 !important;',
-      '  border: none !important;',
-      '  cursor: pointer !important;',
-      '  transition: opacity .15s !important;',
-      '}',
-
-      /* Modal */
-      '#modal-overlay { backdrop-filter: blur(3px); }',
-      '#modal-overlay > div {',
-      '  border-radius: 16px !important;',
-      '  box-shadow: 0 20px 60px rgba(0,0,0,.22) !important;',
-      '  animation: slideUp .22s ease;',
-      '}',
-
-      /* Active sidebar nav */
-      '.sidebar-nav li.active > a {',
-      '  background: linear-gradient(90deg,rgba(37,99,235,.55) 0%,rgba(37,99,235,.15) 100%) !important;',
-      '  color: #fff !important;',
-      '  border-right: 3px solid #3b82f6 !important;',
-      '}',
-      '.sidebar-nav li.active > a .nav-icon { color: #f4c542 !important; }',
-
-      /* Sidebar labels */
-      '.nav-group-label {',
-      '  list-style: none;',
-      '  font-size: .68rem; font-weight: 700;',
-      '  text-transform: uppercase; letter-spacing: .1em;',
-      '  color: rgba(255,255,255,.28);',
-      '  padding: .9rem 1.25rem .4rem;',
-      '}'
-    ].join('\n');
-    document.head.appendChild(s);
-  })();
-
-  /* ── Sync session badge & sidebar user ── */
-  window.addEventListener('load', function() {
-    requestAnimationFrame(function() {
-      try {
-        var si = window.App && window.App.data && window.App.data.schoolInfo;
-        if (si) {
-          var b = document.getElementById('session-badge');
-          if (b) b.textContent = si.session + ' \u00b7 ' + si.term;
+    // Active nav link on scroll
+    const sections = document.querySelectorAll('section[id], footer[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(l => {
+            l.classList.toggle('active', l.getAttribute('href') === '#' + entry.target.id);
+          });
         }
-      } catch(e) {}
-      try {
-        var u = window.App && window.App.currentUser;
-        if (u) {
-          var initials = u.name.trim().split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
-          var av = document.getElementById('sidebar-avatar');   if (av) av.textContent = initials;
-          var un = document.getElementById('sidebar-username'); if (un) un.textContent = u.name;
-          var ro = document.getElementById('sidebar-role');     if (ro) ro.textContent = u.role;
-          var cr = document.getElementById('current-user-name-role');
-          if (cr) cr.textContent = u.name + ' (' + u.role + ')';
-        }
-      } catch(e) {}
-    });
-  });
-</script>
+      });
+    }, { threshold: 0.35 });
+    sections.forEach(s => observer.observe(s));
+  </script>
 
 </body>
 </html>

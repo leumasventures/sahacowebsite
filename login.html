@@ -49,6 +49,43 @@
       pointer-events: none;
       z-index: 0;
     }
+    /* Topbar & Header */
+    .topbar { background: var(--maroon-dark); padding: 7px 0; border-bottom: 1px solid rgba(184,134,42,0.25); }
+    .topbar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .topbar-items { display: flex; align-items: center; gap: 1.5rem; }
+    .topbar-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 500; color: rgba(255,255,255,0.55); }
+    .topbar-item .ti { color: var(--gold-light); font-size: 0.9rem; }
+    .topbar-motto { font-family: var(--font-serif); font-style: italic; font-size: 0.75rem; color: var(--gold-light); }
+
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--white); border-bottom: 1px solid var(--rule);
+    }
+    .header.scrolled { box-shadow: 0 4px 28px rgba(0,0,0,0.10); }
+    .header-inner { display: flex; align-items: center; gap: 1.5rem; padding-block: 12px; }
+
+    .logo-wrap { display: flex; align-items: center; gap: 0.9rem; }
+    .crest { width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); }
+    .crest img { width: 100%; height: 100%; object-fit: cover; }
+    .logo-name { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 700; color: var(--maroon); }
+    .logo-tag { font-size: 0.65rem; font-weight: 600; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; }
+
+    .nav-list { display: flex; align-items: center; gap: 0.2rem; }
+    .nav-link {
+      padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 500;
+      color: var(--ink-light); border-radius: 6px;
+    }
+    .nav-link:hover, .nav-link.active { background: var(--parchment); color: var(--maroon); font-weight: 600; }
+
+    .nav-cta {
+      background: var(--maroon); color: white;
+      padding: 0.45rem 1.1rem; border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .hamburger { display: none; margin-left: auto; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; }
+
+    
 
     .auth-container {
       width: 100%;
@@ -571,13 +608,46 @@
   </style>
 </head>
 <body>
+  <header class="header" id="header">
+    <div class="header-inner container">
+      <div class="logo-wrap">
+        <div class="crest">
+          <img src="images/sahaco logo.jpg" alt="SAHARCO Crest" onerror="this.parentNode.innerHTML='<div class=\'crest-placeholder\'>✝</div>'" />
+        </div>
+        <!-- <div class="logo-text">
+          <span class="logo-name">Sacred Heart College</span>
+          <span class="logo-tag">SAHARCO · Eziukwu Aba</span>
+        </div> -->
+      </div>
+
+      <nav class="nav">
+        <ul class="nav-list">
+          <li><a href="index.html"      class="nav-link active">Home</a></li>
+          <li><a href="about.html"     class="nav-link">About</a></li>
+          <li><a href="mission .html"      class="nav-link">Mission</a></li>
+          <li><a href="contact.html"     class="nav-link">Contact</a></li>
+          <li><a href="admission.html" class="nav-link">Admissions</a></li>
+          <li>
+            <a href="login.html" class="btn-admit nav-cta">
+              Login <ion-icon name="arrow-forward-outline"></ion-icon>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+
+    </div>
+  </header>
 
   <div class="auth-container">
 
     <!-- School Branding -->
     <div class="school-brand">
       <div class="school-crest">
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 40 40" xmlns="images/sahaco logo.jpg">
           <path d="M18 4h4v12h12v4H22v16h-4V20H6v-4h12V4z"/>
           <path d="M20 32 Q14 27 12 22 Q10 17 14 14.5 Q17 13 20 16 Q23 13 26 14.5 Q30 17 28 22 Q26 27 20 32z" opacity="0.5"/>
         </svg>

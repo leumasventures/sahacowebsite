@@ -127,12 +127,12 @@ export const Auth = {
   /**
    * POST /auth/login
    * Server sets an HttpOnly JWT cookie on success.
-   * @param {string} identifier — email or admission number
+   * @param {string} email — email or admission number
    * @param {string} password
    * @param {string} role       — 'admin' | 'teacher' | 'student' | 'parent'
    */
-  login: (identifier, password, role) =>
-    post('/auth/login', { identifier, password, role }),
+  login: (email, password, role) =>
+    post('/auth/login', { email, password, role }),
 
   /** POST /auth/logout — server clears the HttpOnly cookie */
   logout: () => post('/auth/logout'),

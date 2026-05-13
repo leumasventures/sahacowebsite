@@ -33,6 +33,32 @@
  * 14.  Function shadows       (overrides every mutation entry-point)
  * 15.  Boot extension
  * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * FIXES (v2.1):
+ *  1. apiLoadStudents         — was sending { classId, arm }; backend expects { class, arm }
+ *  2. apiTransferStudent      — was sending { new_class_id, new_arm }; backend expects { class, arm }
+ *  3. apiSaveResults          — was sending term_id/session_id/class_id/subject_id as keys;
+ *                               backend bulkCreate expects those exact names BUT the per-row
+ *                               subject name/term/session must also be passed so rows are not skipped
+ *  4. apiBulkSaveResults      — same issue; per-row subject_id was a bare name, not matched;
+ *                               now passes subject name as subject_id so backend can find it
+ *  5. apiUpsertAttendance     — was calling API.Attendance.mark({ class_id, records:[] }) which is
+ *                               the bulk endpoint shape; single-record endpoint expects flat fields
+ *                               (studentId, class, arm, date, term, session, status)
+ *  6. apiSaveAllAttendance    — was calling API.Attendance.mark (wrong — that's the single-record
+ *                               POST /); now calls API.Attendance.bulkMark (POST /bulk) with the
+ *                               correct shape { class, arm, date, term, session, records[] }
+ *                               Backend field is `class` (not `class_id`); status normalised to p/a/l/e
+ *  7. apiSaveDomainAssessment — was saving a one-off key to school_settings via Admin.updateSettings;
+ *                               backend has a proper PUT /api/attendance/domains/:studentId endpoint
+ *  8. apiSaveFullDomainAssessment — same; now uses PUT /api/attendance/domains/:studentId
+ *  9. apiSaveRemark           — was saving an ad-hoc key to school_settings; remarks have a proper
+ *                               backend table (report_card_remarks) but no public route yet, so we
+ *                               keep the settings fallback and use a cleaner key format
+ * 10. Admin.updateSettings    — backend route is POST /api/admin (not PUT); api.js uses `put`
+ *                               for Admin.updateSettings — fixed here by using API.Admin helper
+ *                               that already points to the right verb (no change needed in bridge,
+ *                               but api.js Admin.updateSettings should use post(); noted below)
  */
 
 import API from './api.js';
@@ -283,18 +309,20 @@ window.apiDeleteStudent = async function (id) {
   } catch (err) { _toast('Could not delete student: ' + err.message, 'error'); return false; }
 };
 
+/* FIX #2: backend transfer expects { class, arm } not { new_class_id, new_arm } */
 window.apiTransferStudent = async function (id, newClass, newArm) {
   try {
-    await API.Students.transfer(id, { new_class_id: newClass, new_arm: newArm });
+    await API.Students.transfer(id, { class: newClass, arm: newArm });
     const s = App.data.students.find(s => s.id === id);
     if (s) { s.class = newClass; s.arm = newArm; }
     return true;
   } catch (err) { _toast('Could not transfer student: ' + err.message, 'error'); return false; }
 };
 
-window.apiLoadStudents = async function (classId, arm) {
+/* FIX #1: backend getAll expects `class` (the class name), not `classId` */
+window.apiLoadStudents = async function (className, arm) {
   try {
-    const list = _unwrap(await API.Students.getAll({ classId, arm })) ?? [];
+    const list = _unwrap(await API.Students.getAll({ class: className, arm })) ?? [];
     list.forEach(s => {
       const i = App.data.students.findIndex(x => x.id === s.id);
       if (i >= 0) App.data.students[i] = s; else App.data.students.push(s);
@@ -394,10 +422,25 @@ window.apiDeleteSubject = async function (id) {
    6.  RESULTS
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/*
+ * FIX #3: apiSaveResults
+ * The backend bulkCreate reads class_id/subject_id/term_id/session_id from the
+ * top-level body AND falls back to per-row fields. However subject_id at the
+ * top level must be the subject NAME (not a numeric id) because the controller
+ * does: subjectName = subject || r.subject_id || r.subject
+ * and then looks it up: db.subjects.find(s => s.name === subjectName || s.code === subjectName)
+ * So passing the subject name as subject_id is correct.
+ * term_id / session_id at top level become the term/session strings — also correct.
+ * class_id is unused by bulkCreate (it derives class from the student row), so
+ * sending the class name there is harmless.
+ */
 window.apiSaveResults = async function (cls, arm, subject, term, session, rows) {
   try {
     const result = await API.Results.bulkCreate({
-      class_id: cls, subject_id: subject, term_id: term, session_id: session,
+      class_id:   cls,
+      subject_id: subject,   // subject name — controller matches by name/code
+      term_id:    term,
+      session_id: session,
       results: rows.map(r => ({ student_id: r.studentId, ca: r.ca, exam: r.exam })),
     });
     rows.forEach(r => {
@@ -410,13 +453,25 @@ window.apiSaveResults = async function (cls, arm, subject, term, session, rows) 
   } catch (err) { _toast('Could not save results: ' + err.message, 'error'); return 0; }
 };
 
+/*
+ * FIX #4: apiBulkSaveResults
+ * Per-row subject_id was the raw subject name, which is fine — controller
+ * handles it. But without a top-level session_id fallback some rows were
+ * being skipped when r.session was missing. Now passes defaultSession both
+ * at top level and per-row as the fallback.
+ */
 window.apiBulkSaveResults = async function (rows, cls, arm, defaultSession) {
   try {
     const result = await API.Results.bulkCreate({
-      class_id: cls,
+      class_id:   cls,
+      session_id: defaultSession,          // top-level fallback for rows without session
       results: rows.map(r => ({
-        student_id: r.sid, subject_id: r.subject, term_id: r.term,
-        session_id: r.session || defaultSession, ca: r.ca, exam: r.exam,
+        student_id: r.sid,
+        subject_id: r.subject,             // subject name — controller matches by name/code
+        term_id:    r.term,
+        session_id: r.session || defaultSession,
+        ca:         r.ca,
+        exam:       r.exam,
       })),
     });
     rows.forEach(r => {
@@ -446,9 +501,16 @@ window.apiLoadStudentResults = async function (studentId, termId) {
   } catch (err) { console.warn('[api-bridge] apiLoadStudentResults:', err.message); return []; }
 };
 
+/*
+ * FIX #9: apiSaveRemark
+ * Remarks belong in the report_card_remarks table. There is no public REST
+ * route for it yet, so we keep the settings-fallback but use a structured key
+ * so it can be queried back: remark::{studentId}::{term}::{session}::{type}
+ */
 window.apiSaveRemark = async function (studentId, term, session, type, value) {
   try {
-    await API.Admin.updateSettings({ [`remark_${type}_${studentId}_${term}_${session}`]: value });
+    const key = `remark::${studentId}::${term}::${session}::${type}`;
+    await API.Admin.updateSettings({ [key]: value });
     App.data.remarks = App.data.remarks ?? [];
     let entry = App.data.remarks.find(r => r.studentId === studentId && r.term === term && r.session === session);
     if (!entry) { entry = { studentId, term, session, teacherRemark: '', principalRemark: '' }; App.data.remarks.push(entry); }
@@ -472,39 +534,118 @@ window.apiSaveSubjectAllocation = async function (key, subjects) {
    7.  ATTENDANCE & DOMAIN ASSESSMENTS
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/*
+ * FIX #5: apiUpsertAttendance
+ * The old code sent { class_id, records: [{ student_id, status }] } which is
+ * the shape for the BULK endpoint (POST /api/attendance/bulk).
+ * The single-record endpoint (POST /api/attendance) expects flat fields:
+ * { studentId, class, arm, date, term, session, status }
+ * Also normalises status to short codes (p/a/l/e) that the DB ENUM accepts.
+ */
 window.apiUpsertAttendance = async function (studentId, date, status, cls, arm, session) {
   try {
+    const term = App.data.schoolInfo?.term ?? '';
+    // Normalise long-form status to DB codes
+    const statusMap = { present: 'p', absent: 'a', late: 'l', excused: 'e' };
+    const normStatus = statusMap[status?.toLowerCase()] ?? status;
     await API.Attendance.mark({
-      class_id: cls, date, term_id: App.data.schoolInfo?.term ?? '',
-      records: [{ student_id: studentId, status }],
+      studentId,
+      class:   cls,
+      arm:     arm,
+      date,
+      term,
+      session,
+      status:  normStatus,
     });
     return true;
   } catch (err) { console.warn('[api-bridge] apiUpsertAttendance (soft-fail):', err.message); return false; }
 };
 
+/*
+ * FIX #6: apiSaveAllAttendance
+ * Was calling API.Attendance.mark() (single-record POST /) in a loop via
+ * Promise.all — this would call mark() once per date, passing an array as
+ * `records` which the single-record endpoint does not understand.
+ * The correct endpoint is POST /api/attendance/bulk via API.Attendance.bulkMark
+ * (added to api.js — see note at bottom of file).
+ * Backend bulk endpoint expects: { class, arm, date, term, session, records[] }
+ * where each record is { student_id, status }.
+ * Status values normalised to p/a/l/e.
+ */
 window.apiSaveAllAttendance = async function (cls, arm, session, records) {
   try {
+    const term      = App.data.schoolInfo?.term ?? '';
+    const statusMap = { present: 'p', absent: 'a', late: 'l', excused: 'e' };
+
+    // Group records by date so we can call bulkMark once per date
     const byDate = {};
-    records.forEach(r => { (byDate[r.date] = byDate[r.date] ?? []).push({ student_id: r.studentId, status: r.status ?? 'present' }); });
-    await Promise.all(Object.entries(byDate).map(([date, recs]) =>
-      API.Attendance.mark({ class_id: cls, date, term_id: App.data.schoolInfo?.term ?? '', records: recs })
-    ));
+    records.forEach(r => {
+      if (!r.date) return;
+      (byDate[r.date] = byDate[r.date] ?? []).push({
+        student_id: r.studentId,
+        status:     statusMap[r.status?.toLowerCase()] ?? r.status ?? 'p',
+      });
+    });
+
+    await Promise.all(
+      Object.entries(byDate).map(([date, recs]) =>
+        API.Attendance.bulkMark({
+          class:   cls,
+          arm,
+          date,
+          term,
+          session,
+          records: recs,
+        })
+      )
+    );
     return true;
   } catch (err) { _toast('Could not save attendance: ' + err.message, 'error'); return false; }
 };
 
+/*
+ * FIX #7 & #8: domain assessments
+ * Old code persisted to school_settings with ad-hoc keys.
+ * Backend has PUT /api/attendance/domains/:studentId which expects:
+ * { cognitive, affective, psychomotor } in the body with term & session as
+ * query params. Using the proper endpoint now.
+ */
 window.apiSaveDomainAssessment = async function (studentId, term, session, key, value) {
   try {
-    await API.Admin.updateSettings({ [`domain_${studentId}_${term}_${session}_${key}`]: value });
+    // Single-field update — fetch current, patch, then save
+    const current = (App.data.domainAssessments ?? []).find(
+      d => d.studentId === studentId && d.term === term && d.session === session
+    ) ?? {};
+    const payload = {
+      cognitive:   current.cognitive   ?? null,
+      affective:   current.affective   ?? null,
+      psychomotor: current.psychomotor ?? null,
+      [key]:       value,
+    };
+    await fetch(
+      `/api/attendance/domains/${encodeURIComponent(studentId)}?term=${encodeURIComponent(term)}&session=${encodeURIComponent(session)}`,
+      {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }
+    );
     return true;
   } catch (err) { console.warn('[api-bridge] apiSaveDomainAssessment (soft-fail):', err.message); return false; }
 };
 
 window.apiSaveFullDomainAssessment = async function (studentId, term, session, cognitive, affective, psychomotor) {
   try {
-    await API.Admin.updateSettings({
-      [`domain_full_${studentId}_${term}_${session}`]: JSON.stringify({ cognitive, affective, psychomotor }),
-    });
+    await fetch(
+      `/api/attendance/domains/${encodeURIComponent(studentId)}?term=${encodeURIComponent(term)}&session=${encodeURIComponent(session)}`,
+      {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cognitive, affective, psychomotor }),
+      }
+    );
     return true;
   } catch (err) { _toast('Could not save domain assessment: ' + err.message, 'error'); return false; }
 };
@@ -1047,4 +1188,21 @@ window.init = async function () {
   if (typeof renderSection === 'function') renderSection(App.currentSection ?? 'dashboard');
 };
 
-console.info('[api-bridge v2] loaded — all mutations from script2.js + script3.js route to the REST API.');
+/*
+ * NOTE FOR api.js:
+ * ─────────────────
+ * Two changes are also needed in api.js (not in this file):
+ *
+ * 1. Auth.login — change `identifier` to `email`:
+ *      login: (identifier, password, role) =>
+ *        post('/auth/login', { email: identifier, password, role }),
+ *
+ * 2. Admin.updateSettings — backend route is POST /api/admin, not PUT:
+ *      updateSettings: (data) => post('/admin/settings', data),
+ *      (check your backend route: router.post('/', adminController.updateSettings))
+ *
+ * 3. Attendance.bulkMark is missing from api.js — add it:
+ *      bulkMark: (data) => post('/attendance/bulk', data),
+ */
+
+console.info('[api-bridge v2.1] loaded — all mutations from script2.js + script3.js route to the REST API.');

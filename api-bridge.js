@@ -223,9 +223,12 @@ window.saveGradingAndDomainsToAPI = async function (gradingScale, domainLabels, 
 window.apiSaveClass = async function ({ id, name, level, arms }, isEdit) {
   try {
     if (isEdit) {
-      await API.Classes.update(id, { name, level, arms });
-      const c = App.data.classes.find(c => c.id === id);
-      if (c) Object.assign(c, { name, level, arms });
+      // FIX: backend routes use class name as the URL param, not numeric id
+      // Find the existing name from the in-memory cache to build the URL
+      const existing = App.data.classes.find(c => c.id === id);
+      const urlName  = existing?.name ?? name;
+      await API.Classes.update(urlName, { name, level, arms });
+      if (existing) Object.assign(existing, { name, level, arms });
     } else {
       const result = await API.Classes.create({ name, level, arms });
       App.data.classes.push(_unwrap(result) ?? { id: Date.now(), name, level, arms });
@@ -236,7 +239,10 @@ window.apiSaveClass = async function ({ id, name, level, arms }, isEdit) {
 
 window.apiDeleteClass = async function (id) {
   try {
-    await API.Classes.delete(id);
+    const cls = App.data.classes.find(c => c.id === id);
+    if (!cls) { _toast('Class not found in local data.', 'error'); return false; }
+    // FIX: backend route is /classes/:name
+    await API.Classes.delete(cls.name);
     App.data.classes = App.data.classes.filter(c => c.id !== id);
     return true;
   } catch (err) { _toast('Could not delete class: ' + err.message, 'error'); return false; }
@@ -244,37 +250,39 @@ window.apiDeleteClass = async function (id) {
 
 window.apiAddArm = async function (classId, newArms) {
   try {
-    await API.Classes.addArm(classId, { arms: newArms });
     const c = App.data.classes.find(c => c.id === classId);
-    if (c) newArms.forEach(a => { if (!c.arms.includes(a)) c.arms.push(a); });
+    if (!c) { _toast('Class not found.', 'error'); return false; }
+    // FIX: pass class name to URL
+    await API.Classes.addArm(c.name, { arms: newArms });
+    newArms.forEach(a => { if (!c.arms.includes(a)) c.arms.push(a); });
     return true;
   } catch (err) { _toast('Could not add arm: ' + err.message, 'error'); return false; }
 };
 
 window.apiRenameArm = async function (classId, oldArm, newName) {
   try {
-    await API.Classes.renameArm(classId, oldArm, { new_name: newName });
     const c = App.data.classes.find(c => c.id === classId);
-    if (c) {
-      const i = c.arms.indexOf(oldArm);
-      if (i >= 0) c.arms[i] = newName;
-      App.data.students.forEach(s => { if (s.class === c.name && s.arm === oldArm) s.arm = newName; });
-      App.data.teachers.forEach(t => { if (t.assignedClass === c.name && t.assignedArm === oldArm) t.assignedArm = newName; });
-    }
+    if (!c) { _toast('Class not found.', 'error'); return false; }
+    // FIX: pass class name to URL
+    await API.Classes.renameArm(c.name, oldArm, { new_name: newName });
+    const i = c.arms.indexOf(oldArm);
+    if (i >= 0) c.arms[i] = newName;
+    App.data.students.forEach(s => { if (s.class === c.name && s.arm === oldArm) s.arm = newName; });
+    App.data.teachers.forEach(t => { if (t.assignedClass === c.name && t.assignedArm === oldArm) t.assignedArm = newName; });
     return true;
   } catch (err) { _toast('Could not rename arm: ' + err.message, 'error'); return false; }
 };
 
 window.apiDeleteArm = async function (classId, arm) {
   try {
-    await API.Classes.deleteArm(classId, arm);
     const c = App.data.classes.find(c => c.id === classId);
-    if (c) {
-      c.arms = c.arms.filter(a => a !== arm);
-      App.data.teachers.forEach(t => {
-        if (t.assignedClass === c.name && t.assignedArm === arm) t.assignedArm = '';
-      });
-    }
+    if (!c) { _toast('Class not found.', 'error'); return false; }
+    // FIX: pass class name to URL
+    await API.Classes.deleteArm(c.name, arm);
+    c.arms = c.arms.filter(a => a !== arm);
+    App.data.teachers.forEach(t => {
+      if (t.assignedClass === c.name && t.assignedArm === arm) t.assignedArm = '';
+    });
     return true;
   } catch (err) { _toast('Could not delete arm: ' + err.message, 'error'); return false; }
 };

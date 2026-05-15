@@ -42,7 +42,7 @@
 //  CONFIG
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BASE_URL           = 'https://sacredheartcollegeaba.com/api';
+const BASE_URL           = window.__ENV__?.API_URL ?? 'https://rms-bckend.onrender.com/api';
 const DEFAULT_TIMEOUT_MS = 15_000;
 const EXPORT_TIMEOUT_MS  = 60_000;
 

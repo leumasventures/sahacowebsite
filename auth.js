@@ -37,7 +37,7 @@
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const API_BASE = window.__ENV__?.API_URL ?? 'https://sacredheartcollegeaba.com/api';
+const API_BASE = window.__ENV__?.API_URL ?? 'https://rms-bckend.onrender.com/api';
 
 // All portal pages live in the root — no subdirectories exist.
 // Backend role values are: 'Admin', 'Teacher', 'Staff', 'Student', 'Parent'

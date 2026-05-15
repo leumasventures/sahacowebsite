@@ -28,14 +28,23 @@
 /* ── Wait for everything to be ready ─────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
 
-  /* Bootstrap: hydrate App.data from the server on every page load */
-  if (typeof window.loadAppData === 'function') {
-    await window.loadAppData();
+  /* Bootstrap: hydrate App.data from the server on every page load.
+     Guard with _appDataLoaded so api-bridge and this file don't both re-render. */
+  if (typeof window.loadAppData === 'function' && !window._appDataLoaded) {
+    try {
+      await window.loadAppData();
+      window._appDataLoaded = true;
+    } catch (err) {
+      console.error('[patch] loadAppData failed:', err);
+    }
   }
 
-  /* Re-render whichever section is active after data is loaded */
-  if (typeof window.renderSection === 'function' && window.App?.currentSection) {
-    window.renderSection(window.App.currentSection);
+  /* Re-render once after data loaded — only if api-bridge's init() hasn't already done it */
+  if (window._appDataLoaded && !window._initialRenderDone) {
+    window._initialRenderDone = true;
+    if (typeof window.renderSection === 'function' && window.App?.currentSection) {
+      window.renderSection(window.App.currentSection);
+    }
   }
 
   /* ── Patch 1: Classes ──────────────────────────────────────────────────── */

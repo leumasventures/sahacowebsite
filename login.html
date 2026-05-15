@@ -331,7 +331,8 @@
             <select id="login-role" name="role" required>
               <option value="" disabled selected>Select your role</option>
               <option value="admin">Administrator</option>
-              <option value="teacher">Teacher</option>
+              <option value="teacher">Teacher / Staff</option>
+              <option value="student">Student</option>
               <option value="parent">Parent / Guardian</option>
             </select>
             <div class="error-message" id="login-role-error">Please select your role.</div>
@@ -348,6 +349,10 @@
               <span class="role-hint-icon">👨‍👩‍👧</span>
               <span>Parents: use the email address you registered with and your password.</span>
             </div>
+            <div class="role-hint" id="hint-student" style="background:rgba(41,128,185,0.07);color:#1A3A6A;border:1px solid rgba(41,128,185,0.18);">
+              <span class="role-hint-icon">🎓</span>
+              <span>Students: use your admission number (e.g. <strong>SHC/001</strong>) or portal email and your PIN.</span>
+            </div>
           </div>
 
           <!--
@@ -356,11 +361,11 @@
             to guide users accordingly.
           -->
           <div class="form-group">
-            <label for="login-username">Email Address</label>
-            <input type="email" id="login-username" name="email" required
-              placeholder="Enter your email address"
+            <label for="login-username">Email / Admission Number</label>
+            <input type="text" id="login-username" name="email" required
+              placeholder="Enter your email or admission number"
               autocomplete="email" autofocus>
-            <div class="error-message" id="login-username-error">Please enter your email address.</div>
+            <div class="error-message" id="login-username-error">Please enter your email or admission number.</div>
           </div>
 
           <div class="form-group">
@@ -378,7 +383,7 @@
               <input type="checkbox" id="remember" name="remember">
               <label for="remember" style="margin-bottom:0;font-weight:400;">Remember me</label>
             </div>
-            <a href="#" class="forgot">Forgot credentials?</a>
+            <a href="#" class="forgot" id="forgot-link">Forgot credentials?</a>
           </div>
 
           <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
@@ -674,6 +679,37 @@
     plain-text passwords in localStorage, and conflicted with auth.js.
     auth.js (as a module) is now the single auth system.
   -->
+  <!-- ── Forgot Password Modal ─────────────────────────── -->
+  <div id="forgot-modal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(26,20,16,0.55);backdrop-filter:blur(3px);place-items:center;padding:1.5rem;" onclick="if(event.target===this)this.style.display='none'">
+    <div style="background:#fff;border-radius:14px;padding:2rem 2rem 1.6rem;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.18);position:relative;">
+      <button onclick="document.getElementById('forgot-modal').style.display='none'" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#6B6157;line-height:1;">✕</button>
+      <h2 style="font-family:'EB Garamond',serif;font-size:1.4rem;color:#1A1410;margin:0 0 0.3rem;">Reset Password</h2>
+      <p style="font-size:0.83rem;color:#6B6157;margin:0 0 1.3rem;">Enter your registered email. We'll send a reset link.</p>
+      <form id="forgotPasswordForm" novalidate>
+        <div style="margin-bottom:1rem;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;">Email Address</label>
+          <input type="email" name="email" placeholder="your@email.com"
+            style="width:100%;padding:0.85rem 1rem;border:1.5px solid #E8E0D4;border-radius:10px;font-size:0.95rem;font-family:'DM Sans',sans-serif;background:#FAF7F2;color:#1A1410;outline:none;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='#7B1D1D'" onblur="this.style.borderColor='#E8E0D4'">
+        </div>
+        <button type="submit"
+          style="width:100%;padding:0.95rem;background:#7B1D1D;color:white;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background 0.2s;"
+          onmouseover="this.style.background='#5A1212'" onmouseout="this.style.background='#7B1D1D'">
+          Send Reset Link
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Wire forgot link → modal
+    document.getElementById('forgot-link')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      const m = document.getElementById('forgot-modal');
+      m.style.display = 'grid';
+    });
+  </script>
+
   <script type="module" src="auth.js"></script>
 </body>
 </html>

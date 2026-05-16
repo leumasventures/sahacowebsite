@@ -30,7 +30,7 @@ window.App = window.App || {
       name:      'Sacred Heart College Eziukwu Aba',
       session:   '2025/2026',
       term:      'Second Term',
-      principal: 'Rev. Fr. Emmanuel Eze',
+      principal: 'Rev. Fr. Sullivan Obinna Achilihu',
     },
   },
 };
@@ -2390,42 +2390,19 @@ window.printStudentList = function () {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const STAFF_POSITIONS = {
-  Academic: [
-    'Class Teacher', 'Form Master/Mistress', 'Subject Teacher', 'HOD',
-    'Dean of Studies', 'Vice Principal (Academic)', 'Principal',
-    'Deputy Principal', 'ICT Director', 'Librarian', 'Counsellor',
-    'Lab Technician', 'Sports Master', 'Patron'
-  ],
-  Administrative: [
-    'Secretary', 'Bursar', 'Accounts Officer', 'Admin Officer',
-    'HR Officer', 'PRO', 'Store Keeper', 'Receptionist',
-    'Vice Principal (Admin)'
-  ],
-  Support: [
-    'Driver', 'Security Officer', 'Cleaner', 'Gardener',
-    'Canteen Manager', 'Chef/Cook', 'Maintenance Officer', 'Nurse/First Aider'
-  ],
-  Leadership: [
-    'Principal', 'Vice Principal (Academic)', 'Vice Principal (Admin)',
-    'Deputy Principal', 'Director', 'Proprietor/Proprietress'
-  ]
+  Academic: [],
+  Administrative: [],
+  Support: [],
+  Leadership: []
 };
 
 const STAFF_CATEGORIES = ['All', 'Academic', 'Administrative', 'Support', 'Leadership'];
 
-const STAFF_DEPARTMENTS = [
-  'Sciences', 'Humanities', 'Languages', 'Mathematics', 'Social Studies',
-  'Arts', 'Technical', 'Administration', 'Support Services', 'Management'
-];
+const STAFF_DEPARTMENTS = [];
 
-const STAFF_SUBJECTS = [
-  'Mathematics', 'English Language', 'Physics', 'Chemistry', 'Biology',
-  'Economics', 'Literature', 'Geography', 'History', 'Computer Science',
-  'Further Mathematics', 'Civic Education', 'Agricultural Science',
-  'Fine Arts', 'Music', 'French', 'Yoruba', 'Igbo', 'Hausa'
-];
+const STAFF_SUBJECTS = [];
 
-const STAFF_CLASSES = ['JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2', 'SS 3'];
+const STAFF_CLASSES = [];
 
 const STAFF_STATUS_COLORS = {
   Active: 'success',

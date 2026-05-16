@@ -240,12 +240,31 @@
         el.addEventListener('click', e => { e.preventDefault(); logout(); });
       });
 
-      // Verify session asynchronously (doesn't block page render)
+      // ── CRITICAL FIX: guard race condition ──────────────────────────────────
+      // We have a fast sync check (sessionStorage) and a slow async check
+      // (/auth/me cookie round-trip). We must NOT redirect based on the sync
+      // check alone — on a fresh page load after login the cache may not exist
+      // yet (if SHC_Auth.saveSession wasn't called, e.g. older login path).
+      //
+      // Strategy:
+      //  1. If cache exists → trust it immediately (common fast path).
+      //  2. If cache is empty → do NOT redirect yet; fire async verify.
+      //     Only redirect if the server also says no session.
+      //
+      const cached = getSession();
+      if (cached) {
+        // Session confirmed from cache — nothing to do.
+        return;
+      }
+
+      // Cache miss: check server before redirecting (avoids false-positive blink)
       verifySession().then(session => {
         if (!session) {
           const next = encodeURIComponent(window.location.pathname);
           window.location.href = `/login.html?next=${next}`;
         }
+        // If session verified — _writeCache was called inside verifySession,
+        // so subsequent getSession() calls will succeed.
       });
     }
   });

@@ -532,18 +532,31 @@ window.updateTTArms = function () {
   if (cd) sel.innerHTML += cd.arms.map(a => `<option>${a}</option>`).join('');
 };
 
-window.loadTimetable = function () {
+window.loadTimetable = async function () {
   const cls = document.getElementById('tt-class')?.value;
   const arm = document.getElementById('tt-arm')?.value;
   if (!cls || !arm) return typeof toast === 'function' && toast('Select class and arm.', 'warning');
 
   const key  = `${cls}_${arm}`;
-  const tt   = App.data.timetable[key] || {};
   const canManage = typeof priv !== 'undefined' ? priv.canManage() : true;
   const subjOpts  = (App.data.subjects || []).map(s => `<option>${s.name}</option>`).join('');
 
   const grid = document.getElementById('timetable-grid');
   if (!grid) return;
+  grid.innerHTML = `<div style="text-align:center;padding:2rem;color:#9ca3af;">Loading…</div>`;
+
+  let tt = {};
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/timetable?class=${encodeURIComponent(cls)}&arm=${encodeURIComponent(arm)}`, {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include',
+    });
+    const data  = await res.json();
+    if (data.success) { tt = data.data || {}; App.data.timetable = App.data.timetable || {}; App.data.timetable[key] = tt; }
+  } catch (e) {
+    tt = App.data.timetable?.[key] || {};
+  }
 
   const cellId = (day, period) => `tt-${key}-${day}-${period}`.replace(/\s+/g, '_');
 
@@ -551,13 +564,16 @@ window.loadTimetable = function () {
     <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
       <div style="padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
         <h4 style="margin:0;">${cls} ${arm} Timetable</h4>
-        ${canManage ? `<button onclick="saveTimetable('${cls}','${arm}')" style="padding:.45rem 1.1rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500;font-size:.875rem;">💾 Save</button>` : ''}
+        ${canManage ? `<div style="display:flex;gap:.5rem;">
+          <button onclick="saveTimetable('${cls}','${arm}')" style="padding:.45rem 1.1rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500;font-size:.875rem;">💾 Save</button>
+          <button onclick="clearTimetable('${cls}','${arm}')" style="padding:.45rem .85rem;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.875rem;">🗑 Clear</button>
+        </div>` : ''}
       </div>
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
         <thead><tr style="background:#f9fafb;">
           <th style="padding:.65rem 1rem;text-align:left;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:.8rem;min-width:80px;">Period</th>
-          ${DAYS.map(d => `<th style="padding:.65rem 1rem;border-bottom:1px solid #e5e7eb;color:#1e3a5f;font-size:.85rem;min-width:130px;">${d}</th>`).join('')}
+          ${DAYS.map(d => `<th style="padding:.65rem 1rem;border-bottom:1px solid #e5e7eb;color:#1e3a5f;font-size:.85rem;min-width:140px;">${d}</th>`).join('')}
         </tr></thead>
         <tbody>
           ${PERIODS.map(period => `
@@ -565,11 +581,11 @@ window.loadTimetable = function () {
               <td style="padding:.65rem 1rem;font-weight:600;color:#475569;font-size:.82rem;white-space:nowrap;">${period}</td>
               ${DAYS.map(day => {
                 const val = (tt[day] && tt[day][period]) || '';
-                return `<td style="padding:.45rem .65rem;">
+                return `<td style="padding:.4rem .5rem;">
                   ${canManage
                     ? `<select id="${cellId(day,period)}" style="width:100%;padding:.35rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.82rem;background:#fff;">
                          <option value="">—</option>${subjOpts}
-                         ${val ? `<option selected>${val}</option>` : ''}
+                         ${val && !(App.data.subjects||[]).find(s=>s.name===val) ? `<option value="${val}" selected>${val}</option>` : ''}
                        </select>`
                     : `<span style="font-size:.85rem;color:${val?'#1e3a5f':'#d1d5db'}">${val||'—'}</span>`
                   }
@@ -579,22 +595,71 @@ window.loadTimetable = function () {
         </tbody>
       </table></div>
     </div>`;
+
+  // Set selected options after rendering
+  if (canManage) {
+    DAYS.forEach(day => {
+      PERIODS.forEach(period => {
+        const val = (tt[day] && tt[day][period]) || '';
+        const sel = document.getElementById(cellId(day, period));
+        if (sel && val) {
+          const opt = Array.from(sel.options).find(o => o.value === val || o.text === val);
+          if (opt) opt.selected = true;
+        }
+      });
+    });
+  }
 };
 
-window.saveTimetable = function (cls, arm) {
+window.saveTimetable = async function (cls, arm) {
   const key = `${cls}_${arm}`;
-  App.data.timetable[key] = {};
+  const grid = {};
   DAYS.forEach(day => {
-    App.data.timetable[key][day] = {};
+    grid[day] = {};
     PERIODS.forEach(period => {
       const cellId = `tt-${key}-${day}-${period}`.replace(/\s+/g, '_');
       const val = document.getElementById(cellId)?.value || '';
-      if (val) App.data.timetable[key][day][period] = val;
+      if (val) grid[day][period] = val;
     });
   });
-  typeof toast === 'function' && toast('Timetable saved!', 'success');
+
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/timetable`, {
+      method: 'PUT', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ class: cls, arm, grid }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    // Update local cache
+    App.data.timetable = App.data.timetable || {};
+    App.data.timetable[key] = grid;
+    typeof toast === 'function' && toast('Timetable saved!', 'success');
+  } catch (err) {
+    typeof toast === 'function' && toast('Error saving timetable: ' + (err.message || 'Unknown error'), 'error');
+  }
 };
 
+
+window.clearTimetable = async function (cls, arm) {
+  if (!confirm(`Clear the entire timetable for ${cls} ${arm}? This cannot be undone.`)) return;
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    await fetch(`${BASE}/timetable?class=${encodeURIComponent(cls)}&arm=${encodeURIComponent(arm)}`, {
+      method: 'DELETE', credentials: 'include',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const key = `${cls}_${arm}`;
+    if (App.data.timetable) delete App.data.timetable[key];
+    typeof toast === 'function' && toast(`Timetable cleared for ${cls} ${arm}.`, 'warning');
+    loadTimetable();
+  } catch (err) {
+    typeof toast === 'function' && toast('Error clearing timetable: ' + (err.message || 'Unknown error'), 'error');
+  }
+};
 
 /* ─────────────────────────────────────────────────────────────
    D. NOTIFICATIONS CENTRE

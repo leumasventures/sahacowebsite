@@ -177,6 +177,13 @@ function navigate(sectionId) {
     attendance:      'Attendance',
     fixtures:        'Fixtures & Honours',
     'parent-portal': 'Parent Portal',
+    'timetable':     'Timetable',
+    'fees':            'Fee Setup & Templates',
+    'levies':          'Levies',
+    'former-students': 'Former Students',
+    'former-staff':    'Former Staff',
+    'access-tokens': 'Access Tokens',
+    'users':         'User Management',
     settings:        'Settings',
 
     // ── Admission pages (external — title only, no renderSection needed) ──
@@ -204,6 +211,13 @@ function renderSection(id) {
     case 'attendance':      renderAttendance();   break;
     case 'fixtures':        renderFixtures();     break;
     case 'settings':        renderSettings();     break;
+    case 'timetable':       renderTimetable();    break;
+    case 'fees':            renderFees();           break;
+    case 'levies':          navigate('fees'); return; // merged into Finance
+    case 'former-students': renderFormerStudents(); break;
+    case 'former-staff':    renderFormerStaff();    break;
+    case 'access-tokens':   renderAccessTokens(); break;
+    case 'users':           renderUsers();        break;
 
     // ── Admission pages live on their own HTML files ──
     case 'admissions':      window.location.href = 'admissionList.html'; break;
@@ -584,6 +598,7 @@ function classRow(c, i) {
     </td>
     <td style="${tdStyle()}">
       <button onclick="editClass(${c.id})" style="${btnStyle('secondary', 'sm')}">✏ Edit</button>
+      <button onclick="openPromoteClassModal('${c.name}')" style="${btnStyle('warning', 'sm')}" title="Move all students to next class">⬆ Promote</button>
       <button onclick="deleteClass(${c.id})" style="${btnStyle('danger', 'sm')}">🗑</button>
     </td>
   </tr>`;
@@ -658,16 +673,167 @@ window.deleteClass = function(id) {
     </div>`);
 };
 
-window.confirmDeleteClass = function(id) {
+window.confirmDeleteClass = async function(id) {
   const cls = (App.data.classes || []).find(c => c.id === id);
   if (!cls) return;
-  if (App.data.teachers) {
-    App.data.teachers.forEach(t => { if (t.assignedClass === cls.name) { t.assignedClass = ''; t.assignedArm = ''; } });
+  try {
+    await Classes.delete(cls.name);
+    if (App.data.teachers) {
+      App.data.teachers.forEach(t => { if (t.assignedClass === cls.name) { t.assignedClass = ''; t.assignedArm = ''; } });
+    }
+    App.data.classes = App.data.classes.filter(c => c.id !== id);
+    closeModal();
+    renderClasses();
+    toast(`"${cls.name}" deleted.`, 'warning');
+  } catch (err) {
+    closeModal();
+    toast('Error deleting class: ' + (err.message || 'Unknown error'), 'error');
   }
-  App.data.classes = App.data.classes.filter(c => c.id !== id);
+};
+
+/* ── PROMOTE CLASS ───────────────────────────────────────────── */
+/* Standard Nigerian school promotion order                       */
+const CLASS_PROMOTION_MAP = {
+  // Day Care
+  'Creche':    'Toddler',    'Toddler':   'Reception',
+  // Nursery
+  'Nursery 1': 'Nursery 2', 'Nursery 2': 'Nursery 3',
+  'Nursery 3': 'Primary 1',
+  // Primary
+  'Primary 1': 'Primary 2', 'Primary 2': 'Primary 3',
+  'Primary 3': 'Primary 4', 'Primary 4': 'Primary 5',
+  'Primary 5': 'Primary 6', 'Primary 6': 'JSS 1',
+  // Junior Secondary
+  'JSS 1':  'JSS 2',  'JSS 2':  'JSS 3',
+  'JSS 3':  'SS 1',
+  // Senior Secondary
+  'SS 1':  'SS 2',   'SS 2':  'SS 3',
+  'SSS 1': 'SSS 2',  'SSS 2': 'SSS 3',
+};
+
+window.openPromoteClassModal = function(className) {
+  const cls        = (App.data.classes || []).find(c => c.name === className);
+  const nextName   = CLASS_PROMOTION_MAP[className];
+  const nextClass  = nextName ? (App.data.classes || []).find(c => c.name === nextName) : null;
+  const students   = (App.data.students || []).filter(s =>
+    (s.class === className || s.class_name === className) && s.active !== false);
+  const isGraduating = !nextName || className === 'SS 3' || className === 'SSS 3' || className === 'Primary 6';
+
+  const classOpts  = (App.data.classes || []).map(c =>
+    `<option value="${c.name}" ${c.name === nextName ? 'selected' : ''}>${c.name}</option>`).join('');
+
+  showModal(`
+    <h3 style="margin:0 0 .5rem;">⬆ Promote ${className}</h3>
+    <p style="color:#6b7280;font-size:.85rem;margin:0 0 1.25rem;">
+      Move <strong>${students.length} student${students.length !== 1 ? 's' : ''}</strong> from
+      <strong>${className}</strong> to their next class.
+    </p>
+
+    ${isGraduating ? `
+    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:.9rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#92400e;">
+      <strong>⚠️ Final Year Class</strong><br>
+      ${className} is the last class in the progression. Students will be
+      <strong>archived as Graduated</strong> if you choose "Graduate & Archive".
+      Or select a custom destination class below.
+    </div>` : ''}
+
+    <div style="display:flex;flex-direction:column;gap:.9rem;">
+      <div>
+        <label style="${labelStyle()}">Destination Class</label>
+        <select id="promo-dest" style="${selectStyle()};width:100%;">
+          <option value="">-- Select --</option>${classOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="promo-session" value="${App.data.schoolInfo?.session || ''}"
+               placeholder="e.g. 2025/2026" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Arm (leave blank to keep each student's current arm)</label>
+        <select id="promo-arm" style="${selectStyle()};width:100%;">
+          <option value="">Keep current arm</option>
+          ${['A','B','C','D','E'].map(a => `<option value="${a}">${a}</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="background:#eff6ff;border-radius:8px;padding:.75rem 1rem;font-size:.83rem;color:#1d4ed8;">
+        <strong>${students.length}</strong> student${students.length !== 1 ? 's' : ''} will be moved.
+        Their results, attendance and fee records remain linked to their ID.
+      </div>
+
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        ${isGraduating ? `<button onclick="graduateAndArchive('${className}')"
+          style="${btnStyle('warning')}">🎓 Graduate & Archive</button>` : ''}
+        <button onclick="submitPromoteClass('${className}')"
+          style="${btnStyle('primary')}">⬆ Promote Students</button>
+      </div>
+    </div>`);
+};
+
+window.submitPromoteClass = async function(fromClass) {
+  const destClass = document.getElementById('promo-dest')?.value;
+  const session   = document.getElementById('promo-session')?.value || '';
+  const arm       = document.getElementById('promo-arm')?.value     || null;
+
+  if (!destClass) { toast('Select a destination class', 'error'); return; }
+  if (destClass === fromClass) { toast('Destination must be different from current class', 'error'); return; }
+
+  const students = (App.data.students || []).filter(s =>
+    (s.class === fromClass || s.class_name === fromClass) && s.active !== false);
+  if (!students.length) { toast('No active students in ' + fromClass, 'warning'); return; }
+
+  if (!confirmDlg(`Promote ${students.length} student${students.length !== 1 ? 's' : ''} from ${fromClass} → ${destClass}?`)) return;
+
+  try {
+    let promoted = 0, failed = 0;
+    const destCls = (App.data.classes || []).find(c => c.name === destClass);
+
+    for (const s of students) {
+      const newArm = arm || s.arm;
+      try {
+        await Students.update(s.id, { class: destClass, arm: newArm });
+        s.class = destClass; s.class_name = destClass; s.arm = newArm;
+        promoted++;
+      } catch (e) { failed++; }
+    }
+
+    closeModal();
+    if (promoted > 0) {
+      toast(`✅ ${promoted} student${promoted !== 1 ? 's' : ''} promoted to ${destClass}${failed ? ` (${failed} failed)` : ''}`, 'success');
+    } else {
+      toast(`Promotion failed for all students.`, 'error');
+    }
+    renderClasses();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.graduateAndArchive = async function(fromClass) {
+  const session = document.getElementById('promo-session')?.value || '';
+  const students = (App.data.students || []).filter(s =>
+    (s.class === fromClass || s.class_name === fromClass) && s.active !== false);
+  if (!students.length) { toast('No active students in ' + fromClass, 'warning'); return; }
+
+  if (!confirmDlg(`Archive ${students.length} student${students.length !== 1 ? 's' : ''} from ${fromClass} as Graduated? This cannot be easily undone.`)) return;
+
+  let archived = 0, failed = 0;
+  for (const s of students) {
+    try {
+      await Archive.archiveStudent(s.id, {
+        exit_reason:  'Graduated',
+        exit_session: session,
+        exit_term:    'Third Term',
+      });
+      const idx = App.data.students.findIndex(st => st.id === s.id);
+      if (idx > -1) App.data.students.splice(idx, 1);
+      archived++;
+    } catch(e) { failed++; }
+  }
+
   closeModal();
+  toast(`🎓 ${archived} student${archived !== 1 ? 's' : ''} graduated & archived${failed ? ` (${failed} failed)` : ''}`, 'success');
   renderClasses();
-  toast(`"${cls.name}" deleted.`, 'warning');
 };
 
 /* ── MODAL ───────────────────────────────────────────────────── */
@@ -866,11 +1032,11 @@ function openClassModal(cls = null) {
   }
 
   /* ── Form submit ── */
-  document.getElementById('class-form').onsubmit = (e) => {
+  document.getElementById('class-form').onsubmit = async (e) => {
     e.preventDefault();
-    const name     = document.getElementById('cls-name').value.trim();
-    const level    = activeLevel;
-    const nameErr  = document.getElementById('cls-name-error');
+    const name    = document.getElementById('cls-name').value.trim();
+    const level   = activeLevel;
+    const nameErr = document.getElementById('cls-name-error');
 
     if (!name) {
       nameErr.textContent = 'Class name is required.';
@@ -895,31 +1061,43 @@ function openClassModal(cls = null) {
       return;
     }
 
-    if (isEdit) {
-      const oldName = cls.name;
-      Object.assign(cls, { name, level, arms: [...modalArms] });
-      if (oldName !== name) {
-        (App.data.students || []).forEach(s => { if (s.class === oldName) s.class = name; });
-        (App.data.teachers || []).forEach(t => { if (t.assignedClass === oldName) t.assignedClass = name; });
-      }
-      closeModal();
-      renderClasses();
-      setTimeout(() => {
-        const row = document.getElementById(`class-row-${cls.id}`);
-        if (row) {
-          row.style.transition = 'background .15s';
-          row.style.background = CLASS_TIERS[level]?.surface || '#d1fae5';
-          setTimeout(() => { row.style.background = ''; }, 1500);
+    try {
+      if (isEdit) {
+        const oldName = cls.name;
+        // Call API using class NAME (not numeric id) as the key
+        await Classes.update(oldName, { name, level });
+        // Sync arms: post new set
+        await Classes.addArm(name, { arms: modalArms }).catch(() => {});
+
+        Object.assign(cls, { name, level, arms: [...modalArms] });
+        if (oldName !== name) {
+          (App.data.students || []).forEach(s => { if (s.class === oldName) s.class = name; });
+          (App.data.teachers || []).forEach(t => { if (t.assignedClass === oldName) t.assignedClass = name; });
         }
-      }, 80);
-      toast('Class updated!', 'success');
-    } else {
-      const newCls = { id: Date.now(), name, level, arms: [...modalArms] };
-      App.data.classes = App.data.classes || [];
-      App.data.classes.push(newCls);
-      closeModal();
-      renderClasses();
-      toast(`${CLASS_TIERS[level]?.icon || ''} ${name} added!`, 'success');
+        closeModal();
+        renderClasses();
+        setTimeout(() => {
+          const row = document.getElementById(`class-row-${cls.id}`);
+          if (row) {
+            row.style.transition = 'background .15s';
+            row.style.background = CLASS_TIERS[level]?.surface || '#d1fae5';
+            setTimeout(() => { row.style.background = ''; }, 1500);
+          }
+        }, 80);
+        toast('Class updated!', 'success');
+      } else {
+        // Create via API — response gives us the real DB id
+        const resp = await Classes.create({ name, level, arms: modalArms });
+        const saved = resp.data || resp;
+        const newCls = { id: saved.id || Date.now(), name: saved.name || name, level: saved.level || level, arms: [...modalArms] };
+        App.data.classes = App.data.classes || [];
+        App.data.classes.push(newCls);
+        closeModal();
+        renderClasses();
+        toast(`${CLASS_TIERS[level]?.icon || ''} ${name} added!`, 'success');
+      }
+    } catch (err) {
+      toast('Error saving class: ' + (err.message || 'Unknown error'), 'error');
     }
   };
 }
@@ -1267,10 +1445,14 @@ window.addArm = function (classId) {
     const invalid = letters.filter(l => !/^[A-Z0-9]{1,3}$/.test(l));
     if (invalid.length) { errEl.textContent=`Invalid arm name(s): ${invalid.join(', ')}. Use 1-3 letters/digits.`; errEl.style.display=''; return; }
 
-    letters.forEach(l => cls.arms.push(l));
-    closeModal();
-    refreshArmsGrid(cls);
-    toast(`Arm${letters.length>1?'s':''} ${letters.map(l=>`${cls.name} ${l}`).join(', ')} added!`, 'success');
+    Classes.addArm(cls.name, { arms: letters }).then(() => {
+      letters.forEach(l => cls.arms.push(l));
+      closeModal();
+      refreshArmsGrid(cls);
+      toast(`Arm${letters.length>1?'s':''} ${letters.map(l=>`${cls.name} ${l}`).join(', ')} added!`, 'success');
+    }).catch(err => {
+      toast('Error adding arm: ' + (err.message || 'Unknown error'), 'error');
+    });
   };
 };
 
@@ -1448,15 +1630,17 @@ window.confirmDeleteArm = function (classId, arm) {
   const cls = App.data.classes.find(c => c.id === classId);
   if (!cls) return;
 
-  /* Clear teacher assignments */
-  (App.data.teachers||[]).forEach(t => {
-    if (t.assignedClass === cls.name && t.assignedArm === arm) { t.assignedArm = ''; }
+  Classes.deleteArm(cls.name, arm).then(() => {
+    (App.data.teachers||[]).forEach(t => {
+      if (t.assignedClass === cls.name && t.assignedArm === arm) { t.assignedArm = ''; }
+    });
+    cls.arms = cls.arms.filter(a => a !== arm);
+    closeModal();
+    refreshArmsGrid(cls);
+    toast(`Arm ${cls.name} ${arm} removed.`, 'warning');
+  }).catch(err => {
+    toast('Error removing arm: ' + (err.message || 'Unknown error'), 'error');
   });
-
-  cls.arms = cls.arms.filter(a => a !== arm);
-  closeModal();
-  refreshArmsGrid(cls);
-  toast(`Arm ${cls.name} ${arm} removed.`, 'warning');
 };
 
 
@@ -1788,6 +1972,7 @@ function studentRow(s, canManage) {
     </td>
     <td style="${tdStyle()}">
       <button onclick="viewStudent('${s.id}')" style="${btnStyle('info','sm')}">👁 View</button>
+      <button onclick="window.open('student-finance.html?studentId=${encodeURIComponent(s.id)}','_blank')" style="${btnStyle('secondary','sm')}" title="Student Finance Portal">💰</button>
       ${canManage ? `
         <button onclick="editStudent('${s.id}')" style="${btnStyle('secondary','sm')}">✏ Edit</button>
         <button onclick="transferStudent('${s.id}')" style="${btnStyle('secondary','sm')}">🔀</button>
@@ -1886,6 +2071,7 @@ window.viewStudent = function (id) {
     <div id="profile-results-panel" style="display:none;">${resultsTab()}</div>
 
     <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
+      <button onclick="window.open('student-finance.html?studentId=${encodeURIComponent(s.id)}','_blank')" style="${btnStyle('warning')}">💰 Finance Portal</button>
       ${priv.canManage() ? `<button onclick="closeModal();editStudent('${s.id}')" style="${btnStyle('secondary')}">✏ Edit</button>` : ''}
       <button onclick="closeModal()" style="${btnStyle('primary')}">Close</button>
     </div>`);
@@ -1989,7 +2175,7 @@ function openStudentModal(s = null) {
     } else { warnEl.style.display = 'none'; }
   });
 
-  document.getElementById('student-form').onsubmit = (e) => {
+  document.getElementById('student-form').onsubmit = async (e) => {
     e.preventDefault();
     const name = document.getElementById('st-name').value.trim();
     if (!name) return toast('Full name is required.', 'error');
@@ -1999,25 +2185,37 @@ function openStudentModal(s = null) {
       class:      document.getElementById('st-class').value,
       arm:        document.getElementById('st-arm').value,
       gender:     document.getElementById('st-gender').value,
-      dob:        document.getElementById('st-dob').value,
-      parent:     document.getElementById('st-parent').value.trim(),
-      phone:      document.getElementById('st-phone').value.trim(),
+      dob:        document.getElementById('st-dob').value    || null,
+      parent:     document.getElementById('st-parent').value.trim()  || null,
+      phone:      document.getElementById('st-phone').value.trim()   || null,
     };
-    if (isEdit) {
-      data.attendance = parseInt(document.getElementById('st-attendance').value) || s.attendance;
-      Object.assign(s, data);
-      toast('Student updated!', 'success');
-    } else {
-      data.attendance = 100;
-      data.id = genStudentId();
-      App.data.students.push(data);
-      toast(`Student added! ID: ${data.id}`, 'success');
-    }
-    closeModal(); renderStudents(_currentFilter, _currentFilters);
-    /* Highlight row */
-    if (isEdit) {
-      const row = document.getElementById(`student-row-${s.id}`);
-      if (row) { row.style.background='#d1fae5'; setTimeout(()=>row.style.background='',1400); }
+
+    if (!data.class) return toast('Class is required.', 'error');
+    if (!data.arm)   return toast('Arm is required.', 'error');
+
+    try {
+      if (isEdit) {
+        data.attendance = parseInt(document.getElementById('st-attendance').value) || s.attendance;
+        await Students.update(s.id, data);
+        Object.assign(s, data);
+        toast('Student updated!', 'success');
+      } else {
+        data.attendance = 100;
+        const resp = await Students.create(data);
+        const saved = resp.data || resp;
+        saved.class = saved.class || data.class;
+        saved.arm   = saved.arm   || data.arm;
+        App.data.students.push(saved);
+        toast(`Student added! ID: ${saved.id}`, 'success');
+      }
+      closeModal();
+      renderStudents(_currentFilter, _currentFilters);
+      if (isEdit) {
+        const row = document.getElementById(`student-row-${s.id}`);
+        if (row) { row.style.background='#d1fae5'; setTimeout(()=>row.style.background='',1400); }
+      }
+    } catch (err) {
+      toast('Error saving student: ' + (err.message || 'Unknown error'), 'error');
     }
   };
 }
@@ -2390,19 +2588,33 @@ window.printStudentList = function () {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const STAFF_POSITIONS = {
-  Academic: [],
-  Administrative: [],
-  Support: [],
-  Leadership: []
+  Academic:       ['Class Teacher','Subject Teacher','Form Master/Mistress','Head of Department','Assistant HOD','Remedial Teacher','Laboratory Technician'],
+  Administrative: ['Principal Secretary','School Registrar','Admissions Officer','Examination Officer','Account Officer','Bursar','Records Officer','Data Entry Clerk'],
+  Support:        ['Librarian','Library Assistant','ICT Technician','Lab Assistant','Nurse/Health Officer','Counsellor','Driver','Security Officer','Cleaner','Gardener','Canteen Attendant'],
+  Leadership:     ['Principal','Vice Principal (Academics)','Vice Principal (Administration)','Dean of Students','Head of Junior School','Head of Senior School','Chaplain/Welfare Officer']
 };
 
 const STAFF_CATEGORIES = ['All', 'Academic', 'Administrative', 'Support', 'Leadership'];
 
-const STAFF_DEPARTMENTS = [];
+const STAFF_DEPARTMENTS = [
+  'Mathematics','English Language','Sciences','Social Sciences','Humanities',
+  'Languages','Business Studies','Technical','Arts','Physical Education',
+  'ICT / Computer Studies','Religious Studies','Home Economics',
+  'Administration','Bursary / Finance','Library','Health / Medical',
+  'Security','Maintenance','Catering'
+];
 
-const STAFF_SUBJECTS = [];
+const STAFF_SUBJECTS = [
+  'Mathematics','English Language','Biology','Chemistry','Physics',
+  'Economics','Government','Literature','Accounting','Geography',
+  'CRS / MRS','Social Studies','Basic Technology','Agricultural Sci.',
+  'Computer Studies','French','Civic Education','Fine Arts','Music',
+  'Physical Education','Home Economics','Further Mathematics','Data Processing'
+];
 
-const STAFF_CLASSES = [];
+const STAFF_CLASSES = [
+  'JSS 1','JSS 2','JSS 3','SS 1','SS 2','SS 3'
+];
 
 const STAFF_STATUS_COLORS = {
   Active: 'success',
@@ -2892,57 +3104,115 @@ window.smRemoveExistingCred = function(i, staffId) {
 };
 
 // ── Submit ─────────────────────────────────────────────────────────────────────
-window.smSubmitForm = function() {
+window.smSubmitForm = async function() {
   const name = document.getElementById('sf-name')?.value.trim();
   if (!name) { toast('Name is required', 'error'); return; }
 
-  const newCreds = _pendingStaffFiles.map(f => ({ name: f.name, size: f.size, type: f.type }));
+  const category = document.getElementById('sf-category')?.value;
+  const position = document.getElementById('sf-position')?.value;
+  if (!category) { toast('Category is required', 'error'); return; }
+  if (!position) { toast('Position is required', 'error'); return; }
+
+  const classVal = document.getElementById('sf-class')?.value;
+  const armVal   = document.getElementById('sf-arm')?.value;
+
+  // Map frontend field names to what the backend expects
   const data = {
     name,
-    gender:       document.getElementById('sf-gender')?.value,
-    phone:        document.getElementById('sf-phone')?.value,
-    email:        document.getElementById('sf-email')?.value,
-    dateJoined:   document.getElementById('sf-joined')?.value,
-    status:       document.getElementById('sf-status')?.value,
-    category:     document.getElementById('sf-category')?.value,
-    position:     document.getElementById('sf-position')?.value,
-    department:   document.getElementById('sf-department')?.value,
-    subject:      document.getElementById('sf-subject')?.value,
-    classUnit:    document.getElementById('sf-class')?.value,
-    arm:          document.getElementById('sf-arm')?.value,
-    qualification:document.getElementById('sf-qual')?.value,
-    experience:   document.getElementById('sf-exp')?.value,
-    notes:        document.getElementById('sf-notes')?.value,
+    gender:        document.getElementById('sf-gender')?.value,
+    phone:         document.getElementById('sf-phone')?.value     || null,
+    email:         document.getElementById('sf-email')?.value     || null,
+    date_joined:   document.getElementById('sf-joined')?.value    || null,
+    status:        document.getElementById('sf-status')?.value,
+    category,
+    position,
+    department:    document.getElementById('sf-department')?.value || null,
+    subject:       document.getElementById('sf-subject')?.value === 'N/A' ? null : (document.getElementById('sf-subject')?.value || null),
+    qualification: document.getElementById('sf-qual')?.value      || null,
+    experience:    document.getElementById('sf-exp')?.value       || null,
+    notes:         document.getElementById('sf-notes')?.value     || null,
   };
 
-  if (_currentEditStaffId) {
-    const s = App.data.staff.find(x => x.id === _currentEditStaffId);
-    if (s) {
-      Object.assign(s, data);
-      s.credentials = [...(s.credentials || []), ...newCreds];
-      toast('Staff member updated!', 'success');
-    }
-  } else {
-    App.data.staff.push({
-      id: smMakeId(),
-      role: 'Staff',
-      credentials: newCreds,
-      ...data
-    });
-    toast('Staff member added!', 'success');
-  }
+  const newCreds = _pendingStaffFiles.map(f => ({ name: f.name, size: f.size, type: f.type }));
 
-  closeModal();
-  renderStaff();
+  try {
+    let savedStaff;
+    if (_currentEditStaffId) {
+      // Update existing staff
+      const resp = await Staff.update(_currentEditStaffId, data);
+      savedStaff = resp.data || resp;
+
+      // Assign class if changed
+      const assignClass = classVal !== 'N/A' ? classVal : null;
+      const assignArm   = armVal   !== 'N/A' ? armVal   : null;
+      await Staff.assignClass(_currentEditStaffId, { classUnit: assignClass, arm: assignArm });
+
+      // Update in-memory cache
+      const cached = App.data.staff.find(x => x.id === _currentEditStaffId);
+      if (cached) {
+        Object.assign(cached, data, {
+          dateJoined: data.date_joined,
+          classUnit:  assignClass || '',
+          class:      assignClass || '',
+          arm:        assignArm  || '',
+        });
+      }
+      toast('Staff member updated!', 'success');
+    } else {
+      // Create new staff
+      const resp = await Staff.create(data);
+      savedStaff = resp.data || resp;
+
+      // Assign class after creation
+      if (classVal && classVal !== 'N/A') {
+        await Staff.assignClass(savedStaff.id, {
+          classUnit: classVal,
+          arm:       armVal !== 'N/A' ? armVal : null
+        });
+        savedStaff.classUnit    = classVal;
+        savedStaff.class        = classVal;
+        savedStaff.assignedClass= classVal;
+        savedStaff.arm          = armVal !== 'N/A' ? armVal : '';
+        savedStaff.assignedArm  = savedStaff.arm;
+      }
+
+      // Normalise for local cache
+      savedStaff.dateJoined   = savedStaff.dateJoined || data.date_joined || '';
+      savedStaff.credentials  = newCreds;
+      savedStaff.role         = 'Staff';
+      App.data.staff.push(savedStaff);
+      toast('Staff member added!', 'success');
+    }
+
+    // Upload credentials if any
+    if (newCreds.length && savedStaff?.id) {
+      try {
+        await Staff.uploadCredential(savedStaff.id, { credentials: newCreds });
+      } catch (credErr) {
+        toast('Staff saved but credential upload failed: ' + credErr.message, 'warning');
+      }
+    }
+
+    closeModal();
+    renderStaff();
+
+  } catch (err) {
+    toast('Error saving staff: ' + (err.message || 'Unknown error'), 'error');
+  }
 };
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
-window.smDeleteStaff = function(id) {
+window.smDeleteStaff = async function(id) {
   if (!priv.canManage() && denyAccess()) return;
   if (!confirmDlg('Delete this staff member? This cannot be undone.')) return;
-  App.data.staff = App.data.staff.filter(s => s.id !== id);
-  renderStaff();
-  toast('Staff member deleted.', 'warning');
+  try {
+    await Staff.delete(id);
+    App.data.staff = App.data.staff.filter(s => s.id !== id);
+    renderStaff();
+    toast('Staff member deleted.', 'warning');
+  } catch (err) {
+    toast('Error deleting staff: ' + (err.message || 'Unknown error'), 'error');
+  }
 };
 
 // ── Export CSV ─────────────────────────────────────────────────────────────────
@@ -3019,13 +3289,21 @@ function openSubjectModal() {
         <button type="submit" style="${btnStyle('primary')}">Add Subject</button>
       </div>
     </form>`);
-  document.getElementById('subj-form').onsubmit = (e) => {
+  document.getElementById('subj-form').onsubmit = async (e) => {
     e.preventDefault();
-    const name = document.getElementById('sb-name').value.trim();
-    const code = document.getElementById('sb-code').value.trim().toUpperCase();
-    if (!name || !code) return toast('All fields required.', 'error');
-    App.data.subjects.push({ id: Date.now(), name, code, level: document.getElementById('sb-level').value, type: document.getElementById('sb-type').value });
-    closeModal(); renderSubjects(); toast('Subject added!', 'success');
+    const name  = document.getElementById('sb-name').value.trim();
+    const code  = document.getElementById('sb-code').value.trim().toUpperCase();
+    const level = document.getElementById('sb-level').value;
+    const type  = document.getElementById('sb-type').value;
+    if (!name || !code) return toast('Name and code are required.', 'error');
+    try {
+      const resp   = await Subjects.create({ name, code, level, type });
+      const saved  = resp.data || resp;
+      App.data.subjects.push({ id: saved.id || Date.now(), name, code, level, type });
+      closeModal(); renderSubjects(); toast('Subject added!', 'success');
+    } catch (err) {
+      toast('Error adding subject: ' + (err.message || 'Unknown error'), 'error');
+    }
   };
 }
 
@@ -6409,38 +6687,6 @@ function getDefaultDomainLabel(score) {
   return { 1:'Excellent', 2:'Very Good', 3:'Good', 4:'Fair', 5:'Poor' }[score] || 'Not rated';
 }
 
-/* ── Style helpers (keep in sync with your app-level helpers) ── */
-function labelStyle() {
-  return 'display:block; font-size:0.82rem; font-weight:600; color:#475569; margin-bottom:0.35rem;';
-}
-function inputStyle(size) {
-  const pad = size === 'sm' ? '0.35rem 0.6rem' : '0.55rem 0.85rem';
-  const fz  = size === 'sm' ? '0.82rem' : '0.9rem';
-  return `width:100%; padding:${pad}; font-size:${fz}; border:1.5px solid #d1d5db; border-radius:6px; outline:none; box-sizing:border-box; transition:border-color .15s;`;
-}
-function btnStyle(variant, size) {
-  const pad = size === 'xs' ? '0.25rem 0.6rem' : size === 'sm' ? '0.4rem 0.85rem' : '0.6rem 1.25rem';
-  const fz  = size === 'xs' ? '0.78rem' : size === 'sm' ? '0.82rem' : '0.9rem';
-  const base = `padding:${pad}; font-size:${fz}; font-weight:600; border:none; border-radius:7px; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; transition:opacity .15s;`;
-  const variants = {
-    primary:   'background:#2563eb; color:#fff;',
-    secondary: 'background:#f1f5f9; color:#334155; border:1.5px solid #d1d5db;',
-    success:   'background:#16a34a; color:#fff;',
-    danger:    'background:#ef4444; color:#fff;',
-    outline:   'background:#fff; color:#2563eb; border:1.5px solid #2563eb;',
-  };
-  return base + (variants[variant] || variants.secondary);
-}
-function tableStyle() {
-  return 'width:100%; border-collapse:collapse; font-size:0.88rem; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;';
-}
-function thRowStyle() {
-  return 'background:#f8fafc;';
-}
-function thStyle(width) {
-  return `padding:0.6rem 0.75rem; text-align:left; font-size:0.8rem; font-weight:700; color:#475569; border-bottom:1px solid #e2e8f0; white-space:nowrap; width:${width};`;
-}
-
 /* ─────────────────────────────────────────
    17. MODAL SYSTEM
 ───────────────────────────────────────── */
@@ -7154,3 +7400,1984 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHANGE PASSWORD  — accessible from sidebar 🔑 button or Settings
+═══════════════════════════════════════════════════════════════════════════ */
+window.openChangePasswordModal = function() {
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">🔑 Change Password</h3>
+    <div style="display:flex;flex-direction:column;gap:.85rem;">
+      <div>
+        <label style="${labelStyle()}">Current Password *</label>
+        <div style="position:relative;">
+          <input id="cp-current" type="password" placeholder="Enter current password"
+                 style="${inputStyle()};width:100%;padding-right:2.5rem;">
+          <button type="button" onclick="togglePwdVis('cp-current',this)"
+                  style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.9rem;">👁</button>
+        </div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">New Password * <span style="font-size:.75rem;color:#9ca3af;">(min 8 characters)</span></label>
+        <div style="position:relative;">
+          <input id="cp-new" type="password" placeholder="Enter new password" oninput="updatePwdStrength(this.value)"
+                 style="${inputStyle()};width:100%;padding-right:2.5rem;">
+          <button type="button" onclick="togglePwdVis('cp-new',this)"
+                  style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.9rem;">👁</button>
+        </div>
+        <!-- Strength bar -->
+        <div style="margin-top:.4rem;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;">
+          <div id="cp-strength-bar" style="height:100%;width:0%;background:#ef4444;border-radius:2px;transition:width .3s,background .3s;"></div>
+        </div>
+        <div id="cp-strength-label" style="font-size:.72rem;color:#9ca3af;margin-top:.2rem;"></div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Confirm New Password *</label>
+        <div style="position:relative;">
+          <input id="cp-confirm" type="password" placeholder="Repeat new password"
+                 style="${inputStyle()};width:100%;padding-right:2.5rem;">
+          <button type="button" onclick="togglePwdVis('cp-confirm',this)"
+                  style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.9rem;">👁</button>
+        </div>
+      </div>
+      <div id="cp-error" style="color:#ef4444;font-size:.83rem;min-height:1.2rem;"></div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.3rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button id="cp-submit-btn" onclick="submitChangePassword()" style="${btnStyle('primary')}">🔑 Change Password</button>
+      </div>
+    </div>`);
+};
+
+window.togglePwdVis = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isText = input.type === 'text';
+  input.type = isText ? 'password' : 'text';
+  btn.textContent = isText ? '👁' : '🙈';
+};
+
+window.updatePwdStrength = function(pwd) {
+  const bar   = document.getElementById('cp-strength-bar');
+  const label = document.getElementById('cp-strength-label');
+  if (!bar || !label) return;
+  let score = 0;
+  if (pwd.length >= 8)  score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  const levels = [
+    { pct:'0%',   color:'#e5e7eb', text:'' },
+    { pct:'20%',  color:'#ef4444', text:'Very weak' },
+    { pct:'40%',  color:'#f59e0b', text:'Weak' },
+    { pct:'60%',  color:'#f59e0b', text:'Fair' },
+    { pct:'80%',  color:'#22c55e', text:'Strong' },
+    { pct:'100%', color:'#059669', text:'Very strong' },
+  ];
+  const lvl = levels[score] || levels[0];
+  bar.style.width      = lvl.pct;
+  bar.style.background = lvl.color;
+  label.textContent    = lvl.text;
+  label.style.color    = lvl.color;
+};
+
+window.submitChangePassword = async function() {
+  const current = document.getElementById('cp-current')?.value;
+  const newPwd  = document.getElementById('cp-new')?.value;
+  const confirm = document.getElementById('cp-confirm')?.value;
+  const errEl   = document.getElementById('cp-error');
+  const btn     = document.getElementById('cp-submit-btn');
+
+  const setErr = (msg) => { if (errEl) errEl.textContent = msg; };
+  setErr('');
+
+  if (!current || !newPwd || !confirm) { setErr('All fields are required.'); return; }
+  if (newPwd.length < 8)               { setErr('New password must be at least 8 characters.'); return; }
+  if (newPwd !== confirm)              { setErr('New passwords do not match.'); return; }
+  if (newPwd === current)              { setErr('New password must be different from current password.'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Changing…'; }
+
+  try {
+    // Use the SHC_Auth API helper which adds the Bearer token automatically
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/auth/change-password`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword: current, newPassword: newPwd }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Could not change password.');
+    closeModal();
+    toast('✅ Password changed successfully! Logging you out…', 'success');
+    setTimeout(() => {
+      if (window.SHC_Auth) SHC_Auth.logout();
+      else { sessionStorage.clear(); location.href = 'login.html'; }
+    }, 1800);
+  } catch(e) {
+    setErr(e.message || 'Could not change password. Check your current password.');
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 Change Password'; }
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDIT FEE STRUCTURE ITEM
+═══════════════════════════════════════════════════════════════════════════ */
+window.openEditFeeStructureModal = function(f) {
+  const classOpts = (App.data.classes||[]).map(c =>
+    `<option value="${c.name}" ${f.class_name===c.name?'selected':''}>${c.name}</option>`).join('');
+  const termOpts  = ['First Term','Second Term','Third Term'].map(t =>
+    `<option ${f.term===t?'selected':''}>${t}</option>`).join('');
+
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">✏️ Edit Fee Structure Item</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;">
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Label *</label>
+        <input id="efs-label" value="${f.label||''}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Amount (₦) *</label>
+        <input id="efs-amount" type="number" min="0" value="${f.amount||0}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Level</label>
+        <select id="efs-level" style="${selectStyle()};width:100%;">
+          <option ${f.level==='All'?'selected':''}>All</option>
+          <option ${f.level==='Junior'?'selected':''}>Junior</option>
+          <option ${f.level==='Senior'?'selected':''}>Senior</option>
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Specific Class (overrides Level)</label>
+        <select id="efs-class" style="${selectStyle()};width:100%;">
+          <option value="">— None —</option>${classOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Term</label>
+        <select id="efs-term" style="${selectStyle()};width:100%;">
+          <option value="">All Terms</option>${termOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="efs-session" value="${f.session||''}" placeholder="e.g. 2025/2026 (blank = all)" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Mandatory</label>
+        <select id="efs-mandatory" style="${selectStyle()};width:100%;">
+          <option value="1" ${f.mandatory!==0?'selected':''}>Yes</option>
+          <option value="0" ${f.mandatory===0?'selected':''}>No</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Description</label>
+        <textarea id="efs-desc" rows="2" style="${inputStyle()};width:100%;resize:none;">${f.description||''}</textarea>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitEditFeeStructure(${f.id})" style="${btnStyle('primary')}">💾 Save Changes</button>
+      </div>
+    </div>`);
+};
+
+window.submitEditFeeStructure = async function(id) {
+  const label    = document.getElementById('efs-label')?.value?.trim();
+  const amount   = document.getElementById('efs-amount')?.value;
+  const level    = document.getElementById('efs-level')?.value;
+  const cls      = document.getElementById('efs-class')?.value    || null;
+  const term     = document.getElementById('efs-term')?.value     || null;
+  const session  = document.getElementById('efs-session')?.value  || null;
+  const mandatory= parseInt(document.getElementById('efs-mandatory')?.value);
+  const description = document.getElementById('efs-desc')?.value  || null;
+
+  if (!label)  { toast('Label is required', 'error'); return; }
+  if (!amount) { toast('Amount is required', 'error'); return; }
+
+  try {
+    await Fees.updateStructureItem(id, {
+      label, amount: parseFloat(amount), level,
+      class_name: cls, term, session, mandatory, description,
+    });
+    closeModal();
+    toast('Fee structure item updated!', 'success');
+    loadFeeStructureList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDIT LEVY — also update payment records to match new amount
+═══════════════════════════════════════════════════════════════════════════ */
+/* openEditLevyModal is already wired to openCreateLevyModal(levy) above   */
+/* submitLevy handles both create and update — already correct             */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDIT LEVY PAYMENT — mark individual levy payment as paid / adjust amount
+═══════════════════════════════════════════════════════════════════════════ */
+window.openEditLevyPaymentModal = function(pmtId, currentStatus, currentAmount) {
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">✏️ Edit Levy Payment</h3>
+    <div style="display:flex;flex-direction:column;gap:.85rem;">
+      <div>
+        <label style="${labelStyle()}">Status</label>
+        <select id="elp-status" style="${selectStyle()};width:100%;">
+          ${['Paid','Partial','Unpaid','Waived','Exempt'].map(s =>
+            `<option ${s===currentStatus?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Amount Paid (₦)</label>
+        <input id="elp-amount" type="number" min="0" value="${currentAmount||0}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Reference / Receipt No.</label>
+        <input id="elp-ref" placeholder="Optional" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Note</label>
+        <textarea id="elp-note" rows="2" placeholder="Optional" style="${inputStyle()};width:100%;resize:none;"></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitEditLevyPayment('${pmtId}')" style="${btnStyle('primary')}">💾 Save</button>
+      </div>
+    </div>`);
+};
+
+window.submitEditLevyPayment = async function(pmtId) {
+  const status     = document.getElementById('elp-status')?.value;
+  const amount_paid= parseFloat(document.getElementById('elp-amount')?.value || '0');
+  const reference  = document.getElementById('elp-ref')?.value  || null;
+  const note       = document.getElementById('elp-note')?.value || null;
+  try {
+    await Levies.updatePayment(pmtId, { status, amount_paid, reference, note });
+    closeModal();
+    toast('Payment updated!', 'success');
+    // Refresh the modal that was open — re-trigger last viewed levy
+    if (window._lastViewedLevyId) viewLevyPayments(window._lastViewedLevyId, window._lastViewedLevyName);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEVIES  — Special one-off fees (Sports, Graduation, Interhouse, etc.)
+   Admin only
+═══════════════════════════════════════════════════════════════════════════ */
+function renderLevies() {
+  if (!priv.isAdmin()) { accessDeniedPage('levies'); return; }
+  const section = document.getElementById('levies');
+  if (!section) return;
+
+  const LEVY_CATS = ['Sports','Graduation','Cultural','Interhouse','Excursion','Uniform','ID Card','Library','Technology','Medical','Other'];
+  const classOpts = (App.data.classes||[]).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  const termOpts  = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  const catOpts   = LEVY_CATS.map(c=>`<option>${c}</option>`).join('');
+  const catEmoji  = { Sports:'⚽',Graduation:'🎓',Cultural:'🎭',Interhouse:'🏁',Excursion:'🚌',Uniform:'👔','ID Card':'🪪',Library:'📚',Technology:'💻',Medical:'🏥',Other:'📌' };
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">🎯 Levies & Special Fees</h2>
+      <button onclick="openCreateLevyModal()" style="${btnStyle('primary')}">+ Create Levy</button>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.25rem;font-size:.85rem;color:#1d4ed8;">
+      <strong>ℹ What are Levies?</strong> One-off special fees like Sports Day, Graduation, Interhouse Competition, Excursion, etc.
+      Create a levy, set who it applies to, then use <strong>⚡ Charge Students</strong> to generate payment records for all applicable students.
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+      <select id="levy-filter-cat" onchange="loadLevies()" style="${selectStyle()}">
+        <option value="">All Categories</option>${catOpts}
+      </select>
+      <select id="levy-filter-active" onchange="loadLevies()" style="${selectStyle()}">
+        <option value="">Active & Inactive</option>
+        <option value="true">Active Only</option>
+        <option value="false">Inactive Only</option>
+      </select>
+    </div>
+
+    <div id="levies-list">Loading…</div>
+
+    <!-- Create levy modal template (hidden) -->
+    <div id="levy-create-modal-data" data-cats='${JSON.stringify(LEVY_CATS)}' data-classopts="${classOpts.replace(/"/g,'&quot;')}" data-termopts="${termOpts.replace(/"/g,'&quot;')}" style="display:none;"></div>`;
+
+  window._levyCatEmoji = catEmoji;
+  loadLevies();
+}
+
+async function loadLevies() {
+  const el     = document.getElementById('levies-list');
+  const cat    = document.getElementById('levy-filter-cat')?.value;
+  const active = document.getElementById('levy-filter-active')?.value;
+  if (!el) return;
+  el.innerHTML = '<p style="color:#9ca3af;padding:1rem;">Loading…</p>';
+  try {
+    const params = {};
+    if (cat)    params.category = cat;
+    if (active) params.active   = active;
+    const resp  = await Levies.getAll(params);
+    const levies= resp.data || [];
+    if (!levies.length) {
+      el.innerHTML = `<div style="text-align:center;padding:3rem;color:#9ca3af;">
+        <div style="font-size:3rem;margin-bottom:.5rem;">🎯</div>
+        <p>No levies created yet. Click <strong>+ Create Levy</strong> to add one.</p>
+      </div>`;
+      return;
+    }
+    const emoji = window._levyCatEmoji || {};
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
+      ${levies.map(l => {
+        const sc = l.active ? '#22c55e' : '#9ca3af';
+        return `<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:1.1rem;font-weight:700;">${emoji[l.category]||'📌'} ${l.name}</div>
+              <div style="font-size:.78rem;opacity:.8;margin-top:.2rem;">${l.category} · ${l.target}${l.class_name?' · '+l.class_name:''}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:1.4rem;font-weight:700;">₦${parseFloat(l.amount).toLocaleString()}</div>
+              <span style="font-size:.7rem;background:${sc}33;color:${sc};border-radius:9999px;padding:.15rem .6rem;">${l.active?'Active':'Inactive'}</span>
+            </div>
+          </div>
+          <div style="padding:.9rem 1.25rem;font-size:.82rem;color:#6b7280;">
+            ${l.term ? `<div>📅 ${l.term}${l.session?' · '+l.session:''}</div>` : ''}
+            ${l.due_date ? `<div>⏰ Due: ${new Date(l.due_date).toLocaleDateString()}</div>` : ''}
+            ${l.description ? `<div style="margin-top:.3rem;color:#374151;">${l.description}</div>` : ''}
+          </div>
+          <div style="padding:.6rem 1.25rem;border-top:1px solid #f3f4f6;display:flex;gap:.4rem;flex-wrap:wrap;">
+            <button onclick="chargeLevyStudents(${l.id},'${l.name.replace(/'/g,"\\'")}','${l.target}','${l.class_name||''}')" style="${btnStyle('primary','sm')}">⚡ Charge Students</button>
+            <button onclick="viewLevyPayments(${l.id},'${l.name.replace(/'/g,"\\'")}')\"  style="${btnStyle('secondary','sm')}">📋 Payments</button>
+            <button onclick="openEditLevyModal(${JSON.stringify(l).replace(/"/g,'&quot;')})" style="${btnStyle('outline','sm')}">✏️</button>
+            <button onclick="deleteLevy(${l.id})" style="${btnStyle('danger','sm')}">🗑</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+}
+
+window.openCreateLevyModal = function(levy = null) {
+  const isEdit = !!levy;
+  const LEVY_CATS = ['Sports','Graduation','Cultural','Interhouse','Excursion','Uniform','ID Card','Library','Technology','Medical','Other'];
+  const classOpts = (App.data.classes||[]).map(c=>`<option ${levy?.class_name===c.name?'selected':''} value="${c.name}">${c.name}</option>`).join('');
+  const termOpts  = ['First Term','Second Term','Third Term'].map(t=>`<option ${levy?.term===t?'selected':''}>${t}</option>`).join('');
+  const catOpts   = LEVY_CATS.map(c=>`<option ${levy?.category===c?'selected':''}>${c}</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">${isEdit?'✏️ Edit':'➕ Create'} Levy</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Levy Name *</label>
+        <input id="lv-name" value="${levy?.name||''}" placeholder="e.g. Sports Day Fee, Graduation Fee" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Category</label>
+        <select id="lv-cat" style="${selectStyle()};width:100%;">${catOpts}</select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Amount (₦) *</label>
+        <input id="lv-amount" type="number" min="0" value="${levy?.amount||''}" placeholder="0.00" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Applies To</label>
+        <select id="lv-target" onchange="toggleLevyClassField()" style="${selectStyle()};width:100%;">
+          ${['All','Junior','Senior','Class'].map(t=>`<option ${levy?.target===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div id="lv-class-wrap" style="${levy?.target==='Class'?'':'display:none'}">
+        <label style="${labelStyle()}">Class</label>
+        <select id="lv-class" style="${selectStyle()};width:100%;">${classOpts}</select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Term</label>
+        <select id="lv-term" style="${selectStyle()};width:100%;"><option value="">All Terms</option>${termOpts}</select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Due Date</label>
+        <input id="lv-due" type="date" value="${levy?.due_date?.slice(0,10)||''}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="lv-session" value="${levy?.session||App.data.schoolInfo?.session||''}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Mandatory?</label>
+        <select id="lv-mandatory" style="${selectStyle()};width:100%;">
+          <option value="1" ${(levy?.mandatory!==0)?'selected':''}>Yes</option>
+          <option value="0" ${levy?.mandatory===0?'selected':''}>No</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Description</label>
+        <textarea id="lv-desc" rows="2" placeholder="Optional description" style="${inputStyle()};width:100%;resize:none;">${levy?.description||''}</textarea>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitLevy(${isEdit?levy.id:'null'})" style="${btnStyle('primary')}">${isEdit?'💾 Save':'✅ Create'}</button>
+      </div>
+    </div>`);
+};
+
+window.openEditLevyModal = function(levy) { openCreateLevyModal(levy); };
+
+window.toggleLevyClassField = function() {
+  const t  = document.getElementById('lv-target')?.value;
+  const wrap = document.getElementById('lv-class-wrap');
+  if (wrap) wrap.style.display = t === 'Class' ? '' : 'none';
+};
+
+window.submitLevy = async function(levyId) {
+  const name     = document.getElementById('lv-name')?.value?.trim();
+  const amount   = document.getElementById('lv-amount')?.value;
+  const category = document.getElementById('lv-cat')?.value;
+  const target   = document.getElementById('lv-target')?.value;
+  if (!name || !amount) { toast('Name and amount are required', 'error'); return; }
+  if (target === 'Class' && !document.getElementById('lv-class')?.value) {
+    toast('Select a class for Class-level levy', 'error'); return;
+  }
+  const data = {
+    name, category, amount: parseFloat(amount), target,
+    class_name:  target === 'Class' ? document.getElementById('lv-class')?.value : null,
+    term:        document.getElementById('lv-term')?.value      || null,
+    due_date:    document.getElementById('lv-due')?.value       || null,
+    session:     document.getElementById('lv-session')?.value   || null,
+    mandatory:   parseInt(document.getElementById('lv-mandatory')?.value),
+    description: document.getElementById('lv-desc')?.value      || null,
+  };
+  try {
+    if (levyId) { await Levies.update(levyId, data); toast('Levy updated!','success'); }
+    else        { await Levies.create(data);          toast('Levy created!','success'); }
+    closeModal(); loadLevies();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.deleteLevy = async function(id) {
+  if (!confirmDlg('Delete this levy? All associated payment records will also be deleted.')) return;
+  try { await Levies.remove(id); toast('Levy deleted','warning'); loadLevies(); }
+  catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.chargeLevyStudents = async function(id, name, target, className) {
+  const who = target === 'Class' ? `all students in ${className}` : `all ${target.toLowerCase()} students`;
+  if (!confirmDlg(`Charge "${name}" to ${who}? Students already charged will be skipped.`)) return;
+  try {
+    const resp = await Levies.charge(id);
+    toast(`Charged ${resp.data?.charged||0} students. (${resp.data?.skipped||0} already charged)`, 'success');
+    loadLevies();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.viewLevyPayments = async function(id, name) {
+  window._lastViewedLevyId   = id;
+  window._lastViewedLevyName = name;
+  const el = document.createElement('div');
+  el.innerHTML = `<h3 style="margin:0 0 1rem;">📋 ${name} — Payments</h3><div id="lp-inner">Loading…</div>`;
+  showModal(el.innerHTML);
+  try {
+    const resp = await Levies.getPayments(id);
+    const pmts = resp.data || [];
+    const meta = resp;
+    const sc   = { Paid:'#22c55e', Unpaid:'#ef4444', Partial:'#f59e0b', Waived:'#6b7280', Exempt:'#3b82f6' };
+    document.getElementById('lp-inner').innerHTML = `
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+        ${[
+          { l:'Total',  v: pmts.length,                     c:'#3b82f6' },
+          { l:'Paid',   v: meta.paid||0,                    c:'#22c55e' },
+          { l:'Unpaid', v: meta.unpaid||0,                  c:'#ef4444' },
+          { l:'Amount', v:`₦${parseFloat(meta.totalAmount||0).toLocaleString()}`, c:'#10b981' },
+        ].map(x=>`<div style="background:#f9fafb;border-radius:8px;padding:.65rem .9rem;border-left:3px solid ${x.c};min-width:100px;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">${x.l}</div>
+          <div style="font-size:1.1rem;font-weight:700;">${x.v}</div>
+        </div>`).join('')}
+      </div>
+      <div style="max-height:380px;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead><tr style="background:#f9fafb;position:sticky;top:0;">
+          <th style="padding:.55rem .75rem;text-align:left;border-bottom:1px solid #e5e7eb;">Student</th>
+          <th style="padding:.55rem .75rem;text-align:left;border-bottom:1px solid #e5e7eb;">Class</th>
+          <th style="padding:.55rem .75rem;text-align:right;border-bottom:1px solid #e5e7eb;">Amount</th>
+          <th style="padding:.55rem .75rem;text-align:left;border-bottom:1px solid #e5e7eb;">Status</th>
+          <th style="padding:.55rem .75rem;text-align:center;border-bottom:1px solid #e5e7eb;"></th>
+        </tr></thead>
+        <tbody>${pmts.map(p=>`
+          <tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:.5rem .75rem;font-weight:600;">${p.student_name}</td>
+            <td style="padding:.5rem .75rem;font-size:.78rem;color:#6b7280;">${p.class_name||''} ${p.arm||''}</td>
+            <td style="padding:.5rem .75rem;text-align:right;">₦${parseFloat(p.amount_paid||0).toLocaleString()}</td>
+            <td style="padding:.5rem .75rem;">
+              <span style="background:${sc[p.status]||'#6b7280'}22;color:${sc[p.status]||'#6b7280'};border-radius:9999px;padding:.15rem .55rem;font-size:.73rem;font-weight:600;">${p.status}</span>
+            </td>
+            <td style="padding:.5rem .75rem;text-align:center;">
+              <div style="display:flex;gap:.3rem;justify-content:center;">
+                <button onclick="openEditLevyPaymentModal('${p.id}','${p.status}',${p.amount_paid})" style="${btnStyle('outline','sm')}">✏️</button>
+                ${p.status!=='Paid' ? `<button onclick="markLevyPaid('${p.id}')" style="${btnStyle('success','sm')}">✓ Paid</button>` : ''}
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+  } catch(e) { const d = document.getElementById('lp-inner'); if(d) d.innerHTML=`<p style="color:#ef4444;">Error: ${e.message}</p>`; }
+};
+
+window.markLevyPaid = async function(pmtId) {
+  try {
+    await Levies.updatePayment(pmtId, { status: 'Paid', payment_date: new Date().toISOString().slice(0,10) });
+    toast('Marked as paid','success');
+    // Refresh the modal content
+    document.querySelector('#modal-overlay button[onclick*="markLevyPaid"]')?.closest('tr')?.remove();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORMER STUDENTS  (Alumni / Leavers Archive)
+═══════════════════════════════════════════════════════════════════════════ */
+function renderFormerStudents() {
+  if (!priv.isAdmin()) { accessDeniedPage('former-students'); return; }
+  const section = document.getElementById('former-students');
+  if (!section) return;
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">🎓 Former Students</h2>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="openArchiveStudentModal()" style="${btnStyle('primary')}">➡ Exit a Student</button>
+        <a href="${(window.__ENV__?.API_URL||'https://rms-bckend.onrender.com/api')}/archive/students/export/csv" target="_blank" style="${btnStyle('outline')}">⬇ Export CSV</a>
+      </div>
+    </div>
+
+    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.25rem;font-size:.85rem;color:#92400e;">
+      <strong>📌 Archive Policy:</strong> When a student exits (graduates, transfers, is withdrawn), use <strong>Exit a Student</strong>.
+      Their record moves here permanently — results, fees and attendance history are retained for reference.
+    </div>
+
+    <!-- Stats bar -->
+    <div id="fs-stats-bar" style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;"></div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <select id="fst-reason" onchange="loadFormerStudents()" style="${selectStyle()}">
+        <option value="">All Reasons</option>
+        ${['Graduated','Transferred','Withdrawn','Expelled','Deceased','Unknown'].map(r=>`<option>${r}</option>`).join('')}
+      </select>
+      <input id="fst-search" placeholder="Search name or ID…" oninput="loadFormerStudents()" style="${inputStyle()};min-width:200px;">
+    </div>
+
+    <div id="former-students-list">Loading…</div>`;
+
+  loadFormerStudents();
+}
+
+async function loadFormerStudents() {
+  const el     = document.getElementById('former-students-list');
+  const stats  = document.getElementById('fs-stats-bar');
+  const reason = document.getElementById('fst-reason')?.value;
+  const search = document.getElementById('fst-search')?.value;
+  if (!el) return;
+  try {
+    const params = {};
+    if (reason) params.exit_reason = reason;
+    if (search) params.search = search;
+    const resp  = await Archive.getStudents(params);
+    const rows  = resp.data || [];
+
+    if (stats && !reason && !search) {
+      const byReason = {};
+      rows.forEach(r => { byReason[r.exit_reason] = (byReason[r.exit_reason]||0) + 1; });
+      const reasonColor = { Graduated:'#22c55e',Transferred:'#3b82f6',Withdrawn:'#f59e0b',Expelled:'#ef4444',Deceased:'#6b7280',Unknown:'#9ca3af' };
+      stats.innerHTML = Object.entries(byReason).map(([r,c])=>`
+        <div style="background:#fff;border-radius:10px;padding:.75rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${reasonColor[r]||'#6b7280'};cursor:pointer;" onclick="document.getElementById('fst-reason').value='${r}';loadFormerStudents()">
+          <div style="font-size:.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">${r}</div>
+          <div style="font-size:1.4rem;font-weight:700;">${c}</div>
+        </div>`).join('') + `
+        <div style="background:#fff;border-radius:10px;padding:.75rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #3b82f6;">
+          <div style="font-size:.7rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Total</div>
+          <div style="font-size:1.4rem;font-weight:700;">${rows.length}</div>
+        </div>`;
+    }
+
+    if (!rows.length) { el.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;">No archived students found.</p>'; return; }
+
+    const rc = { Graduated:'#22c55e',Transferred:'#3b82f6',Withdrawn:'#f59e0b',Expelled:'#ef4444',Deceased:'#6b7280',Unknown:'#9ca3af' };
+    el.innerHTML = `<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <thead><tr style="background:#f9fafb;">
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STUDENT</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">LAST CLASS</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">EXIT YEAR</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">REASON</th>
+          <th style="padding:.65rem 1rem;text-align:center;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+        </tr></thead>
+        <tbody>${rows.map(s=>`
+          <tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:.65rem 1rem;">
+              <div style="font-weight:600;">${s.name}</div>
+              <div style="font-size:.72rem;color:#9ca3af;">${s.id} · Admitted ${s.admission_year||'—'}</div>
+            </td>
+            <td style="padding:.65rem 1rem;font-size:.85rem;">${s.last_class||'—'} ${s.last_arm||''}</td>
+            <td style="padding:.65rem 1rem;font-size:.85rem;">${s.exit_year||'—'}</td>
+            <td style="padding:.65rem 1rem;">
+              <span style="background:${rc[s.exit_reason]||'#9ca3af'}22;color:${rc[s.exit_reason]||'#9ca3af'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${s.exit_reason}</span>
+            </td>
+            <td style="padding:.65rem 1rem;text-align:center;">
+              <div style="display:flex;gap:.3rem;justify-content:center;">
+                <button onclick="viewArchivedStudent('${s.id}')" style="${btnStyle('secondary','sm')}">View</button>
+                <button onclick="restoreStudent('${s.id}')" style="${btnStyle('success','sm')}">&#x21A9; Restore</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error loading archive: ${e.message}</p>`; }
+}
+
+window.openArchiveStudentModal = function() {
+  const activeStudents = (App.data.students||[]).filter(s => s.active !== false && s.status !== 'left');
+  const studentOpts = activeStudents.map(s=>
+    `<option value="${s.id}">${s.name} (${s.class||''} ${s.arm||''})</option>`).join('');
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">🎓 Exit a Student</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="${labelStyle()}">Student *</label>
+        <select id="arc-student" style="${selectStyle()};width:100%;">
+          <option value="">-- Select Student --</option>${studentOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Exit Reason *</label>
+        <select id="arc-reason" style="${selectStyle()};width:100%;">
+          ${['Graduated','Transferred','Withdrawn','Expelled','Deceased','Unknown'].map(r=>`<option>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+        <div>
+          <label style="${labelStyle()}">Exit Term</label>
+          <select id="arc-term" style="${selectStyle()};width:100%;"><option value="">—</option>${termOpts}</select>
+        </div>
+        <div>
+          <label style="${labelStyle()}">Exit Session</label>
+          <input id="arc-session" value="${App.data.schoolInfo?.session||''}" style="${inputStyle()};width:100%;">
+        </div>
+        <div>
+          <label style="${labelStyle()}">Certificate No.</label>
+          <input id="arc-cert" placeholder="Optional" style="${inputStyle()};width:100%;">
+        </div>
+        <div>
+          <label style="${labelStyle()}">Final GPA</label>
+          <input id="arc-gpa" type="number" step="0.01" min="0" max="5" placeholder="Optional" style="${inputStyle()};width:100%;">
+        </div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Forwarding Address</label>
+        <input id="arc-addr" placeholder="Optional — next school or home address" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Note</label>
+        <textarea id="arc-note" rows="2" placeholder="Optional note" style="${inputStyle()};resize:none;width:100%;"></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitArchiveStudent()" style="${btnStyle('warning')}">➡ Archive Student</button>
+      </div>
+    </div>`);
+};
+
+window.submitArchiveStudent = async function() {
+  const studentId = document.getElementById('arc-student')?.value;
+  const reason    = document.getElementById('arc-reason')?.value;
+  if (!studentId) { toast('Select a student','error'); return; }
+  if (!confirmDlg('Archive this student? Their record will move to Former Students. This can be undone.')) return;
+  try {
+    const resp = await Archive.archiveStudent(studentId, {
+      exit_reason:     reason,
+      exit_term:       document.getElementById('arc-term')?.value     || null,
+      exit_session:    document.getElementById('arc-session')?.value  || null,
+      certificate_no:  document.getElementById('arc-cert')?.value     || null,
+      final_gpa:       document.getElementById('arc-gpa')?.value      || null,
+      forwarding_addr: document.getElementById('arc-addr')?.value     || null,
+      exit_note:       document.getElementById('arc-note')?.value     || null,
+    });
+    // Remove from local cache
+    const idx = App.data.students.findIndex(s=>s.id===studentId);
+    if (idx > -1) App.data.students.splice(idx, 1);
+    closeModal();
+    toast(resp.message || 'Student archived successfully!', 'success');
+    loadFormerStudents();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.viewArchivedStudent = async function(id) {
+  try {
+    const resp    = await Archive.getOneStudent(id);
+    const s       = resp.data;
+    const results = s.results || [];
+    showModal(`
+      <h3 style="margin:0 0 1rem;">👤 ${s.name}</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.85rem;margin-bottom:1rem;">
+        <div><strong>ID:</strong> ${s.id}</div>
+        <div><strong>Gender:</strong> ${s.gender||'—'}</div>
+        <div><strong>Last Class:</strong> ${s.last_class||'—'} ${s.last_arm||''}</div>
+        <div><strong>Admission Year:</strong> ${s.admission_year||'—'}</div>
+        <div><strong>Exit Year:</strong> ${s.exit_year||'—'} ${s.exit_session?'('+s.exit_session+')':''}</div>
+        <div><strong>Exit Reason:</strong> ${s.exit_reason}</div>
+        <div><strong>Parent:</strong> ${s.parent||'—'}</div>
+        <div><strong>Phone:</strong> ${s.phone||'—'}</div>
+        ${s.certificate_no ? `<div style="grid-column:1/-1"><strong>Certificate No:</strong> ${s.certificate_no}</div>` : ''}
+        ${s.exit_note ? `<div style="grid-column:1/-1"><strong>Note:</strong> ${s.exit_note}</div>` : ''}
+      </div>
+      ${results.length ? `
+        <strong style="font-size:.85rem;">Academic Records (${results.length} entries)</strong>
+        <div style="max-height:180px;overflow-y:auto;margin-top:.5rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;text-align:left;">Subject</th>
+            <th style="padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;">CA</th>
+            <th style="padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;">Exam</th>
+            <th style="padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;">Total</th>
+            <th style="padding:.4rem .6rem;border-bottom:1px solid #e5e7eb;text-align:left;">Term</th>
+          </tr></thead>
+          <tbody>${results.map(r=>`<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:.4rem .6rem;">${r.subject_name}</td>
+            <td style="padding:.4rem .6rem;text-align:center;">${r.ca||'—'}</td>
+            <td style="padding:.4rem .6rem;text-align:center;">${r.exam||'—'}</td>
+            <td style="padding:.4rem .6rem;text-align:center;font-weight:600;">${r.total||'—'}</td>
+            <td style="padding:.4rem .6rem;">${r.term} ${r.session||''}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table></div>` : '<p style="color:#9ca3af;font-size:.85rem;">No academic records found.</p>'}
+      <div style="display:flex;justify-content:flex-end;margin-top:1rem;gap:.5rem;">
+        <button onclick="restoreStudent('${s.id}')" style="${btnStyle('success')}">↩ Restore to Active</button>
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Close</button>
+      </div>`);
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.restoreStudent = async function(id) {
+  if (!confirmDlg('Restore this student back to active students?')) return;
+  try {
+    const resp = await Archive.restoreStudent(id);
+    toast(resp.message || 'Student restored!','success');
+    closeModal();
+    loadFormerStudents();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORMER STAFF  (Leavers Archive)
+═══════════════════════════════════════════════════════════════════════════ */
+function renderFormerStaff() {
+  if (!priv.isAdmin()) { accessDeniedPage('former-staff'); return; }
+  const section = document.getElementById('former-staff');
+  if (!section) return;
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">👋 Former Staff</h2>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="openArchiveStaffModal()" style="${btnStyle('primary')}">➡ Exit a Staff Member</button>
+        <a href="${(window.__ENV__?.API_URL||'https://rms-bckend.onrender.com/api')}/archive/staff/export/csv" target="_blank" style="${btnStyle('outline')}">⬇ Export CSV</a>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <select id="fstf-reason" onchange="loadFormerStaff()" style="${selectStyle()}">
+        <option value="">All Reasons</option>
+        ${['Resigned','Retired','Dismissed','Contract Ended','Transfer','Deceased','Unknown'].map(r=>`<option>${r}</option>`).join('')}
+      </select>
+      <select id="fstf-cat" onchange="loadFormerStaff()" style="${selectStyle()}">
+        <option value="">All Categories</option>
+        ${['Academic','Administrative','Support','Leadership'].map(c=>`<option>${c}</option>`).join('')}
+      </select>
+      <input id="fstf-search" placeholder="Search name, ID, department…" oninput="loadFormerStaff()" style="${inputStyle()};min-width:200px;">
+    </div>
+
+    <div id="former-staff-list">Loading…</div>`;
+
+  loadFormerStaff();
+}
+
+async function loadFormerStaff() {
+  const el     = document.getElementById('former-staff-list');
+  const reason = document.getElementById('fstf-reason')?.value;
+  const cat    = document.getElementById('fstf-cat')?.value;
+  const search = document.getElementById('fstf-search')?.value;
+  if (!el) return;
+  try {
+    const params = {};
+    if (reason) params.exit_reason = reason;
+    if (cat)    params.category    = cat;
+    if (search) params.search      = search;
+    const resp = await Archive.getStaff(params);
+    const rows = resp.data || [];
+
+    if (!rows.length) { el.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:2rem;">No archived staff found.</p>'; return; }
+
+    const rc = { Resigned:'#f59e0b',Retired:'#22c55e',Dismissed:'#ef4444','Contract Ended':'#3b82f6',Transfer:'#8b5cf6',Deceased:'#6b7280',Unknown:'#9ca3af' };
+    el.innerHTML = `<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <thead><tr style="background:#f9fafb;">
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STAFF</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ROLE</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">SERVICE</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">EXIT</th>
+          <th style="padding:.65rem 1rem;text-align:center;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+        </tr></thead>
+        <tbody>${rows.map(s=>`
+          <tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:.65rem 1rem;">
+              <div style="font-weight:600;">${s.name}</div>
+              <div style="font-size:.72rem;color:#9ca3af;">${s.id} · ${s.department||s.category||'—'}</div>
+            </td>
+            <td style="padding:.65rem 1rem;font-size:.82rem;">${s.position||'—'}<br><span style="color:#9ca3af;">${s.category||'—'}</span></td>
+            <td style="padding:.65rem 1rem;font-size:.82rem;">
+              ${s.date_joined?new Date(s.date_joined).getFullYear():'?'} – ${s.exit_year||'?'}
+              ${s.service_years?`<br><span style="color:#9ca3af;">${s.service_years} yrs</span>`:''}
+            </td>
+            <td style="padding:.65rem 1rem;">
+              <span style="background:${rc[s.exit_reason]||'#9ca3af'}22;color:${rc[s.exit_reason]||'#9ca3af'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${s.exit_reason}</span>
+            </td>
+            <td style="padding:.65rem 1rem;text-align:center;display:flex;gap:.3rem;justify-content:center;">
+              <button onclick="viewArchivedStaff('${s.id}')" style="${btnStyle('secondary','sm')}">View</button>
+              <button onclick="restoreStaff('${s.id}')" style="${btnStyle('success','sm')}">↩ Restore</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+}
+
+window.openArchiveStaffModal = function() {
+  const activeStaff = (App.data.staff||[]).filter(s => s.status !== 'Resigned' && s.status !== 'left');
+  const staffOpts = activeStaff.map(s=>
+    `<option value="${s.id}">${s.name} (${s.position||s.category||'Staff'})</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">👋 Exit a Staff Member</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="${labelStyle()}">Staff Member *</label>
+        <select id="arcs-staff" style="${selectStyle()};width:100%;">
+          <option value="">-- Select Staff --</option>${staffOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Exit Reason *</label>
+        <select id="arcs-reason" style="${selectStyle()};width:100%;">
+          ${['Resigned','Retired','Dismissed','Contract Ended','Transfer','Deceased','Unknown'].map(r=>`<option>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+        <div>
+          <label style="${labelStyle()}">Last Working Date</label>
+          <input id="arcs-date" type="date" value="${new Date().toISOString().slice(0,10)}" style="${inputStyle()};width:100%;">
+        </div>
+        <div>
+          <label style="${labelStyle()}">Reference Letter Given?</label>
+          <select id="arcs-ref" style="${selectStyle()};width:100%;">
+            <option value="0">No</option><option value="1">Yes</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Exit Note</label>
+        <textarea id="arcs-note" rows="2" placeholder="Optional note or reason detail" style="${inputStyle()};resize:none;width:100%;"></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitArchiveStaff()" style="${btnStyle('warning')}">➡ Archive Staff</button>
+      </div>
+    </div>`);
+};
+
+window.submitArchiveStaff = async function() {
+  const staffId = document.getElementById('arcs-staff')?.value;
+  const reason  = document.getElementById('arcs-reason')?.value;
+  if (!staffId) { toast('Select a staff member','error'); return; }
+  if (!confirmDlg('Archive this staff member? Their record will move to Former Staff.')) return;
+  try {
+    const resp = await Archive.archiveStaff(staffId, {
+      exit_reason:      reason,
+      date_left:        document.getElementById('arcs-date')?.value || null,
+      reference_given:  parseInt(document.getElementById('arcs-ref')?.value || '0'),
+      exit_note:        document.getElementById('arcs-note')?.value || null,
+    });
+    // Update local cache
+    const cached = App.data.staff.find(s=>s.id===staffId);
+    if (cached) cached.status = 'Resigned';
+    closeModal();
+    toast(resp.message || 'Staff member archived!','success');
+    loadFormerStaff();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.viewArchivedStaff = async function(id) {
+  try {
+    const resp = await Archive.getOneStaff(id);
+    const s    = resp.data;
+    showModal(`
+      <h3 style="margin:0 0 1rem;">👤 ${s.name}</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.85rem;margin-bottom:1rem;">
+        <div><strong>ID:</strong> ${s.id}</div>
+        <div><strong>Category:</strong> ${s.category||'—'}</div>
+        <div><strong>Position:</strong> ${s.position||'—'}</div>
+        <div><strong>Department:</strong> ${s.department||'—'}</div>
+        <div><strong>Joined:</strong> ${s.date_joined||'—'}</div>
+        <div><strong>Left:</strong> ${s.date_left||'—'}</div>
+        <div><strong>Service:</strong> ${s.service_years!=null?s.service_years+' years':'—'}</div>
+        <div><strong>Exit Reason:</strong> ${s.exit_reason}</div>
+        <div><strong>Phone:</strong> ${s.phone||'—'}</div>
+        <div><strong>Email:</strong> ${s.email||'—'}</div>
+        <div><strong>Reference Given:</strong> ${s.reference_given?'Yes':'No'}</div>
+        <div><strong>Subject:</strong> ${s.subject||'—'}</div>
+        ${s.exit_note?`<div style="grid-column:1/-1"><strong>Note:</strong> ${s.exit_note}</div>`:''}
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:.5rem;">
+        <button onclick="restoreStaff('${s.id}')" style="${btnStyle('success')}">↩ Restore to Active</button>
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Close</button>
+      </div>`);
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.restoreStaff = async function(id) {
+  if (!confirmDlg('Restore this staff member back to active staff?')) return;
+  try {
+    const resp = await Archive.restoreStaff(id);
+    toast(resp.message || 'Staff restored!','success');
+    closeModal();
+    loadFormerStaff();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEES MANAGEMENT  (Admin only)
+   Tabs: Structure | Record Payment | Payments | Student Ledger | Class Accounts
+═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   FINANCE — FEE SETUP  (Admin + Bursar)
+   Dashboard sidebar = Fee Templates/Setup only.
+   All payment recording, receipts and ledger = student-finance.html
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderFees() {
+  const isAdmin  = priv.isAdmin();
+  const isBursar = App.currentUser?.role === 'Bursar';
+  if (!isAdmin && !isBursar) { accessDeniedPage('fees'); return; }
+
+  const section = document.getElementById('fees');
+  if (!section) return;
+
+  const classOpts = (App.data.classes||[]).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  const termOpts  = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  const LEVY_CATS = ['Sports','Graduation','Cultural','Interhouse','Excursion','Uniform','ID Card','Library','Technology','Medical','Other'];
+  const catOpts   = LEVY_CATS.map(c=>`<option>${c}</option>`).join('');
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">💰 Fee Setup & Templates</h2>
+    </div>
+
+    <!-- Finance Portal CTA -->
+    <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:14px;padding:1.5rem 1.75rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;color:#fff;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:.3rem;">🏦 Student Finance Portal</div>
+        <div style="font-size:.85rem;opacity:.85;">Record payments, generate receipts, view ledgers and manage all student financial transactions.</div>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="window.open('student-finance.html','_blank')" style="background:#fff;color:#1e3a5f;border:none;padding:.6rem 1.3rem;border-radius:10px;font-weight:700;cursor:pointer;font-size:.9rem;">🔗 Open Finance Portal</button>
+      </div>
+    </div>
+
+    <!-- Quick student access -->
+    <div style="background:#fff;border-radius:12px;padding:1.1rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.5rem;display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <label style="${labelStyle()}">Jump to a Student's Finance</label>
+        <select id="fees-student-jump" style="${selectStyle()};width:100%;">
+          <option value="">— Select Student —</option>
+          ${(App.data.students||[]).map(s=>`<option value="${encodeURIComponent(s.id)}">${s.name} (${s.class||''} ${s.arm||''})</option>`).join('')}
+        </select>
+      </div>
+      <button onclick="(function(){const v=$('fees-student-jump')?.value;if(v)window.open('student-finance.html?studentId='+v,'_blank');else toast('Select a student','warning');})()" style="${btnStyle('primary')}">💳 Open Finance Record</button>
+    </div>
+
+    <!-- Two-column form: add fee + add levy -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+
+      <!-- Add Regular Fee -->
+      <div style="background:#fff;border-radius:12px;padding:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <h4 style="margin:0 0 .9rem;color:#1e3a5f;display:flex;align-items:center;gap:.5rem;">📌 Add Regular Fee Template</h4>
+        <div style="display:flex;flex-direction:column;gap:.55rem;">
+          <input id="ft-label" placeholder="Fee name e.g. School Fees, PTA Levy" style="${inputStyle()}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <input id="ft-amount" type="number" min="0" placeholder="Amount (₦)" style="${inputStyle()}">
+            <select id="ft-level" style="${selectStyle()}">
+              <option value="All">All Classes</option>
+              <option value="Junior">Junior (JSS)</option>
+              <option value="Senior">Senior (SS)</option>
+            </select>
+          </div>
+          <select id="ft-class" style="${selectStyle()}"><option value="">Specific class (optional)</option>${classOpts}</select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <select id="ft-term" style="${selectStyle()}"><option value="">All Terms</option>${termOpts}</select>
+            <input id="ft-session" placeholder="Session (optional)" style="${inputStyle()}">
+          </div>
+          <label style="font-size:.82rem;display:flex;align-items:center;gap:.4rem;"><input type="checkbox" id="ft-mandatory" checked> Mandatory</label>
+          <textarea id="ft-desc" rows="2" placeholder="Description (optional)" style="${inputStyle()};resize:none;"></textarea>
+          <button onclick="submitAddFeeTemplate()" style="${btnStyle('primary')}">+ Add Fee Template</button>
+        </div>
+      </div>
+
+      <!-- Add Levy -->
+      <div style="background:#fff;border-radius:12px;padding:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <h4 style="margin:0 0 .9rem;color:#1e3a5f;display:flex;align-items:center;gap:.5rem;">🎯 Add Levy / Special Fee</h4>
+        <div style="display:flex;flex-direction:column;gap:.55rem;">
+          <input id="lt-name" placeholder="e.g. Sports Day Fee, Graduation Fee" style="${inputStyle()}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <input id="lt-amount" type="number" min="0" placeholder="Amount (₦)" style="${inputStyle()}">
+            <select id="lt-cat" style="${selectStyle()}">${catOpts}</select>
+          </div>
+          <select id="lt-target" onchange="toggleLevyClassField()" style="${selectStyle()}">
+            <option value="All">All Students</option>
+            <option value="Junior">Junior Classes</option>
+            <option value="Senior">Senior Classes</option>
+            <option value="Class">Specific Class</option>
+          </select>
+          <div id="lv-class-wrap" style="display:none;">
+            <select id="lt-class" style="${selectStyle()};width:100%;"><option value="">Select class</option>${classOpts}</select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <select id="lt-term" style="${selectStyle()}"><option value="">All Terms</option>${termOpts}</select>
+            <input id="lt-due" type="date" style="${inputStyle()}" title="Due date">
+          </div>
+          <textarea id="lt-desc" rows="2" placeholder="Description (optional)" style="${inputStyle()};resize:none;"></textarea>
+          <button onclick="submitAddLevyTemplate()" style="${btnStyle('secondary')}">+ Add Levy Template</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates list -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+      <h3 style="margin:0;font-size:.95rem;color:#1e3a5f;">📋 Current Fee & Levy Templates</h3>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <select id="fsf-class" onchange="loadFinTemplatesList()" style="${selectStyle()}">
+          <option value="">All Classes</option>${classOpts}
+        </select>
+        <select id="fsf-term" onchange="loadFinTemplatesList()" style="${selectStyle()}">
+          <option value="">All Terms</option>${termOpts}
+        </select>
+      </div>
+    </div>
+    <div id="fin-templates-list">Loading…</div>`;
+
+  loadFinTemplatesList();
+}
+
+window.toggleLevyClassField = function() {
+  const t = document.getElementById('lt-target')?.value;
+  const w = document.getElementById('lv-class-wrap');
+  if (w) w.style.display = t === 'Class' ? '' : 'none';
+};
+
+window.submitAddFeeTemplate = async function() {
+  const label = document.getElementById('ft-label')?.value?.trim();
+  const amt   = document.getElementById('ft-amount')?.value;
+  if (!label || !amt) { toast('Name and amount are required', 'error'); return; }
+  const cls  = document.getElementById('ft-class')?.value || null;
+  const desc = document.getElementById('ft-desc')?.value  || null;
+  try {
+    if (cls) {
+      await Fees.assignFeeToClass({ class_name: cls, label, amount: parseFloat(amt),
+        level: null,
+        term:  document.getElementById('ft-term')?.value    || null,
+        session: document.getElementById('ft-session')?.value || null,
+        mandatory: document.getElementById('ft-mandatory')?.checked ? 1 : 0,
+        description: desc });
+    } else {
+      await Fees.addStructureItem({ label, amount: parseFloat(amt),
+        level: document.getElementById('ft-level')?.value || 'All',
+        term:  document.getElementById('ft-term')?.value    || null,
+        session: document.getElementById('ft-session')?.value || null,
+        mandatory: document.getElementById('ft-mandatory')?.checked ? 1 : 0,
+        description: desc });
+    }
+    ['ft-label','ft-amount','ft-session','ft-desc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    toast('Fee template added!', 'success');
+    loadFinTemplatesList();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.submitAddLevyTemplate = async function() {
+  const name = document.getElementById('lt-name')?.value?.trim();
+  const amt  = document.getElementById('lt-amount')?.value;
+  if (!name || !amt) { toast('Name and amount are required','error'); return; }
+  const target = document.getElementById('lt-target')?.value;
+  if (target==='Class' && !document.getElementById('lt-class')?.value) { toast('Select a class','error'); return; }
+  try {
+    await Levies.create({ name, category: document.getElementById('lt-cat')?.value,
+      amount: parseFloat(amt), target,
+      class_name: target==='Class' ? document.getElementById('lt-class')?.value : null,
+      term:     document.getElementById('lt-term')?.value  || null,
+      due_date: document.getElementById('lt-due')?.value   || null,
+      description: document.getElementById('lt-desc')?.value || null,
+      mandatory: 1 });
+    ['lt-name','lt-amount','lt-desc'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    toast('Levy template added!', 'success');
+    loadFinTemplatesList();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+async function loadFinTemplatesList() {
+  const el  = document.getElementById('fin-templates-list');
+  const cls = document.getElementById('fsf-class')?.value;
+  const term= document.getElementById('fsf-term')?.value;
+  if (!el) return;
+  try {
+    const [feesResp, leviesResp] = await Promise.all([Fees.getStructure(cls ? { class: cls } : {}), Levies.getAll()]);
+    const feeItems  = (feesResp.data   || []).map(f => ({ ...f, _type:'fee'  }));
+    const levyItems = (leviesResp.data || []).map(l => ({ ...l, _type:'levy' }));
+    let all = [...feeItems, ...levyItems];
+    if (term) all = all.filter(t => !t.term || t.term === term);
+    all.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+
+    if (!all.length) {
+      el.innerHTML = `<div style="text-align:center;padding:2.5rem;color:#9ca3af;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <div style="font-size:2.5rem;margin-bottom:.5rem;">📋</div>
+        <p>No templates yet. Add a fee or levy above.</p>
+      </div>`;
+      return;
+    }
+
+    const catEmoji = {Sports:'⚽',Graduation:'🎓',Cultural:'🎭',Interhouse:'🏁',Excursion:'🚌',Uniform:'👔','ID Card':'🪪',Library:'📚',Technology:'💻',Medical:'🏥',Other:'📌'};
+
+    el.innerHTML = `<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <thead><tr style="background:#f9fafb;">
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TYPE</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">APPLIES TO</th>
+          <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TERM</th>
+          <th style="padding:.65rem 1rem;text-align:right;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+          <th style="padding:.65rem 1rem;text-align:center;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">MAND.</th>
+          <th style="padding:.65rem 1rem;text-align:center;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+        </tr></thead>
+        <tbody>${all.map(t => {
+          const isLevy   = t._type === 'levy';
+          const name     = isLevy ? t.name : t.label;
+          const typeTag  = isLevy
+            ? `<span style="background:#eff6ff;color:#2563eb;border-radius:4px;padding:.15rem .5rem;font-size:.72rem;font-weight:600;">${catEmoji[t.category]||'📌'} ${t.category||'Levy'}</span>`
+            : `<span style="background:#f0fdf4;color:#166534;border-radius:4px;padding:.15rem .5rem;font-size:.72rem;font-weight:600;">📌 Fee</span>`;
+          const appliesTo = isLevy ? (t.class_name || t.target || 'All') : (t.class_name || t.level || 'All');
+          const amount    = parseFloat(t.amount||0);
+          const editFn    = isLevy ? `openCreateLevyModal(${JSON.stringify(t).replace(/"/g,'&quot;')})` : `openEditFeeStructureModal(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
+          const chargeFn  = isLevy
+            ? `chargeTemplateStudents('levy',${t.id},'${name.replace(/'/g,"\\'")}',${amount},'${t.class_name||''}','${t.target||'All'}')`
+            : `chargeTemplateStudents('fee',${t.id},'${name.replace(/'/g,"\\'")}',${amount},'${t.class_name||''}','${t.level||'All'}')`;
+          const delFn     = isLevy ? `deleteLevyTemplate(${t.id})` : `deleteFeeStructureItem(${t.id})`;
+          return `<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:.65rem 1rem;">
+              <div style="font-weight:600;">${name}</div>
+              ${t.description ? `<div style="font-size:.72rem;color:#9ca3af;margin-top:.1rem;">${t.description}</div>` : ''}
+            </td>
+            <td style="padding:.65rem 1rem;">${typeTag}</td>
+            <td style="padding:.65rem 1rem;font-size:.82rem;color:#475569;">${appliesTo}</td>
+            <td style="padding:.65rem 1rem;font-size:.82rem;color:#475569;">${t.term||'All Terms'}</td>
+            <td style="padding:.65rem 1rem;text-align:right;font-weight:700;color:#059669;">₦${amount.toLocaleString()}</td>
+            <td style="padding:.65rem 1rem;text-align:center;">${t.mandatory ? '✅' : '—'}</td>
+            <td style="padding:.65rem 1rem;text-align:center;">
+              <div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;">
+                <button onclick="${editFn}" style="${btnStyle('outline','sm')}" title="Edit">✏️</button>
+                <button onclick="${chargeFn}" style="${btnStyle('secondary','sm')}" title="Charge students now">⚡ Charge</button>
+                <button onclick="${delFn}" style="${btnStyle('danger','sm')}">🗑</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+}
+
+window.deleteLevyTemplate = async function(id) {
+  if (!confirmDlg('Delete this levy? All associated payment records will also be deleted.')) return;
+  try { await Levies.remove(id); toast('Deleted','warning'); loadFinTemplatesList(); }
+  catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.chargeTemplateStudents = async function(type, id, name, amount, className, target) {
+  const who = className ? `all students in ${className}` : `all ${target.toLowerCase()} students`;
+  if (!confirmDlg(`Charge "${name}" (₦${parseFloat(amount).toLocaleString()}) to ${who}?\nStudents already charged this term will be skipped.`)) return;
+  try {
+    let resp;
+    if (type === 'levy') {
+      resp = await Levies.charge(id);
+    } else {
+      resp = await Fees.bulkCharge({ class: className||null, feeType: name, amount,
+        term: App.data.schoolInfo?.term||'First Term', session: App.data.schoolInfo?.session||'' });
+    }
+    toast(`⚡ Charged ${resp.data?.charged||0} students. (${resp.data?.skipped||0} already charged)`, 'success');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+};
+
+window.exportFeesCSV = function() {
+  const BASE = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+  window.open(`${BASE}/fees/export/csv`, '_blank');
+};
+
+
+/* Open Student Finance Portal for a student */
+window.openStudentFinancePortal = function(studentId) {
+  window.open('student-finance.html?studentId=' + encodeURIComponent(studentId), '_blank');
+};
+
+/* loadStudentLedger — used in Student Ledger tab */
+window.loadStudentLedger = async function() {
+  const studentId = document.getElementById('led-student')?.value;
+  const panel     = document.getElementById('student-ledger-panel');
+  const exportBtn = document.getElementById('led-export-btn');
+  if (!studentId) { toast('Select a student','warning'); return; }
+  if (!panel) return;
+  panel.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:1.5rem;">Loading…</p>';
+  try {
+    const resp    = await Fees.getLedger(studentId);
+    const entries = resp.data || [];
+    const balance = parseFloat(resp.balance || 0);
+    if (exportBtn) exportBtn.disabled = false;
+    window._ledgerStudentId = studentId;
+    const student = (App.data.students||[]).find(s=>s.id===studentId);
+
+    panel.innerHTML = `
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #3b82f6;flex:1;min-width:120px;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Total Charged</div>
+          <div style="font-size:1.2rem;font-weight:700;">₦${parseFloat(resp.totalCharged||0).toLocaleString()}</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #22c55e;flex:1;min-width:120px;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Total Paid</div>
+          <div style="font-size:1.2rem;font-weight:700;">₦${parseFloat(resp.totalPaid||0).toLocaleString()}</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${balance>0?'#ef4444':'#22c55e'};flex:1;min-width:120px;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Balance</div>
+          <div style="font-size:1.2rem;font-weight:700;color:${balance>0?'#ef4444':'#22c55e'};">₦${balance.toLocaleString()}</div>
+        </div>
+        <a href="student-finance.html?studentId="+encodeURIComponent(studentId)+"" target="_blank" style="${btnStyle('primary')}">🔗 Full Finance Portal</a>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;font-size:.83rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TYPE</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DESCRIPTION</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#ef4444;font-weight:600;border-bottom:1px solid #e5e7eb;">DEBIT</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#22c55e;font-weight:600;border-bottom:1px solid #e5e7eb;">CREDIT</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">BALANCE</th>
+          </tr></thead>
+          <tbody>${entries.length ? entries.map(e=>`
+            <tr style="border-bottom:1px solid #f3f4f6;">
+              <td style="padding:.55rem 1rem;font-size:.78rem;color:#6b7280;">${new Date(e.created_at).toLocaleDateString()}</td>
+              <td style="padding:.55rem 1rem;"><span style="background:#f3f4f6;border-radius:4px;padding:.1rem .5rem;font-size:.72rem;font-weight:600;text-transform:uppercase;">${e.entry_type}</span></td>
+              <td style="padding:.55rem 1rem;">${e.description}</td>
+              <td style="padding:.55rem 1rem;text-align:right;color:#ef4444;font-weight:600;">${parseFloat(e.debit||0)>0?'₦'+parseFloat(e.debit).toLocaleString():'—'}</td>
+              <td style="padding:.55rem 1rem;text-align:right;color:#22c55e;font-weight:600;">${parseFloat(e.credit||0)>0?'₦'+parseFloat(e.credit).toLocaleString():'—'}</td>
+              <td style="padding:.55rem 1rem;text-align:right;font-weight:700;color:${parseFloat(e.balance||0)>0?'#ef4444':'#22c55e'};">₦${parseFloat(e.balance||0).toLocaleString()}</td>
+            </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">No entries yet.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) { if(panel) panel.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+};
+
+window.exportStudentLedger = function() {
+  const studentId = window._ledgerStudentId;
+  if (!studentId) return;
+  const BASE = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+  window.open(`${BASE}/fees/ledger-export/${studentId}`, '_blank');
+};
+
+window.loadClassAccounts = async function() {
+  const cls   = document.getElementById('ca-class')?.value;
+  const arm   = document.getElementById('ca-arm')?.value;
+  const panel = document.getElementById('class-accounts-panel');
+  if (!cls || !panel) return;
+  panel.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:1.5rem;">Loading…</p>';
+  try {
+    const params = { class: cls };
+    if (arm) params.arm = arm;
+    const resp = await Fees.getLedgerSummary(params);
+    const rows = resp.data || [];
+    const totalOutstanding = parseFloat(resp.totalOutstanding || 0);
+    const outstanding = rows.filter(r => parseFloat(r.balance) > 0);
+
+    panel.innerHTML = `
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #3b82f6;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Students</div>
+          <div style="font-size:1.4rem;font-weight:700;">${rows.length}</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:.85rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #ef4444;">
+          <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;">Outstanding</div>
+          <div style="font-size:1.4rem;font-weight:700;color:#ef4444;">${outstanding.length} · ₦${totalOutstanding.toLocaleString()}</div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.77rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STUDENT</th>
+            <th style="padding:.65rem 1rem;text-align:right;font-size:.77rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CHARGED</th>
+            <th style="padding:.65rem 1rem;text-align:right;font-size:.77rem;color:#22c55e;font-weight:600;border-bottom:1px solid #e5e7eb;">PAID</th>
+            <th style="padding:.65rem 1rem;text-align:right;font-size:.77rem;color:#ef4444;font-weight:600;border-bottom:1px solid #e5e7eb;">BALANCE</th>
+            <th style="padding:.65rem 1rem;text-align:center;font-size:.77rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;"></th>
+          </tr></thead>
+          <tbody>${rows.length ? rows.map(r => {
+            const bal     = parseFloat(r.balance||0);
+            const charged = parseFloat(r.total_charged||0);
+            const paid    = parseFloat(r.total_paid||0);
+            const pct     = charged > 0 ? Math.min(100, Math.round(paid/charged*100)) : 100;
+            return `<tr style="border-bottom:1px solid #f3f4f6;">
+              <td style="padding:.65rem 1rem;">
+                <div style="font-weight:600;">${r.student_name}</div>
+                <div style="margin-top:.3rem;height:4px;background:#e5e7eb;border-radius:2px;width:100px;">
+                  <div style="width:${pct}%;height:100%;background:${bal>0?'#f59e0b':'#22c55e'};border-radius:2px;"></div>
+                </div>
+              </td>
+              <td style="padding:.65rem 1rem;text-align:right;">₦${charged.toLocaleString()}</td>
+              <td style="padding:.65rem 1rem;text-align:right;color:#22c55e;font-weight:600;">₦${paid.toLocaleString()}</td>
+              <td style="padding:.65rem 1rem;text-align:right;font-weight:700;color:${bal>0?'#ef4444':'#22c55e'};">${bal>0?'₦'+bal.toLocaleString():'✅ Cleared'}</td>
+              <td style="padding:.65rem 1rem;text-align:center;">
+                <button onclick="openStudentFinancePortal('${r.student_id}')" style="${btnStyle('primary','sm')}">🔗 Finance Portal</button>
+              </td>
+            </tr>`; }).join('') : '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#9ca3af;">No fee records found.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) { panel.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCESS TOKENS  (Admin only)
+═══════════════════════════════════════════════════════════════════════════ */
+function renderAccessTokens() {
+  if (!priv.isAdmin()) { accessDeniedPage('access-tokens'); return; }
+  const section = document.getElementById('access-tokens');
+  if (!section) return;
+
+  const classOpts = (App.data.classes || []).map(c =>
+    `<option value="${c.name}">${c.name}</option>`).join('');
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+      <h2 style="margin:0;">🔑 Access Tokens</h2>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="openGenerateTokenModal()" style="${btnStyle('primary')}">+ Generate Token</button>
+        <button onclick="openBulkTokenModal()" style="${btnStyle('secondary')}">📦 Bulk Generate</button>
+        <button onclick="exportTokensCSV()" style="${btnStyle('outline')}">⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.2rem;font-size:.85rem;color:#1d4ed8;">
+      <strong>ℹ What are Access Tokens?</strong><br>
+      Each token gives a parent one-time (or limited) access to their child's results on the Parent Portal.
+      Tokens are auto-generated with an expiry and can be revoked at any time.
+    </div>
+
+    <!-- Filters -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+      <select id="tok-filter-class" onchange="loadTokens()" style="${selectStyle()}">
+        <option value="">All Classes</option>${classOpts}
+      </select>
+      <input id="tok-filter-search" placeholder="Search student name or code…" oninput="loadTokens()"
+             style="${inputStyle()};min-width:200px;">
+    </div>
+
+    <!-- Tokens table -->
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STUDENT</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TOKEN CODE</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">EXPIRES</th>
+            <th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">USES</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STATUS</th>
+            <th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="tokens-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">Loading tokens…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  loadTokens();
+}
+
+async function loadTokens() {
+  const tbody  = document.getElementById('tokens-tbody');
+  const cls    = document.getElementById('tok-filter-class')?.value;
+  const search = document.getElementById('tok-filter-search')?.value?.toLowerCase();
+  if (!tbody) return;
+
+  try {
+    const resp = cls
+      ? await AccessTokens.getClassList({ class: cls })
+      : await AccessTokens.getAll();
+    let tokens = resp.data || [];
+
+    if (search) {
+      tokens = tokens.filter(t =>
+        (t.studentName || t.student_name || '').toLowerCase().includes(search) ||
+        (t.code || '').toLowerCase().includes(search)
+      );
+    }
+
+    const sc = { active:'#22c55e', expired:'#f59e0b', revoked:'#ef4444', exhausted:'#6b7280' };
+    tbody.innerHTML = tokens.length ? tokens.map(t => {
+      const status = t.status || (t.revoked ? 'revoked' : 'active');
+      const uses   = t.used != null ? `${t.used}${t.maxUses ? '/'+t.maxUses : ''}` : '0';
+      return `
+        <tr>
+          <td style="padding:.65rem 1rem;">
+            <div style="font-weight:600;font-size:.875rem;">${t.studentName||t.student_name||t.studentId||'—'}</div>
+            <div style="font-size:.72rem;color:#9ca3af;">${t.class||''} ${t.arm||''}</div>
+          </td>
+          <td style="padding:.65rem 1rem;">
+            <code style="background:#f3f4f6;padding:.2rem .5rem;border-radius:4px;font-size:.8rem;letter-spacing:.05em;">${t.code||t.latestCode||'—'}</code>
+            ${t.code ? `<button onclick="navigator.clipboard?.writeText('${t.code}').then(()=>toast('Copied!','success'))"
+                    style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:.75rem;margin-left:.3rem;" title="Copy">📋</button>` : ''}
+          </td>
+          <td style="padding:.65rem 1rem;font-size:.8rem;color:#6b7280;">${t.expires||t.expiresAt ? new Date(t.expires||t.expiresAt).toLocaleDateString() : '—'}</td>
+          <td style="padding:.65rem 1rem;text-align:center;font-size:.85rem;">${uses}</td>
+          <td style="padding:.65rem 1rem;">
+            <span style="display:inline-block;background:${sc[status]||'#6b7280'}22;color:${sc[status]||'#6b7280'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${status}</span>
+          </td>
+          <td style="padding:.65rem 1rem;text-align:center;display:flex;gap:.3rem;justify-content:center;">
+            ${status === 'active' && t.code ? `<button onclick="revokeToken('${t.code}')" style="${btnStyle('warning','sm')}">Revoke</button>` : ''}
+            ${t.code ? `<button onclick="deleteToken('${t.code}')" style="${btnStyle('danger','sm')}">Del</button>` : ''}
+          </td>
+        </tr>`;
+    }).join('') :
+      `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">No tokens found</td></tr>`;
+
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${e.message}</td></tr>`;
+  }
+}
+
+window.openGenerateTokenModal = function() {
+  const studentOpts = (App.data.students || []).map(s =>
+    `<option value="${s.id}">${s.name} (${s.class||''} ${s.arm||''})</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">🔑 Generate Access Token</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Student *</label>
+        <select id="gt-student" style="${selectStyle()};width:100%;">
+          <option value="">-- Select Student --</option>${studentOpts}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+        <div>
+          <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Expiry (days)</label>
+          <input id="gt-expiry" type="number" value="30" min="1" max="365" style="${inputStyle()};width:100%;">
+        </div>
+        <div>
+          <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Max Uses (blank = unlimited)</label>
+          <input id="gt-maxuses" type="number" min="1" placeholder="Unlimited" style="${inputStyle()};width:100%;">
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.3rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitGenerateToken()" style="${btnStyle('primary')}">✅ Generate</button>
+      </div>
+    </div>
+  `);
+};
+
+window.submitGenerateToken = async function() {
+  const studentId  = document.getElementById('gt-student')?.value;
+  const expiryDays = parseInt(document.getElementById('gt-expiry')?.value) || 30;
+  const maxUses    = document.getElementById('gt-maxuses')?.value;
+  if (!studentId) { toast('Select a student', 'error'); return; }
+  try {
+    const resp = await AccessTokens.generate({
+      studentId, expiryDays,
+      maxUses:  maxUses ? parseInt(maxUses) : null,
+      term:     App.data.schoolInfo?.term    || null,
+      session:  App.data.schoolInfo?.session || null,
+    });
+    if (!resp.success) throw new Error(resp.message);
+    const code = resp.data?.code;
+    closeModal(); toast(`Token generated: ${code}`, 'success'); loadTokens();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.openBulkTokenModal = function() {
+  const classOpts = (App.data.classes || []).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">📦 Bulk Generate Tokens</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Class *</label>
+        <select id="bt-class" onchange="populateBulkArms()" style="${selectStyle()};width:100%;">
+          <option value="">-- Select Class --</option>${classOpts}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Arm *</label>
+        <select id="bt-arm" style="${selectStyle()};width:100%;"><option value="">Select class first</option></select>
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Expiry (days)</label>
+        <input id="bt-expiry" type="number" value="30" min="1" style="${inputStyle()};width:100%;">
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.3rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitBulkTokens()" style="${btnStyle('primary')}">✅ Generate for Class</button>
+      </div>
+    </div>
+  `);
+};
+
+window.populateBulkArms = function() {
+  const cls = (App.data.classes || []).find(c => c.name === document.getElementById('bt-class')?.value);
+  const sel = document.getElementById('bt-arm');
+  if (sel) sel.innerHTML = (cls?.arms || []).map(a => `<option>${a}</option>`).join('') || '<option>A</option>';
+};
+
+window.submitBulkTokens = async function() {
+  const cls  = document.getElementById('bt-class')?.value;
+  const arm  = document.getElementById('bt-arm')?.value;
+  const days = parseInt(document.getElementById('bt-expiry')?.value) || 30;
+  if (!cls || !arm) { toast('Class and arm are required', 'error'); return; }
+  try {
+    const resp = await AccessTokens.bulkGenerate({
+      class: cls, arm, expiryDays: days,
+      term:    App.data.schoolInfo?.term    || null,
+      session: App.data.schoolInfo?.session || null,
+    });
+    if (!resp.success) throw new Error(resp.message);
+    closeModal(); toast(`Generated ${resp.data?.generated || 0} tokens for ${cls} ${arm}`, 'success'); loadTokens();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.revokeToken = async function(code) {
+  if (!confirmDlg('Revoke this token? The parent will no longer be able to use it.')) return;
+  try {
+    await AccessTokens.revoke(code);
+    toast('Token revoked', 'warning'); loadTokens();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.deleteToken = async function(code) {
+  if (!confirmDlg('Permanently delete this token?')) return;
+  try {
+    await AccessTokens.remove(code);
+    toast('Token deleted', 'warning'); loadTokens();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.exportTokensCSV = function() {
+  const cls   = document.getElementById('tok-filter-class')?.value || '';
+  const token = sessionStorage.getItem('shc_token');
+  const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+  window.open(`${BASE}/access-tokens/export/csv${cls ? '?class='+encodeURIComponent(cls) : ''}`, '_blank');
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   USER MANAGEMENT  (Admin only)
+═══════════════════════════════════════════════════════════════════════════ */
+function renderUsers() {
+  if (!priv.isAdmin()) { accessDeniedPage('users'); return; }
+  const section = document.getElementById('users');
+  if (!section) return;
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+      <h2 style="margin:0;">👤 User Management</h2>
+      <button onclick="openUserModal()" style="${btnStyle('primary')}">+ Add User</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <button id="usr-tab-users"    onclick="switchUserTab('users')"    style="${btnStyle('primary','sm')}">👥 Portal Users</button>
+      <button id="usr-tab-requests" onclick="switchUserTab('requests')" style="${btnStyle('secondary','sm')}">📬 Signup Requests <span id="signup-req-badge" style="display:none;background:#ef4444;color:#fff;border-radius:9999px;padding:.1rem .5rem;font-size:.7rem;margin-left:.3rem;"></span></button>
+    </div>
+
+    <div id="usr-tab-users-panel">
+    <!-- Filters -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+      <select id="usr-filter-role" onchange="loadUsers()" style="${selectStyle()}">
+        <option value="">All Roles</option>
+        <option>Admin</option><option>Teacher</option><option>Student</option><option>Parent</option><option>Staff</option><option>Bursar</option>
+      </select>
+      <select id="usr-filter-active" onchange="loadUsers()" style="${selectStyle()}">
+        <option value="">All Status</option>
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+      <input id="usr-filter-search" placeholder="Search name or email…" oninput="loadUsers()"
+             style="${inputStyle()};min-width:200px;">
+    </div>
+
+    <!-- Users table -->
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">EMAIL</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ROLE</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">LINKED TO</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STATUS</th>
+            <th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">Loading users…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+
+    <div id="usr-tab-requests-panel" style="display:none;">
+      <div id="signup-requests-panel">Loading…</div>
+    </div>`;
+
+  loadUsers();
+  loadSignupRequestBadge();
+}
+
+window.switchUserTab = function(tab) {
+  document.getElementById('usr-tab-users-panel').style.display    = tab === 'users'    ? '' : 'none';
+  document.getElementById('usr-tab-requests-panel').style.display = tab === 'requests' ? '' : 'none';
+  document.getElementById('usr-tab-users').style.cssText    = tab === 'users'    ? btnStyle('primary','sm')    : btnStyle('secondary','sm');
+  document.getElementById('usr-tab-requests').style.cssText = tab === 'requests' ? btnStyle('primary','sm')    : btnStyle('secondary','sm');
+  if (tab === 'requests') loadSignupRequests();
+};
+async function loadSignupRequestBadge() {
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/auth/signup-requests?status=pending`, {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include',
+    });
+    const data  = await res.json();
+    const count = data.pending || 0;
+    const badge = document.getElementById('signup-req-badge');
+    if (badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'inline' : 'none';
+    }
+  } catch(e) {}
+}
+
+async function loadSignupRequests() {
+  const panel  = document.getElementById('signup-requests-panel');
+  if (!panel) return;
+  panel.innerHTML = '<p style="color:#9ca3af;padding:1rem;">Loading…</p>';
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/auth/signup-requests`, {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include',
+    });
+    const data    = await res.json();
+    const reqs    = data.data || [];
+    const pending = reqs.filter(r => r.status === 'pending');
+    const rest    = reqs.filter(r => r.status !== 'pending');
+
+    if (!reqs.length) {
+      panel.innerHTML = `<div style="text-align:center;padding:3rem;color:#9ca3af;">
+        <div style="font-size:3rem;margin-bottom:.5rem;">📬</div>
+        <p>No signup requests yet.</p>
+      </div>`;
+      return;
+    }
+
+    const statusColor = { pending:'#f59e0b', approved:'#22c55e', rejected:'#ef4444' };
+    const typeEmoji   = { staff:'👨‍🏫', parent:'👨‍👩‍👧', student:'🎒' };
+
+    const renderRow = (r) => `
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:.7rem 1rem;">
+          <div style="font-weight:600;">${r.name}</div>
+          <div style="font-size:.72rem;color:#9ca3af;">${r.email}</div>
+        </td>
+        <td style="padding:.7rem 1rem;font-size:.82rem;">${typeEmoji[r.type]||'👤'} ${r.type}</td>
+        <td style="padding:.7rem 1rem;font-size:.8rem;color:#6b7280;">${r.phone||'—'}</td>
+        <td style="padding:.7rem 1rem;font-size:.8rem;color:#6b7280;">${r.role_detail||'—'}</td>
+        <td style="padding:.7rem 1rem;font-size:.78rem;color:#9ca3af;">${new Date(r.created_at).toLocaleDateString()}</td>
+        <td style="padding:.7rem 1rem;">
+          <span style="background:${statusColor[r.status]||'#6b7280'}22;color:${statusColor[r.status]||'#6b7280'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${r.status}</span>
+        </td>
+        <td style="padding:.7rem 1rem;text-align:center;">
+          ${r.status === 'pending' ? `
+            <div style="display:flex;gap:.3rem;justify-content:center;">
+              <button onclick="reviewSignupRequest(${r.id},'approve')" style="${btnStyle('success','sm')}">✓ Approve</button>
+              <button onclick="reviewSignupRequest(${r.id},'reject')"  style="${btnStyle('danger','sm')}">✗ Reject</button>
+            </div>` : `<span style="color:#9ca3af;font-size:.8rem;">${r.reviewed_by||'—'}</span>`}
+        </td>
+      </tr>`;
+
+    const tableHtml = (rows, title, color) => rows.length ? `
+      <h4 style="margin:0 0 .75rem;color:${color};font-size:.9rem;">${title} (${rows.length})</h4>
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.5rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TYPE</th>
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">PHONE</th>
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ROLE DETAIL</th>
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE</th>
+            <th style="padding:.65rem 1rem;text-align:left;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STATUS</th>
+            <th style="padding:.65rem 1rem;text-align:center;font-size:.78rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTION</th>
+          </tr></thead>
+          <tbody>${rows.map(renderRow).join('')}</tbody>
+        </table>
+      </div>` : '';
+
+    panel.innerHTML =
+      tableHtml(pending, '⏳ Pending Approval', '#f59e0b') +
+      tableHtml(rest, '✅ Previously Reviewed', '#6b7280');
+
+  } catch(e) { if(panel) panel.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`; }
+}
+
+window.reviewSignupRequest = async function(id, action) {
+  if (action === 'reject' && !confirmDlg('Reject this signup request?')) return;
+  if (action === 'approve') {
+    const note = prompt('Optional: set a temporary password (leave blank to auto-generate)');
+    // null = cancelled = abort
+    if (note === null && !confirmDlg('Approve with auto-generated password?')) return;
+  }
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const res   = await fetch(`${BASE}/auth/signup-requests/${id}`, {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    if (action === 'approve' && data.data?.tempPassword) {
+      showModal(`
+        <h3 style="margin:0 0 1rem;">✅ Account Created</h3>
+        <p style="color:#374151;font-size:.9rem;">Account created for <strong>${data.data?.name || 'user'}</strong>.</p>
+        <p style="font-size:.85rem;color:#6b7280;">Share these credentials with the user:</p>
+        <div style="background:#f3f4f6;border-radius:8px;padding:1rem;font-family:monospace;margin:1rem 0;">
+          <div>Temporary Password: <strong>${data.data.tempPassword}</strong></div>
+        </div>
+        <p style="font-size:.78rem;color:#9ca3af;">They should change this after first login.</p>
+        <div style="text-align:right;"><button onclick="closeModal()" style="${btnStyle('primary')}">Done</button></div>`);
+    } else {
+      toast(action === 'approve' ? 'Request approved and account created!' : 'Request rejected.', action === 'approve' ? 'success' : 'warning');
+    }
+    loadSignupRequests();
+    loadSignupRequestBadge();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+async function loadUsers() {
+  const tbody  = document.getElementById('users-tbody');
+  const role   = document.getElementById('usr-filter-role')?.value;
+  const active = document.getElementById('usr-filter-active')?.value;
+  const search = document.getElementById('usr-filter-search')?.value;
+  if (!tbody) return;
+
+  try {
+    const params = {};
+    if (role)                           params.role   = role;
+    if (active !== undefined && active) params.active = active;
+    if (search)                         params.search = search;
+
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const q     = Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+    const res   = await fetch(`${BASE}/users${q ? '?'+q : ''}`, {
+      headers: { Authorization: `Bearer ${token}` }, credentials: 'include',
+    });
+    const data  = await res.json();
+    const users = data.data || [];
+
+    const rc = { Admin:'#7c3aed', Teacher:'#2563eb', Student:'#059669', Parent:'#d97706', Staff:'#0891b2' };
+    tbody.innerHTML = users.length ? users.map(u => `
+      <tr>
+        <td style="padding:.65rem 1rem;">
+          <div style="font-weight:600;font-size:.875rem;">${u.name}</div>
+          <div style="font-size:.72rem;color:#9ca3af;">#${u.id}</div>
+        </td>
+        <td style="padding:.65rem 1rem;font-size:.8rem;">${u.email||'—'}</td>
+        <td style="padding:.65rem 1rem;">
+          <span style="background:${rc[u.role]||'#6b7280'}22;color:${rc[u.role]||'#6b7280'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${u.role}</span>
+        </td>
+        <td style="padding:.65rem 1rem;font-size:.8rem;color:#6b7280;">
+          ${[u.staff_id?'Staff: '+u.staff_id:'', u.student_id?'Student: '+u.student_id:'', u.ward_id?'Ward: '+u.ward_id:'', u.assigned_class?'Class: '+u.assigned_class+' '+(u.assigned_arm||''):''].filter(Boolean).join(' · ')||'—'}
+        </td>
+        <td style="padding:.65rem 1rem;">
+          <span style="background:${u.active?'#22c55e':'#ef4444'}22;color:${u.active?'#22c55e':'#ef4444'};border-radius:9999px;padding:.2rem .7rem;font-size:.75rem;font-weight:600;">${u.active?'Active':'Inactive'}</span>
+        </td>
+        <td style="padding:.65rem 1rem;text-align:center;">
+          <div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;">
+            <button onclick="openUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})" style="${btnStyle('secondary','sm')}">Edit</button>
+            <button onclick="openResetPasswordModal(${u.id},'${u.name.replace(/'/g,"\\'")}'" style="${btnStyle('outline','sm')}">🔑 Pwd</button>
+            <button onclick="toggleUserStatus(${u.id},${!!u.active})" style="${btnStyle(u.active?'warning':'success','sm')}">${u.active?'Disable':'Enable'}</button>
+            <button onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}'" style="${btnStyle('danger','sm')}">Del</button>
+          </div>
+        </td>
+      </tr>`).join('') :
+      `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">No users found</td></tr>`;
+
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">Error: ${e.message}</td></tr>`;
+  }
+}
+
+/* Shared user API helper */
+function _userApi(method, path, body) {
+  const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+  const token = sessionStorage.getItem('shc_token');
+  return fetch(`${BASE}/users${path}`, {
+    method, credentials: 'include',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  }).then(r => r.json());
+}
+
+window.openUserModal = function(u = null) {
+  const isEdit = !!u;
+  const roleOpts  = ['Admin','Teacher','Student','Parent','Staff','Bursar'].map(r =>
+    `<option ${u?.role === r ? 'selected' : ''}>${r}</option>`).join('');
+  const classOpts = ['', ...(App.data.classes || []).map(c => c.name)].map(c =>
+    `<option ${u?.assigned_class === c ? 'selected' : ''} value="${c}">${c || '-- None --'}</option>`).join('');
+
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">${isEdit ? '✏️ Edit User' : '➕ Add Portal User'}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Full Name *</label>
+        <input id="um-name" value="${u?.name||''}" placeholder="Full name" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Email *</label>
+        <input id="um-email" type="email" value="${u?.email||''}" placeholder="user@school.ng" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Role *</label>
+        <select id="um-role" style="${selectStyle()};width:100%;">${roleOpts}</select>
+      </div>
+      ${!isEdit ? `<div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Password *</label>
+        <input id="um-password" type="password" placeholder="Min 6 characters" style="${inputStyle()};width:100%;">
+      </div>` : '<div></div>'}
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Staff ID (teacher/staff)</label>
+        <input id="um-staffid" value="${u?.staff_id||''}" placeholder="e.g. S001" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Student/Ward ID</label>
+        <input id="um-studentid" value="${u?.student_id||u?.ward_id||''}" placeholder="e.g. SHC/001" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Assigned Class</label>
+        <select id="um-class" style="${selectStyle()};width:100%;">${classOpts}</select>
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Assigned Arm</label>
+        <select id="um-arm" style="${selectStyle()};width:100%;">
+          <option value="">—</option>
+          ${['A','B','C','D','E'].map(a => `<option ${u?.assigned_arm===a?'selected':''} value="${a}">${a}</option>`).join('')}
+        </select>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:.75rem;justify-content:flex-end;margin-top:.3rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitUser(${isEdit ? u.id : 'null'})" style="${btnStyle('primary')}">${isEdit ? '💾 Save' : '✅ Create User'}</button>
+      </div>
+    </div>
+  `);
+};
+
+window.submitUser = async function(userId) {
+  const name      = document.getElementById('um-name')?.value?.trim();
+  const email     = document.getElementById('um-email')?.value?.trim();
+  const role      = document.getElementById('um-role')?.value;
+  const password  = document.getElementById('um-password')?.value;
+  const staff_id  = document.getElementById('um-staffid')?.value?.trim()    || null;
+  const studentRaw= document.getElementById('um-studentid')?.value?.trim()  || null;
+  const cls       = document.getElementById('um-class')?.value              || null;
+  const arm       = document.getElementById('um-arm')?.value                || null;
+
+  if (!name)  { toast('Name is required', 'error'); return; }
+  if (!email) { toast('Email is required', 'error'); return; }
+  if (!userId && !password) { toast('Password is required', 'error'); return; }
+
+  const payload = {
+    name, email, role, staff_id,
+    student_id:     role === 'Parent' ? null : studentRaw,
+    ward_id:        role === 'Parent' ? studentRaw : null,
+    assigned_class: cls, assigned_arm: arm,
+    ...(password ? { password } : {}),
+  };
+
+  try {
+    const data = await _userApi(userId ? 'PUT' : 'POST', userId ? `/${userId}` : '', payload);
+    if (!data.success) throw new Error(data.message);
+    closeModal(); toast(userId ? 'User updated!' : 'User created!', 'success'); loadUsers();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.openResetPasswordModal = function(userId, userName) {
+  showModal(`
+    <h3 style="margin:0 0 1.2rem;">🔑 Reset Password — ${userName}</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">New Password *</label>
+        <input id="rp-pwd" type="password" placeholder="Min 6 characters" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Confirm Password *</label>
+        <input id="rp-pwd2" type="password" placeholder="Repeat password" style="${inputStyle()};width:100%;">
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.3rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="submitResetPassword(${userId})" style="${btnStyle('primary')}">🔑 Reset Password</button>
+      </div>
+    </div>
+  `);
+};
+
+window.submitResetPassword = async function(userId) {
+  const pwd  = document.getElementById('rp-pwd')?.value;
+  const pwd2 = document.getElementById('rp-pwd2')?.value;
+  if (!pwd)           { toast('Password is required', 'error'); return; }
+  if (pwd.length < 6) { toast('Minimum 6 characters', 'error'); return; }
+  if (pwd !== pwd2)   { toast('Passwords do not match', 'error'); return; }
+  try {
+    const data = await _userApi('PATCH', `/${userId}/password`, { password: pwd });
+    if (!data.success) throw new Error(data.message);
+    closeModal(); toast('Password reset successfully!', 'success');
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.toggleUserStatus = async function(userId, currentlyActive) {
+  if (!confirmDlg(`${currentlyActive ? 'Disable' : 'Enable'} this user account?`)) return;
+  try {
+    const data = await _userApi('PATCH', `/${userId}/status`, { active: !currentlyActive });
+    if (!data.success) throw new Error(data.message);
+    toast(`User ${currentlyActive ? 'disabled' : 'enabled'}`, 'success'); loadUsers();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.deleteUser = async function(userId, userName) {
+  if (!confirmDlg(`Delete user "${userName}"? This cannot be undone.`)) return;
+  try {
+    const data = await _userApi('DELETE', `/${userId}`);
+    if (!data.success) throw new Error(data.message);
+    toast('User deleted', 'warning'); loadUsers();
+  } catch (e) { toast('Error: ' + e.message, 'error'); }
+};

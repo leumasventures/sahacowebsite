@@ -126,7 +126,7 @@
   window.apiSaveClass = function (data, isEdit) {
     var p;
     if (isEdit) {
-      var key = encodeURIComponent(data.id || data.name);
+      var key = encodeURIComponent(data.name || data.id);
       p = put('/classes/' + key, { name: data.name, level: data.level });
       if (Array.isArray(data.arms) && data.arms.length) {
         p = p.then(function () {

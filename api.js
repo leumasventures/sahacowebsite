@@ -492,6 +492,73 @@
      FIXTURES
   ══════════════════════════════════════════════════════════════════════════ */
 
+  var Fees = {
+    getAll:              function (p) { return get('/fees' + buildQuery(p)); },
+    getOne:              function (id) { return get('/fees/' + id); },
+    create:              function (data) { return post('/fees', data); },
+    update:              function (id, data) { return put('/fees/' + id, data); },
+    updateStatus:        function (id, s) { return patch('/fees/' + id + '/status', { status: s }); },
+    remove:              function (id) { return del('/fees/' + id); },
+    bulkCharge:          function (data) { return post('/fees/bulk-charge', data); },
+    getSummary:          function (p) { return get('/fees/summary' + buildQuery(p)); },
+    getByStudent:        function (id, p) { return get('/fees/student/' + id + buildQuery(p)); },
+    /* Structure */
+    getStructure:        function (p) { return get('/fees/structure' + buildQuery(p)); },
+    getStructureForClass:function (p) { return get('/fees/structure/for-class' + buildQuery(p)); },
+    addStructureItem:    function (data) { return post('/fees/structure', data); },
+    assignFeeToClass:    function (data) { return post('/fees/structure/assign-class', data); },
+    assignFeeToLevel:    function (data) { return post('/fees/structure/assign-level', data); },
+    updateStructureItem: function (id, data) { return put('/fees/structure/' + id, data); },
+    deleteStructureItem: function (id) { return del('/fees/structure/' + id); },
+    /* Ledger */
+    getLedger:           function (studentId, p) { return get('/fees/ledger/' + studentId + buildQuery(p)); },
+    getLedgerSummary:    function (p) { return get('/fees/ledger-summary' + buildQuery(p)); },
+    addAdjustment:       function (data) { return post('/fees/ledger/adjustment', data); },
+  };
+
+  var Timetable = {
+    get:        function (cls, arm) { return get('/timetable' + buildQuery({ class: cls, arm: arm })); },
+    save:       function (data) { return put('/timetable', data); },
+    updateCell: function (data) { return patch('/timetable/cell', data); },
+    clear:      function (cls, arm) { return del('/timetable' + buildQuery({ class: cls, arm: arm })); },
+    getAll:     function () { return get('/timetable/all'); },
+  };
+
+  var AccessTokens = {
+    getAll:       function (p) { return get('/access-tokens' + buildQuery(p)); },
+    getByStudent: function (id) { return get('/access-tokens/student/' + id); },
+    getClassList: function (p) { return get('/access-tokens/class-list' + buildQuery(p)); },
+    generate:     function (data) { return post('/access-tokens', data); },
+    bulkGenerate: function (data) { return post('/access-tokens/bulk', data); },
+    revoke:       function (code) { return patch('/access-tokens/' + encodeURIComponent(code) + '/revoke', {}); },
+    remove:       function (code) { return del('/access-tokens/' + encodeURIComponent(code)); },
+    exportCSV:    function (p) { return get('/access-tokens/export/csv' + buildQuery(p)); },
+  };
+
+  var Levies = {
+    getAll:           function (p) { return get('/levies' + buildQuery(p)); },
+    getOne:           function (id) { return get('/levies/' + id); },
+    create:           function (d) { return post('/levies', d); },
+    update:           function (id, d) { return put('/levies/' + id, d); },
+    remove:           function (id) { return del('/levies/' + id); },
+    charge:           function (id) { return post('/levies/' + id + '/charge', {}); },
+    getPayments:      function (id) { return get('/levies/' + id + '/payments'); },
+    updatePayment:    function (pmtId, d) { return patch('/levies/payments/' + pmtId, d); },
+    getStudentLevies: function (studentId) { return get('/levies/student/' + studentId); },
+  };
+
+  var Archive = {
+    getStats:          function ()   { return get('/archive/stats'); },
+    getStudents:       function (p)  { return get('/archive/students' + buildQuery(p)); },
+    getOneStudent:     function (id) { return get('/archive/students/' + id); },
+    archiveStudent:    function (id, d) { return post('/archive/students/' + id, d); },
+    restoreStudent:    function (id) { return del('/archive/students/' + id + '/restore'); },
+    getStaff:          function (p)  { return get('/archive/staff' + buildQuery(p)); },
+    getOneStaff:       function (id) { return get('/archive/staff/' + id); },
+    archiveStaff:      function (id, d) { return post('/archive/staff/' + id, d); },
+    restoreStaff:      function (id) { return del('/archive/staff/' + id + '/restore'); },
+  };
+
   var Fixtures = {
     getAll: function (params) {
       return get('/fixtures' + buildQuery(params));
@@ -609,7 +676,7 @@
   global.apiSaveClass = function (data, isEdit) {
     var p;
     if (isEdit) {
-      var key = encodeURIComponent(data.id || data.name);
+      var key = encodeURIComponent(data.name || data.id);
       p = put('/classes/' + key, { name: data.name, level: data.level });
       if (Array.isArray(data.arms) && data.arms.length) {
         p = p.then(function () {
@@ -800,6 +867,11 @@
   global.Fixtures   = Fixtures;
   global.Notices    = Notices;
   global.Admin      = Admin;
+  global.Fees         = Fees;
+  global.Timetable    = Timetable;
+  global.AccessTokens = AccessTokens;
+  global.Levies       = Levies;
+  global.Archive      = Archive;
 
   console.info('[api] window.API and all sub-namespaces registered.');
 

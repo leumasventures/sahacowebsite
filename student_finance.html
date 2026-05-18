@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Finance Portal — Sacred Heart College</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏫</text></svg>">
+  <style>
+    :root {
+      --brand:    #1e3a5f;
+      --brand2:   #2563eb;
+      --accent:   #7c3aed;
+      --success:  #16a34a;
+      --warning:  #d97706;
+      --danger:   #dc2626;
+      --surface:  #f8fafc;
+      --border:   #e2e8f0;
+      --text:     #111827;
+      --text2:    #4b5563;
+      --text3:    #9ca3af;
+      --radius:   12px;
+      --shadow:   0 4px 16px rgba(0,0,0,.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color: #fff;
+      padding: .9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.2);
+    }
+    .topbar-brand { display: flex; align-items: center; gap: .75rem; }
+    .topbar-brand .logo { font-size: 1.6rem; }
+    .topbar-brand h1 { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+    .topbar-brand p  { font-size: .72rem; opacity: .8; }
+    .topbar-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .topbar-actions a, .topbar-actions button {
+      padding: .4rem .9rem; border-radius: 8px; font-size: .82rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: none;
+    }
+    .btn-light  { background: rgba(255,255,255,.18); color: #fff; }
+    .btn-white  { background: #fff; color: var(--brand); }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: calc(100vh - 56px); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .student-card {
+      padding: 1.25rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    }
+    .student-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color: #fff; font-size: 1.3rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: .6rem;
+    }
+    .student-name  { font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .15rem; }
+    .student-meta  { font-size: .75rem; color: var(--text2); }
+    .balance-chip  {
+      display: inline-block; margin-top: .5rem;
+      padding: .25rem .75rem; border-radius: 9999px;
+      font-size: .75rem; font-weight: 700;
+    }
+    .balance-clear { background: #dcfce7; color: #166534; }
+    .balance-owed  { background: #fee2e2; color: #991b1b; }
+
+    /* Student picker */
+    .stu-picker { padding: 1rem; border-bottom: 1px solid var(--border); }
+    .stu-picker label { font-size: .75rem; font-weight: 600; color: var(--text3); text-transform: uppercase; display: block; margin-bottom: .35rem; }
+    .stu-picker select {
+      width: 100%; padding: .5rem .75rem; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: .875rem; background: #fff; outline: none;
+    }
+    .stu-picker select:focus { border-color: var(--brand2); }
+
+    /* Sidebar nav */
+    .sfp-nav { padding: .75rem 0; flex: 1; }
+    .sfp-nav-item {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .65rem 1.2rem; cursor: pointer;
+      font-size: .875rem; color: var(--text2);
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    .sfp-nav-item:hover  { background: var(--surface); color: var(--brand); }
+    .sfp-nav-item.active { background: #eff6ff; color: var(--brand); border-left-color: var(--brand2); font-weight: 600; }
+    .sfp-nav-item .ni    { font-size: 1rem; }
+    .sfp-nav-badge       { background: var(--danger); color: #fff; font-size: .65rem; font-weight: 700; border-radius: 9999px; padding: .1rem .45rem; margin-left: auto; }
+
+    /* ── Main ── */
+    .main { flex: 1; padding: 1.5rem; overflow-y: auto; max-width: 1100px; }
+
+    /* Cards */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .85rem; margin-bottom: 1.5rem; }
+    .stat-card {
+      background: #fff; border-radius: var(--radius); padding: 1rem 1.1rem;
+      box-shadow: var(--shadow); border-left: 4px solid var(--brand2);
+    }
+    .stat-card .sv { font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: .15rem; }
+    .stat-card .sl { font-size: .72rem; color: var(--text3); font-weight: 600; text-transform: uppercase; }
+
+    /* Tables */
+    .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 1.25rem; }
+    .card-header {
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+    }
+    .card-header h3 { font-size: .95rem; font-weight: 700; color: var(--brand); }
+    table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+    th { padding: .6rem 1rem; text-align: left; font-size: .75rem; color: var(--text3); font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border); background: #f9fafb; }
+    td { padding: .65rem 1rem; border-bottom: 1px solid #f3f4f6; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+
+    /* Status badges */
+    .badge { display: inline-block; border-radius: 9999px; padding: .2rem .65rem; font-size: .73rem; font-weight: 700; }
+    .badge-paid    { background: #dcfce7; color: #166534; }
+    .badge-partial { background: #fef3c7; color: #92400e; }
+    .badge-unpaid  { background: #fee2e2; color: #991b1b; }
+    .badge-waived  { background: #f3f4f6; color: #6b7280; }
+    .badge-charge  { background: #eff6ff; color: #1d4ed8; }
+    .badge-payment { background: #f0fdf4; color: #166534; }
+    .badge-adj     { background: #faf5ff; color: #7c3aed; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-size: .82rem; font-weight: 600; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary   { background: var(--brand);   color: #fff; }
+    .btn-secondary { background: var(--surface);  color: var(--text2); border: 1.5px solid var(--border); }
+    .btn-success   { background: var(--success);  color: #fff; }
+    .btn-danger    { background: var(--danger);   color: #fff; }
+    .btn-warning   { background: var(--warning);  color: #fff; }
+    .btn-sm        { padding: .3rem .65rem; font-size: .77rem; }
+    .btn-ghost     { background: transparent; color: var(--brand2); border: 1.5px solid var(--brand2); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.55); z-index: 500;
+      place-items: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: grid; }
+    .modal-box {
+      background: #fff; border-radius: 16px;
+      max-width: 540px; width: 100%;
+      max-height: 90vh; overflow-y: auto;
+      padding: 1.75rem;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+    }
+    .modal-box h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1.1rem; color: var(--brand); }
+    .form-group { margin-bottom: .85rem; }
+    .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--text2); margin-bottom: .3rem; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: .55rem .85rem; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: .875rem; outline: none;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--brand2); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .form-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+    /* Ledger */
+    .ledger-debit  { color: var(--danger);  font-weight: 600; }
+    .ledger-credit { color: var(--success); font-weight: 600; }
+    .balance-row   { font-weight: 700; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+    .empty-icon { font-size: 3rem; margin-bottom: .5rem; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 2rem; color: var(--text3); }
+
+    /* Section title */
+    .section-title { font-size: 1.1rem; font-weight: 700; color: var(--brand); margin-bottom: 1.1rem; display: flex; align-items: center; gap: .5rem; }
+
+    /* Toast */
+    .toast-wrap { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; display: flex; flex-direction: column; gap: .5rem; }
+    .toast-item { background: #1e293b; color: #fff; padding: .65rem 1.1rem; border-radius: 10px; font-size: .85rem; font-weight: 500; animation: toastIn .2s ease; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 700px) {
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+      .layout  { flex-direction: column; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .topbar, .sidebar, .sfp-nav, .stu-picker, .topbar-actions, .no-print { display: none !important; }
+      .main { padding: 0; max-width: 100%; }
+      .layout { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Bar ── -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="logo">🏫</span>
+    <div>
+      <h1 id="school-name-top">Sacred Heart College Eziukwu Aba</h1>
+      <p>Student Finance Portal</p>
+    </div>
+  </div>
+  <div class="topbar-actions no-print">
+    <a href="dashboard.html#fees" class="btn-light" style="padding:.4rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;color:#fff;text-decoration:none;background:rgba(255,255,255,.18);">← Back to Dashboard</a>
+    <button class="btn-white" onclick="printStatement()">🖨 Print Statement</button>
+    <button class="btn-light" onclick="exportStudentCSV()" style="background:rgba(255,255,255,.18);color:#fff;">⬇ Export CSV</button>
+  </div>
+</div>
+
+<!-- ── Layout ── -->
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <!-- Student picker -->
+    <div class="stu-picker no-print">
+      <label>Select Student</label>
+      <select id="stu-picker" onchange="selectStudent(this.value)">
+        <option value="">— Loading students… —</option>
+      </select>
+    </div>
+
+    <!-- Student card -->
+    <div class="student-card" id="student-card" style="display:none;">
+      <div class="student-avatar" id="stu-avatar">—</div>
+      <div class="student-name" id="stu-name">—</div>
+      <div class="student-meta" id="stu-meta">—</div>
+      <div id="stu-balance-chip"></div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="sfp-nav no-print">
+      <div class="sfp-nav-item active" data-view="overview"    onclick="switchView('overview')">    <span class="ni">📊</span> Overview</div>
+      <div class="sfp-nav-item"        data-view="charges"     onclick="switchView('charges')">     <span class="ni">⚡</span> Charges <span id="nav-unpaid-badge" class="sfp-nav-badge" style="display:none"></span></div>
+      <div class="sfp-nav-item"        data-view="payments"    onclick="switchView('payments')">    <span class="ni">💳</span> Payments</div>
+      <div class="sfp-nav-item"        data-view="levies"      onclick="switchView('levies')">      <span class="ni">🎯</span> Levies</div>
+      <div class="sfp-nav-item"        data-view="ledger"      onclick="switchView('ledger')">      <span class="ni">📒</span> Full Ledger</div>
+      <div class="sfp-nav-item"        data-view="receipts"    onclick="switchView('receipts')">    <span class="ni">🧾</span> Receipts</div>
+      <div class="sfp-nav-item"        data-view="adjustment"  onclick="switchView('adjustment')">  <span class="ni">⚖️</span> Adjustments</div>
+    </nav>
+  </aside>
+
+  <!-- ── Main content ── -->
+  <main class="main" id="sfp-main">
+    <div class="empty"><div class="empty-icon">👈</div><p>Select a student to view their financial records.</p></div>
+  </main>
+</div>
+
+<!-- ── Modal ── -->
+<div class="modal-overlay" id="sfp-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="sfp-modal-box"></div>
+</div>
+
+<!-- ── Toasts ── -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   STUDENT FINANCE PORTAL  —  student-finance.js (inline)
+════════════════════════════════════════════════════════════════ */
+
+const API  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+const getToken = () => sessionStorage.getItem('shc_token');
+
+/* ── Helpers ── */
+const $ = id => document.getElementById(id);
+const fmt = n => '₦' + parseFloat(n||0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' }) : '—';
+const statusBadge = s => {
+  const map = { Paid:'paid', Partial:'partial', Unpaid:'unpaid', Waived:'waived', charge:'charge', payment:'payment', adjustment:'adj', refund:'adj', waiver:'adj' };
+  return `<span class="badge badge-${map[s]||'unpaid'}">${s}</span>`;
+};
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+      ...opts.headers,
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Request failed');
+  return data;
+}
+
+function toast(msg, type = 'info') {
+  const wrap = $('toast-wrap');
+  const el   = document.createElement('div');
+  el.className = 'toast-item';
+  el.style.borderLeft = `3px solid ${type==='success'?'#22c55e':type==='error'?'#ef4444':type==='warning'?'#f59e0b':'#3b82f6'}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function showModal(html) {
+  $('sfp-modal-box').innerHTML = html;
+  $('sfp-modal').classList.add('open');
+}
+function closeModal() { $('sfp-modal').classList.remove('open'); }
+
+/* ── State ── */
+let _student   = null;
+let _view      = 'overview';
+let _receipts  = [];   // session receipt log
+let _schoolInfo= {};
+
+/* ════════════════════════════════════════════════════════════════
+   BOOT — load students + school info
+════════════════════════════════════════════════════════════════ */
+async function boot() {
+  // Redirect to login if not authenticated
+  const token = getToken();
+  if (!token) { location.href = 'login.html'; return; }
+
+  try {
+    // Verify session and check role
+    const meResp = await apiFetch('/auth/me').catch(() => null);
+    const role   = meResp?.user?.role || meResp?.data?.role || null;
+    const ALLOWED = ['Admin', 'Bursar', 'Teacher'];  // who can use this portal
+
+    if (role && !ALLOWED.includes(role)) {
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;font-family:-apple-system,sans-serif;">
+          <div style="text-align:center;padding:2rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+            <h2 style="color:#1e3a5f;margin:0 0 .5rem;">Access Restricted</h2>
+            <p style="color:#6b7280;margin:0 0 1.5rem;">The Student Finance Portal is only accessible to Admin, Bursar and Teachers.</p>
+            <a href="dashboard.html" style="background:#1e3a5f;color:#fff;padding:.65rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:600;">← Back to Dashboard</a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    // Add Bursar label to topbar if applicable
+    if (role === 'Bursar' && meResp?.user?.name) {
+      const nameEl = document.querySelector('.topbar-brand p');
+      if (nameEl) nameEl.textContent = `Student Finance Portal — ${meResp.user.name} (Bursar)`;
+    }
+
+    // Load school info
+    const si = await apiFetch('/admin/settings').catch(() => ({ data: {} }));
+    _schoolInfo = si.data || {};
+    const sn = _schoolInfo.school_name || 'Sacred Heart College Eziukwu Aba';
+    $('school-name-top').textContent = sn;
+
+    // Load students
+    const resp = await apiFetch('/students');
+    const students = (resp.data || []).sort((a,b) => a.name.localeCompare(b.name));
+    const sel = $('stu-picker');
+    sel.innerHTML = '<option value="">— Select a student —</option>' +
+      students.map(s => `<option value="${s.id}">${s.name} — ${s.class||''} ${s.arm||''}</option>`).join('');
+
+    // Auto-select from URL param
+    const params = new URLSearchParams(location.search);
+    const pid = params.get('studentId') || params.get('id');
+    if (pid) { sel.value = pid; selectStudent(pid); }
+
+  } catch(e) { toast('Failed to load: ' + e.message, 'error'); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SELECT STUDENT
+════════════════════════════════════════════════════════════════ */
+async function selectStudent(id) {
+  if (!id) { _student = null; $('sfp-main').innerHTML = '<div class="empty"><div class="empty-icon">👈</div><p>Select a student.</p></div>'; return; }
+  try {
+    const resp = await apiFetch('/students/' + encodeURIComponent(id));
+    _student   = resp.data || resp;
+
+    // Update URL without reload
+    const url = new URL(location.href);
+    url.searchParams.set('studentId', id);
+    history.replaceState(null, '', url);
+
+    // Update sidebar card
+    const initials = (_student.name || '?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    $('stu-avatar').textContent = initials;
+    $('stu-name').textContent   = _student.name;
+    $('stu-meta').textContent   = `${_student.class_name||_student.class||''} ${_student.arm||''} · ID: ${_student.id}`;
+    $('student-card').style.display = '';
+
+    // Get balance
+    loadBalanceChip();
+    switchView(_view);
+  } catch(e) { toast('Error loading student: ' + e.message, 'error'); }
+}
+
+async function loadBalanceChip() {
+  if (!_student) return;
+  try {
+    const resp = await apiFetch('/student-finance/' + _student.id + '/summary');
+    const bal  = parseFloat(resp.data?.ledger?.balance || 0);
+    const chip = $('stu-balance-chip');
+    chip.innerHTML = `<span class="balance-chip ${bal > 0 ? 'balance-owed' : 'balance-clear'}">${bal > 0 ? '⚠ Owes ' + fmt(bal) : '✓ Account Clear'}</span>`;
+    const unpaidCount = resp.data?.unpaid?.totalCount || 0;
+    const badge = $('nav-unpaid-badge');
+    badge.textContent = unpaidCount;
+    badge.style.display = unpaidCount > 0 ? '' : 'none';
+  } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════════════ */
+function switchView(view) {
+  _view = view;
+  document.querySelectorAll('.sfp-nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  if (!_student) return;
+  const main = $('sfp-main');
+  main.innerHTML = '<div class="loading">Loading…</div>';
+  if      (view === 'overview')   renderOverview();
+  else if (view === 'charges')    renderCharges();
+  else if (view === 'payments')   renderPayments();
+  else if (view === 'levies')     renderLevies();
+  else if (view === 'ledger')     renderLedger();
+  else if (view === 'receipts')   renderReceipts();
+  else if (view === 'adjustment') renderAdjustment();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 1 — OVERVIEW
+════════════════════════════════════════════════════════════════ */
+async function renderOverview() {
+  const main = $('sfp-main');
+  try {
+    const summaryResp = await apiFetch('/student-finance/' + _student.id + '/summary');
+    const summary  = summaryResp.data;
+    const ledger   = summary.ledger;
+    const leviesData = summary.unpaid;
+
+    const totalCharged = ledger.totalCharged;
+    const totalPaid    = ledger.totalPaid;
+    const balance      = ledger.balance;
+    const unpaid       = summary.unpaid.feeCount;
+    const levyUnpaid   = summary.unpaid.levyCount;
+
+    // Get recent activity from summary + charges for the outstanding section
+    const [chargesResp, leviesResp] = await Promise.all([
+      apiFetch('/student-finance/' + _student.id + '/charges'),
+      apiFetch('/student-finance/' + _student.id + '/levies'),
+    ]);
+    const payments = chargesResp.data || [];
+    const levies   = leviesResp.data  || [];
+    const recent5  = (summary.recentActivity || []).slice(0,5).reverse();
+
+    main.innerHTML = `
+      <div class="section-title">📊 Financial Overview — ${_student.name}</div>
+
+      <div class="stat-grid">
+        ${[
+          ['Total Charged',    fmt(totalCharged), '#1e3a5f'],
+          ['Total Paid',       fmt(totalPaid),    '#16a34a'],
+          ['Balance Due',      fmt(balance),       balance > 0 ? '#dc2626' : '#16a34a'],
+          ['Unpaid Charges',   unpaid + levyUnpaid, unpaid+levyUnpaid > 0 ? '#dc2626' : '#16a34a'],
+          ['Total Payments',   payments.filter(p=>p.status==='Paid').length, '#7c3aed'],
+          ['Levies',           levies.length,     '#d97706'],
+        ].map(([l,v,c]) => `
+          <div class="stat-card" style="border-left-color:${c};">
+            <div class="sv" style="color:${c};">${v}</div>
+            <div class="sl">${l}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Payment progress bar -->
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header"><h3>Payment Progress</h3></div>
+        <div style="padding:1.25rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--text2);margin-bottom:.5rem;">
+            <span>Paid: ${fmt(totalPaid)}</span>
+            <span>Total: ${fmt(totalCharged)}</span>
+          </div>
+          <div style="height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden;">
+            <div style="width:${totalCharged>0?Math.min(100,Math.round(totalPaid/totalCharged*100)):0}%;height:100%;background:${balance<=0?'#16a34a':'#2563eb'};border-radius:6px;transition:width .6s;"></div>
+          </div>
+          <div style="font-size:.78rem;color:var(--text3);margin-top:.4rem;text-align:right;">${totalCharged>0?Math.round(totalPaid/totalCharged*100):0}% collected</div>
+        </div>
+      </div>
+
+      <!-- Upcoming / outstanding charges -->
+      ${unpaid + levyUnpaid > 0 ? `
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header" style="background:#fff5f5;">
+          <h3 style="color:var(--danger);">⚠ Outstanding (${unpaid + levyUnpaid} items)</h3>
+          <button class="btn btn-primary btn-sm" onclick="switchView('charges')">View All</button>
+        </div>
+        <table>
+          <thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${payments.filter(p=>p.status==='Unpaid').slice(0,4).map(p=>`
+              <tr>
+                <td>${p.fee_type}</td>
+                <td>${p.term}</td>
+                <td style="font-weight:600;color:var(--danger);">${fmt(p.amount)}</td>
+                <td>${statusBadge(p.status)}</td>
+                <td><button class="btn btn-success btn-sm" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button></td>
+              </tr>`).join('')}
+            ${levies.filter(l=>l.status==='Unpaid').slice(0,2).map(l=>`
+              <tr>
+                <td>${l.levy_name} <span style="font-size:.72rem;color:var(--text3);">(Levy)</span></td>
+                <td>${l.term||'—'}</td>
+                <td style="font-weight:600;color:var(--danger);">${fmt(l.amount_paid)}</td>
+                <td>${statusBadge(l.status)}</td>
+                <td><button class="btn btn-success btn-sm" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : `<div class="card" style="margin-bottom:1.25rem;">
+        <div style="padding:1.5rem;text-align:center;color:var(--success);">✅ No outstanding charges</div>
+      </div>`}
+
+      <!-- Recent activity -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Activity</h3>
+          <button class="btn btn-secondary btn-sm" onclick="switchView('ledger')">Full Ledger →</button>
+        </div>
+        ${recent5.length ? `<table>
+          <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+          <tbody>
+            ${recent5.map(e => `
+              <tr>
+                <td style="font-size:.78rem;color:var(--text3);">${fmtDate(e.created_at)}</td>
+                <td>${e.description}</td>
+                <td>${statusBadge(e.entry_type)}</td>
+                <td class="${parseFloat(e.debit||0)>0?'ledger-debit':''}">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+                <td class="${parseFloat(e.credit||0)>0?'ledger-credit':''}">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+                <td class="balance-row" style="color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'};">${fmt(e.balance)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty"><p>No activity yet.</p></div>'}
+      </div>`;
+  } catch(e) { main.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 2 — CHARGES
+════════════════════════════════════════════════════════════════ */
+async function renderCharges() {
+  const main = $('sfp-main');
+  try {
+    const resp = await apiFetch('/student-finance/' + _student.id + '/charges');
+    const all  = resp.data || [];
+    const sc   = { Paid:'#16a34a',Partial:'#d97706',Unpaid:'#dc2626',Waived:'#6b7280',overdue:'#dc2626' };
+
+    main.innerHTML = `
+      <div class="section-title">⚡ Charges for ${_student.name}</div>
+      <div class="card">
+        <div class="card-header">
+          <h3>All Fee Charges (${all.length})</h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddChargeModal()">+ Add Charge</button>
+        </div>
+        ${all.length ? `<table>
+          <thead><tr><th>Fee Type</th><th>Term</th><th>Session</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${all.map(p=>`
+            <tr>
+              <td><strong>${p.fee_type}</strong></td>
+              <td>${p.term}</td>
+              <td style="font-size:.78rem;color:var(--text3);">${p.session||'—'}</td>
+              <td style="font-weight:700;color:${sc[p.status]||'#374151'};">${fmt(p.amount)}</td>
+              <td style="font-size:.78rem;color:var(--text3);">${fmtDate(p.payment_date)}</td>
+              <td>${statusBadge(p.status)}</td>
+              <td>
+                <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
+                  ${p.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button>`:''}
+                  <button class="btn btn-secondary btn-sm" onclick="generateReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾 Receipt</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteCharge('${p.id}')">🗑</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty"><div class="empty-icon">⚡</div><p>No charges recorded.</p></div>'}
+      </div>`;
+  } catch(e) { main.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 3 — PAYMENTS
+════════════════════════════════════════════════════════════════ */
+async function renderPayments() {
+  const main = $('sfp-main');
+  try {
+    const resp = await apiFetch('/student-finance/' + _student.id + '/payments');
+    const paid = resp.data || [];
+    const total = paid.reduce((a,p) => a+parseFloat(p.amount||0), 0);
+
+    main.innerHTML = `
+      <div class="section-title">💳 Payment History — ${_student.name}</div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <div class="stat-card" style="border-left-color:#16a34a;min-width:160px;">
+          <div class="sv" style="color:#16a34a;">${fmt(total)}</div>
+          <div class="sl">Total Paid</div>
+        </div>
+        <div class="stat-card" style="border-left-color:#2563eb;min-width:120px;">
+          <div class="sv">${paid.length}</div>
+          <div class="sl">Transactions</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Payment Records</h3>
+          <button class="btn btn-primary btn-sm" onclick="openDirectPaymentModal()">+ Record Payment</button>
+        </div>
+        ${paid.length ? `<table>
+          <thead><tr><th>Fee Type</th><th>Term</th><th>Amount</th><th>Date</th><th>Reference</th><th>Actions</th></tr></thead>
+          <tbody>${paid.map(p=>`
+            <tr>
+              <td><strong>${p.fee_type}</strong></td>
+              <td>${p.term}</td>
+              <td style="font-weight:700;color:#16a34a;">${fmt(p.amount)}</td>
+              <td>${fmtDate(p.payment_date)}</td>
+              <td style="font-size:.78rem;color:var(--text3);">${p.reference||'—'}</td>
+              <td>
+                <button class="btn btn-secondary btn-sm" onclick="generateReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾 Receipt</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty"><div class="empty-icon">💳</div><p>No payments recorded yet.</p></div>'}
+      </div>`;
+  } catch(e) { main.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 4 — LEVIES
+════════════════════════════════════════════════════════════════ */
+async function renderLevies() {
+  const main = $('sfp-main');
+  try {
+    const resp  = await apiFetch('/student-finance/' + _student.id + '/levies');
+    const levies = resp.data || [];
+    const sc = { Paid:'#16a34a', Unpaid:'#dc2626', Partial:'#d97706', Waived:'#6b7280', Exempt:'#7c3aed' };
+
+    main.innerHTML = `
+      <div class="section-title">🎯 Levies & Special Fees — ${_student.name}</div>
+      <div class="card">
+        <div class="card-header"><h3>All Levies (${levies.length})</h3></div>
+        ${levies.length ? `<table>
+          <thead><tr><th>Levy Name</th><th>Category</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${levies.map(l=>`
+            <tr>
+              <td><strong>${l.levy_name}</strong></td>
+              <td><span style="background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:.15rem .5rem;font-size:.72rem;">${l.category||'—'}</span></td>
+              <td style="font-size:.78rem;color:var(--text3);">${fmtDate(l.due_date)}</td>
+              <td style="font-weight:700;color:${sc[l.status]||'#374151'};">${fmt(l.amount_paid)}</td>
+              <td>${statusBadge(l.status)}</td>
+              <td>
+                <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
+                  ${l.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button>`:''}
+                  <button class="btn btn-secondary btn-sm" onclick="generateLevyReceipt(${JSON.stringify(l).replace(/"/g,'&quot;')})">🧾 Receipt</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty"><div class="empty-icon">🎯</div><p>No levies assigned.</p></div>'}
+      </div>`;
+  } catch(e) { main.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 5 — FULL LEDGER
+════════════════════════════════════════════════════════════════ */
+async function renderLedger() {
+  const main = $('sfp-main');
+  try {
+    const resp    = await apiFetch('/student-finance/' + _student.id + '/ledger');
+    const entries = resp.data    || [];
+    const totalCharged = parseFloat(resp.totalCharged || 0);
+    const totalPaid    = parseFloat(resp.totalPaid    || 0);
+    const balance      = parseFloat(resp.balance      || 0);
+
+    main.innerHTML = `
+      <div class="section-title">📒 Full Financial Ledger — ${_student.name}</div>
+      <div class="stat-grid" style="margin-bottom:1.25rem;">
+        ${[['Total Debits',fmt(totalCharged),'#dc2626'],['Total Credits',fmt(totalPaid),'#16a34a'],['Net Balance',fmt(balance),balance>0?'#dc2626':'#16a34a'],['Entries',entries.length,'#2563eb']].map(([l,v,c])=>
+          `<div class="stat-card" style="border-left-color:${c};"><div class="sv" style="color:${c};">${v}</div><div class="sl">${l}</div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Ledger Entries (${entries.length})</h3>
+          <a href="${API}/student-finance/${_student.id}/export" target="_blank" class="btn btn-secondary btn-sm">⬇ Export CSV</a>
+        </div>
+        ${entries.length ? `
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Type</th><th>Description</th><th>Term/Session</th>
+            <th style="text-align:right;">Debit (₦)</th>
+            <th style="text-align:right;">Credit (₦)</th>
+            <th style="text-align:right;">Balance (₦)</th>
+          </tr></thead>
+          <tbody>
+            ${entries.map(e=>`
+              <tr>
+                <td style="font-size:.78rem;white-space:nowrap;">${fmtDate(e.created_at)}</td>
+                <td>${statusBadge(e.entry_type)}</td>
+                <td>${e.description}</td>
+                <td style="font-size:.78rem;color:var(--text3);">${e.term||''} ${e.session?'/'+e.session:''}</td>
+                <td class="ledger-debit" style="text-align:right;">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+                <td class="ledger-credit" style="text-align:right;">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+                <td class="balance-row" style="text-align:right;color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'};">${fmt(e.balance)}</td>
+              </tr>`).join('')}
+            <tr style="background:#f9fafb;font-weight:700;border-top:2px solid var(--border);">
+              <td colspan="4" style="text-align:right;font-size:.85rem;">TOTALS</td>
+              <td class="ledger-debit" style="text-align:right;">${fmt(totalCharged)}</td>
+              <td class="ledger-credit" style="text-align:right;">${fmt(totalPaid)}</td>
+              <td style="text-align:right;color:${balance>0?'var(--danger)':'var(--success)'};">${fmt(balance)}</td>
+            </tr>
+          </tbody>
+        </table></div>` : '<div class="empty"><div class="empty-icon">📒</div><p>No ledger entries yet.</p></div>'}
+      </div>`;
+  } catch(e) { main.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 6 — RECEIPTS (session log)
+════════════════════════════════════════════════════════════════ */
+function renderReceipts() {
+  const main = $('sfp-main');
+  const forStudent = _receipts.filter(r => r.studentId === _student?.id);
+  main.innerHTML = `
+    <div class="section-title">🧾 Receipt Log — ${_student.name}</div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Receipts Generated This Session (${forStudent.length})</h3>
+        <p style="font-size:.78rem;color:var(--text3);">Note: Print individual receipts from Charges or Payments views.</p>
+      </div>
+      ${forStudent.length ? `<table>
+        <thead><tr><th>Receipt No.</th><th>Fee</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>${forStudent.map(r=>`
+          <tr>
+            <td style="font-size:.78rem;font-family:monospace;">${r.receiptNo}</td>
+            <td>${r.feeType}</td>
+            <td style="font-weight:600;color:#16a34a;">${fmt(r.amount)}</td>
+            <td style="font-size:.78rem;">${fmtDate(r.date)}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td><button class="btn btn-secondary btn-sm" onclick="generateReceipt(${JSON.stringify(r.raw).replace(/"/g,'&quot;')})">🖨 Reprint</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="empty"><div class="empty-icon">🧾</div><p>No receipts generated this session.<br>Generate receipts from the Charges or Payments views.</p></div>'}
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   VIEW 7 — ADJUSTMENTS
+════════════════════════════════════════════════════════════════ */
+function renderAdjustment() {
+  const main = $('sfp-main');
+  main.innerHTML = `
+    <div class="section-title">⚖️ Ledger Adjustment — ${_student.name}</div>
+    <div class="card" style="max-width:580px;">
+      <div class="card-header"><h3>Add Manual Adjustment</h3></div>
+      <div style="padding:1.25rem;">
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem;">
+          Use this to add a credit (discount, scholarship, overpayment), a debit (outstanding fee), or a refund to the student's ledger.
+        </p>
+        <div class="form-group">
+          <label>Adjustment Type *</label>
+          <select id="adj-type">
+            <option value="credit">Credit (payment / discount / scholarship)</option>
+            <option value="debit">Debit (extra charge / outstanding)</option>
+            <option value="refund">Refund</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount (₦) *</label>
+            <input type="number" id="adj-amount" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Reference</label>
+            <input type="text" id="adj-ref" placeholder="Optional">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description *</label>
+          <input type="text" id="adj-desc" placeholder="e.g. Scholarship discount, Overpayment refund">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Term</label>
+            <select id="adj-term">
+              <option>First Term</option><option>Second Term</option><option>Third Term</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Session</label>
+            <input type="text" id="adj-session" placeholder="e.g. 2025/2026">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Note (internal)</label>
+          <textarea id="adj-note" rows="2" placeholder="Internal note (not shown on receipts)"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitAdjustment()">⚖️ Apply Adjustment</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitAdjustment() {
+  const type   = $('adj-type')?.value;
+  const amount = parseFloat($('adj-amount')?.value || 0);
+  const desc   = $('adj-desc')?.value?.trim();
+  const ref    = $('adj-ref')?.value   || null;
+  const term   = $('adj-term')?.value  || null;
+  const session= $('adj-session')?.value || null;
+  if (!amount || !desc) { toast('Amount and description are required', 'error'); return; }
+  try {
+    await apiFetch('/student-finance/' + _student.id + '/adjustment', {
+      method: 'POST',
+      body: { type, amount, description: desc, reference: ref, term, session },
+    });
+    toast('Adjustment applied!', 'success');
+    loadBalanceChip();
+    switchView('ledger');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PAYMENT MODALS
+════════════════════════════════════════════════════════════════ */
+function quickPayModal(chargeId, feeType, amount, term) {
+  showModal(`
+    <h3>💳 Record Payment</h3>
+    <div style="background:#eff6ff;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#1d4ed8;">
+      <strong>${feeType}</strong> · Expected: ${fmt(amount)} · ${term}
+    </div>
+    <div class="form-group"><label>Amount Paid (₦) *</label><input type="number" id="qp-amount" value="${amount}" min="0"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Date *</label><input type="date" id="qp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label>Method</label>
+        <select id="qp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option><option>Online</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Receipt / Reference No.</label><input type="text" id="qp-ref" placeholder="Optional"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="submitQuickPay('${chargeId}','${feeType}',${amount},'${term}')">✅ Record & Receipt</button>
+    </div>`);
+}
+
+async function submitQuickPay(chargeId, feeType, expectedAmount, term) {
+  const amtPaid = parseFloat($('qp-amount')?.value || 0);
+  const date    = $('qp-date')?.value;
+  const method  = $('qp-method')?.value;
+  const ref     = $('qp-ref')?.value || null;
+  if (!amtPaid || !date) { toast('Amount and date required', 'error'); return; }
+  const status = amtPaid >= expectedAmount ? 'Paid' : 'Partial';
+  try {
+    const payResp = await apiFetch('/student-finance/' + _student.id + '/pay', { method: 'POST', body: { chargeId, amountPaid: amtPaid, date, method, reference: ref } });
+    // Use receipt data returned by server (has student name, class etc. from DB)
+    const receiptData = {
+      ...(payResp.data?.receiptData || {}),
+      student_name: _student.name,
+      class_name:   _student.class_name || _student.class || '',
+      student_arm:  _student.arm || '',
+      method,
+    };
+    closeModal();
+    toast('Payment recorded! Status: ' + (payResp.data?.status || status), 'success');
+    generateReceipt(receiptData);
+    loadBalanceChip();
+    renderCharges();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function quickLevyPayModal(pmtId, levyName, amount) {
+  showModal(`
+    <h3>💳 Pay Levy — ${levyName}</h3>
+    <div class="form-group"><label>Amount Paid (₦) *</label><input type="number" id="lqp-amount" value="${amount}" min="0"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Date *</label><input type="date" id="lqp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label>Method</label>
+        <select id="lqp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option><option>Online</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Reference No.</label><input type="text" id="lqp-ref" placeholder="Optional"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="submitLevyPay('${pmtId}','${levyName}',${amount})">✅ Record & Receipt</button>
+    </div>`);
+}
+
+async function submitLevyPay(pmtId, levyName, expectedAmount) {
+  const amtPaid = parseFloat($('lqp-amount')?.value || 0);
+  const date    = $('lqp-date')?.value;
+  const method  = $('lqp-method')?.value;
+  const ref     = $('lqp-ref')?.value || null;
+  if (!amtPaid || !date) { toast('Amount and date required', 'error'); return; }
+  const status = amtPaid >= expectedAmount ? 'Paid' : 'Partial';
+  try {
+    await apiFetch('/levies/payments/' + pmtId, { method: 'PATCH', body: { status, amount_paid: amtPaid, reference: ref } });
+    const receiptData = {
+      id: pmtId, student_id: _student.id, student_name: _student.name,
+      class_name: _student.class_name||_student.class||'', student_arm: _student.arm||'',
+      fee_type: levyName + ' (Levy)', amount: amtPaid, expected: expectedAmount,
+      payment_date: date, term: '—', status, reference: ref, method,
+    };
+    closeModal();
+    toast('Levy payment recorded!', 'success');
+    generateLevyReceipt(receiptData);
+    loadBalanceChip();
+    renderLevies();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function openDirectPaymentModal() {
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`
+    <h3>➕ Record Direct Payment</h3>
+    <div class="form-group"><label>Fee Type *</label><input type="text" id="dp-type" placeholder="e.g. School Fees, PTA Levy"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount (₦) *</label><input type="number" id="dp-amount" min="0" placeholder="0.00"></div>
+      <div class="form-group"><label>Date *</label><input type="date" id="dp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Term *</label><select id="dp-term">${termOpts}</select></div>
+      <div class="form-group"><label>Method</label>
+        <select id="dp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option><option>Online</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label><select id="dp-status"><option>Paid</option><option>Partial</option><option>Unpaid</option></select></div>
+      <div class="form-group"><label>Reference No.</label><input type="text" id="dp-ref" placeholder="Optional"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitDirectPayment()">✅ Record & Receipt</button>
+    </div>`);
+}
+
+async function submitDirectPayment() {
+  const feeType = $('dp-type')?.value?.trim();
+  const amount  = parseFloat($('dp-amount')?.value || 0);
+  const date    = $('dp-date')?.value;
+  const term    = $('dp-term')?.value;
+  const method  = $('dp-method')?.value;
+  const status  = $('dp-status')?.value;
+  const ref     = $('dp-ref')?.value || null;
+  if (!feeType || !amount || !date) { toast('Fee type, amount, date are required', 'error'); return; }
+  try {
+    const resp = await apiFetch('/student-finance/' + _student.id + '/charge', { method: 'POST', body: {
+      feeType, amount, date, term, status, reference: ref,
+    }});
+    const receiptData = {
+      id: resp.data?.id||'PAY'+Date.now(), student_id: _student.id,
+      student_name: _student.name, class_name: _student.class_name||_student.class||'',
+      student_arm: _student.arm||'', fee_type: feeType, amount, payment_date: date,
+      term, status, reference: ref, method,
+    };
+    closeModal();
+    toast('Payment recorded!', 'success');
+    generateReceipt(receiptData);
+    loadBalanceChip();
+    renderPayments();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function openAddChargeModal() {
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`
+    <h3>⚡ Add Charge</h3>
+    <div class="form-group"><label>Fee Type *</label><input type="text" id="ac-type" placeholder="e.g. School Fees, Development Levy"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount (₦) *</label><input type="number" id="ac-amount" min="0"></div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="ac-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="form-group"><label>Term *</label><select id="ac-term">${termOpts}</select></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddCharge()">+ Add Charge</button>
+    </div>`);
+}
+
+async function submitAddCharge() {
+  const feeType = $('ac-type')?.value?.trim();
+  const amount  = parseFloat($('ac-amount')?.value || 0);
+  const date    = $('ac-date')?.value;
+  const term    = $('ac-term')?.value;
+  if (!feeType || !amount) { toast('Fee type and amount required', 'error'); return; }
+  try {
+    await apiFetch('/student-finance/' + _student.id + '/charge', { method: 'POST', body: {
+      feeType, amount, date, term, status: 'Unpaid',
+    }});
+    closeModal();
+    toast('Charge added!', 'success');
+    loadBalanceChip();
+    renderCharges();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteCharge(id) {
+  if (!confirm('Delete this charge record?')) return;
+  try {
+    await apiFetch('/fees/' + id, { method: 'DELETE' });  // still uses fees endpoint
+    toast('Deleted', 'warning');
+    loadBalanceChip();
+    renderCharges();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RECEIPT GENERATOR
+════════════════════════════════════════════════════════════════ */
+function generateReceipt(p) { _generateReceipt(p, false); }
+function generateLevyReceipt(p) { _generateReceipt(p, true); }
+
+function _generateReceipt(p, isLevy) {
+  const schoolName = _schoolInfo.school_name || 'Sacred Heart College Eziukwu Aba';
+  const principal  = _schoolInfo.principal_name || 'Rev. Fr. Sullivan Obinna Achilihu';
+  const schoolAddr = _schoolInfo.school_address || 'Eziukwu Road, Aba, Abia State';
+  const schoolPhone= _schoolInfo.school_phone   || '';
+  const amt        = parseFloat(p.amount || p.amount_paid || 0);
+  const expected   = parseFloat(p.expected || amt);
+  const balance    = Math.max(0, expected - amt);
+  const status     = p.status || (balance > 0 ? 'Partial' : 'Paid');
+  const rcpNo      = 'RCP-' + String(p.id||'').replace(/\D/g,'').slice(-6).padStart(6,'0') + '-' + new Date().getFullYear();
+  const dateStr    = new Date(p.payment_date || new Date()).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'});
+  const now        = new Date().toLocaleString('en-NG');
+  const method     = p.method || 'Cash';
+  const sc         = status === 'Paid' ? '#16a34a' : '#d97706';
+  const student    = _student;
+
+  // Log to receipts session store
+  _receipts.push({
+    studentId: _student?.id, receiptNo: rcpNo, feeType: p.fee_type, amount: amt,
+    date: p.payment_date, status, raw: p,
+  });
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Receipt ${rcpNo}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:#f1f5f9;padding:1.5rem;color:#111;}
+  .receipt{background:#fff;max-width:540px;margin:0 auto;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.15);}
+  .hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:2rem 1.75rem 1.5rem;text-align:center;position:relative;}
+  .hdr .seal{font-size:3rem;margin-bottom:.5rem;}
+  .hdr h1{font-size:1.15rem;font-weight:800;line-height:1.3;}
+  .hdr p{font-size:.75rem;opacity:.8;margin-top:.2rem;}
+  .hdr .addr{font-size:.72rem;opacity:.7;margin-top:.3rem;}
+  .strip{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.75rem;background:${sc}11;border-bottom:2px solid ${sc}33;}
+  .strip .rno{font-size:.78rem;color:#6b7280;font-family:monospace;font-weight:600;}
+  .strip .st{background:${sc};color:#fff;border-radius:9999px;padding:.25rem .9rem;font-size:.78rem;font-weight:800;}
+  .body{padding:1.5rem 1.75rem;}
+  .sec{margin-bottom:1.25rem;}
+  .sec-title{font-size:.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;border-bottom:1px solid #f1f5f9;padding-bottom:.3rem;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+  .info-row{display:flex;flex-direction:column;gap:.08rem;}
+  .lbl{font-size:.7rem;color:#9ca3af;}
+  .val{font-size:.88rem;font-weight:600;color:#111;}
+  .amt-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:1.1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;margin:1rem 0;}
+  .amt-box .lside .lbl2{font-size:.78rem;color:#6b7280;}
+  .amt-box .lside .bal{font-size:.78rem;color:${balance>0?'#dc2626':'#16a34a'};margin-top:.2rem;font-weight:600;}
+  .amt-box .rside{font-size:1.8rem;font-weight:800;color:#1e3a5f;}
+  .wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-25deg);font-size:4rem;font-weight:900;color:rgba(255,255,255,.06);pointer-events:none;white-space:nowrap;}
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:1rem 1.75rem;font-size:.72rem;color:#9ca3af;text-align:center;}
+  .no-print{text-align:center;margin-bottom:1rem;display:flex;gap:.5rem;justify-content:center;}
+  @media print{body{background:#fff;padding:0;}.receipt{box-shadow:none;max-width:100%;border-radius:0;}.no-print{display:none;}}
+</style></head><body>
+<div class="no-print">
+  <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.55rem 1.3rem;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:700;">🖨 Print</button>
+  <button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;padding:.55rem 1.3rem;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:700;">✕ Close</button>
+</div>
+<div class="receipt">
+  <div class="hdr">
+    <div class="wm">${status==='Paid'?'✓ PAID':'PARTIAL'}</div>
+    <div class="seal">🏫</div>
+    <h1>${schoolName}</h1>
+    <p>Official ${isLevy?'Levy ':''}Payment Receipt</p>
+    <div class="addr">${schoolAddr}${schoolPhone?' · '+schoolPhone:''}</div>
+  </div>
+  <div class="strip">
+    <span class="rno">Receipt: ${rcpNo}</span>
+    <span class="st">${status.toUpperCase()}</span>
+  </div>
+  <div class="body">
+    <div class="sec">
+      <div class="sec-title">Student</div>
+      <div class="info-grid">
+        <div class="info-row"><span class="lbl">Full Name</span><span class="val">${student?.name||p.student_name||'—'}</span></div>
+        <div class="info-row"><span class="lbl">Student ID</span><span class="val">${p.student_id}</span></div>
+        <div class="info-row"><span class="lbl">Class</span><span class="val">${(p.class_name||'')+' '+(p.student_arm||'')}</span></div>
+        <div class="info-row"><span class="lbl">Term</span><span class="val">${p.term||'—'}</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">Payment Details</div>
+      <div class="info-grid">
+        <div class="info-row"><span class="lbl">Fee Description</span><span class="val">${p.fee_type}</span></div>
+        <div class="info-row"><span class="lbl">Payment Date</span><span class="val">${dateStr}</span></div>
+        <div class="info-row"><span class="lbl">Payment Method</span><span class="val">${method}</span></div>
+        <div class="info-row"><span class="lbl">Reference / Receipt</span><span class="val">${p.reference||rcpNo}</span></div>
+      </div>
+    </div>
+    <div class="amt-box">
+      <div class="lside">
+        <div class="lbl2">Amount Paid</div>
+        <div class="bal">${balance>0?'Balance due: ₦'+balance.toLocaleString('en-NG'):'Fully settled ✓'}</div>
+      </div>
+      <div class="rside">₦${amt.toLocaleString('en-NG',{minimumFractionDigits:2})}</div>
+    </div>
+    <div style="font-size:.72rem;color:#9ca3af;text-align:center;">
+      This is a computer-generated receipt issued by ${schoolName}.<br>
+      For enquiries, contact the school bursar or accounts office.
+    </div>
+  </div>
+  <div class="footer">
+    Principal: ${principal} &nbsp;·&nbsp; Generated: ${now}
+  </div>
+</div>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=620,height=800,scrollbars=yes');
+  if (win) { win.document.write(html); win.document.close(); }
+  else toast('Allow popups to generate receipts', 'warning');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT & EXPORT
+════════════════════════════════════════════════════════════════ */
+function printStatement() { window.print(); }
+
+function exportStudentCSV() {
+  if (!_student) { toast('Select a student first', 'warning'); return; }
+  window.open(API + '/student-finance/' + _student.id + '/export', '_blank');
+}
+
+/* ── Boot ── */
+boot();
+</script>
+</body>
+</html>

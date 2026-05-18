@@ -499,6 +499,11 @@
           <span class="ni">📚</span> Subjects
         </a>
       </li>
+      <li id="nav-li-timetable">
+        <a href="#timetable" data-section="timetable">
+          <span class="ni">🗓️</span> Timetable
+        </a>
+      </li>
 
       <li class="nav-section">Admissions</li>
       <li id="nav-li-admissions">
@@ -548,6 +553,32 @@
           <span class="ni">👨‍👩‍👧</span> Parent Portal
         </a>
       </li>
+      <li id="nav-li-fees" class="admin-only-nav">
+        <a href="#fees" data-section="fees">
+          <span class="ni">📋</span> Fee Setup
+        </a>
+      </li>
+      <li id="nav-li-former-students" class="admin-only-nav">
+        <a href="#former-students" data-section="former-students">
+          <span class="ni">🎓</span> Former Students
+        </a>
+      </li>
+      <li id="nav-li-former-staff" class="admin-only-nav">
+        <a href="#former-staff" data-section="former-staff">
+          <span class="ni">👋</span> Former Staff
+        </a>
+      </li>
+      <li id="nav-li-access-tokens" class="admin-only-nav">
+        <a href="#access-tokens" data-section="access-tokens">
+          <span class="ni">🔑</span> Access Tokens
+        </a>
+      </li>
+      <li id="nav-li-users" class="admin-only-nav">
+        <a href="#users" data-section="users">
+          <span class="ni">👤</span> User Management
+          <span class="nav-badge" id="nav-badge-users" style="display:none"></span>
+        </a>
+      </li>
       <li id="nav-li-settings">
         <a href="#settings" data-section="settings">
           <span class="ni">⚙️</span> Settings
@@ -563,7 +594,10 @@
         <strong id="sidebar-username">Loading…</strong>
         <span id="sidebar-role">—</span>
       </div>
-      <button id="logout-btn" title="Logout" data-action="logout">⏻</button>
+      <div style="display:flex;flex-direction:column;gap:.2rem;">
+        <button id="logout-btn" title="Logout" data-action="logout" style="background:none;border:none;cursor:pointer;font-size:1rem;color:inherit;padding:.2rem .3rem;" onclick="if(window.SHC_Auth)SHC_Auth.logout(event);else{sessionStorage.clear();location.href='login.html';}">⏻</button>
+        <button title="Change Password" style="background:none;border:none;cursor:pointer;font-size:.85rem;color:inherit;padding:.2rem .3rem;" onclick="openChangePasswordModal()">🔑</button>
+      </div>
     </div>
   </div>
 </aside>
@@ -678,17 +712,24 @@
 
     </section>
 
-    <!-- ════════ ALL OTHER SECTIONS — populated by script2.js ════════ -->
+    
     <section id="classes"       class="content-section hidden"></section>
     <section id="arms"          class="content-section hidden"></section>
     <section id="students"      class="content-section hidden"></section>
     <section id="teachers"      class="content-section hidden"></section>
     <section id="subjects"      class="content-section hidden"></section>
+    <section id="timetable"     class="content-section hidden"></section>
     <section id="results"       class="content-section hidden"></section>
     <section id="report-cards"  class="content-section hidden"></section>
     <section id="attendance"    class="content-section hidden"></section>
     <section id="fixtures"      class="content-section hidden"></section>
     <section id="parent-portal" class="content-section hidden"></section>
+    <section id="fees"          class="content-section hidden"></section>
+    <section id="levies"        class="content-section hidden"></section>
+    <section id="former-students" class="content-section hidden"></section>
+    <section id="former-staff"  class="content-section hidden"></section>
+    <section id="access-tokens" class="content-section hidden"></section>
+    <section id="users"         class="content-section hidden"></section>
     <section id="settings"      class="content-section hidden"></section>
 
   </main>
@@ -716,7 +757,7 @@
 <script src="api.js"></script>
 <script src="script.js"></script>
 <script src="persistence_patch.js"></script>
-<script src="script2.js"></script>
+
 <script src="script3.js"></script>
 
 <script>
@@ -952,6 +993,12 @@ window.addEventListener('load', function () {
         }
       });
     }
+
+    /* ── 5f2. Show/hide admin-only nav items based on role ── */
+    var isAdmin  = session3 && session3.role === 'Admin';
+    document.querySelectorAll('.admin-only-nav').forEach(function (el) {
+      el.style.display = isAdmin ? '' : 'none';
+    });
 
     /* ── 5g. Activity feed from App.data ── */
     var activityList = document.getElementById('dash-activity');

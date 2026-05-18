@@ -618,10 +618,25 @@
             <div class="terms">
               <input type="checkbox" id="terms" name="terms" required>
               <label for="terms" style="margin-bottom:0;font-weight:400;">
-                I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> of Sacred Heart College Eziukwu Aba.
+                I agree to the <a href="#" onclick="showTermsModal('terms');return false;">Terms of Service</a> and <a href="#" onclick="showTermsModal('privacy');return false;">Privacy Policy</a> of Sacred Heart College Eziukwu Aba.
               </label>
             </div>
             <div class="error-message" id="terms-error" style="margin-bottom:1rem;">You must agree to the Terms to continue.</div>
+
+            <!-- Terms / Privacy Modal -->
+            <div id="terms-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.6);place-items:center;padding:1rem;" onclick="if(event.target===this)this.style.display='none'">
+              <div style="background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.2);position:relative;">
+                <div style="padding:1.5rem 1.5rem 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e7eb;padding-bottom:1rem;">
+                  <h3 id="terms-modal-title" style="margin:0;font-size:1.1rem;color:#1A1410;"></h3>
+                  <button onclick="document.getElementById('terms-modal').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#6B6157;line-height:1;">✕</button>
+                </div>
+                <div id="terms-modal-body" style="padding:1.5rem;font-size:.875rem;color:#374151;line-height:1.7;"></div>
+                <div style="padding:1rem 1.5rem;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:.5rem;position:sticky;bottom:0;background:#fff;">
+                  <button onclick="document.getElementById('terms-modal').style.display='none';document.getElementById('terms').checked=true;" style="background:#7B1D1D;color:#fff;border:none;border-radius:8px;padding:.65rem 1.2rem;font-weight:600;cursor:pointer;font-size:.875rem;">I Agree</button>
+                  <button onclick="document.getElementById('terms-modal').style.display='none'" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:.65rem 1.2rem;font-weight:600;cursor:pointer;font-size:.875rem;">Close</button>
+                </div>
+              </div>
+            </div>
 
             <div class="btn-nav">
               <button type="button" class="btn-back" id="step2-back">← Back</button>
@@ -708,6 +723,56 @@
       const m = document.getElementById('forgot-modal');
       m.style.display = 'grid';
     });
+
+    // Terms / Privacy modal
+    var TERMS_CONTENT = {
+      terms: {
+        title: 'Terms of Service — Sacred Heart College Portal',
+        body: `
+          <h4 style="margin:0 0 .5rem;">1. Acceptance</h4>
+          <p>By accessing the Sacred Heart College Eziukwu Aba (SHC) school portal, you agree to these Terms. If you do not agree, please do not use this portal.</p>
+          <h4 style="margin:1rem 0 .5rem;">2. Authorised Use</h4>
+          <p>This portal is exclusively for current students, parents/guardians, staff, and administrators of Sacred Heart College Eziukwu Aba. Sharing your login credentials with unauthorised persons is strictly prohibited.</p>
+          <h4 style="margin:1rem 0 .5rem;">3. Account Registration</h4>
+          <p>All account requests are subject to approval by the school administration. Providing false information during registration may result in permanent denial of access.</p>
+          <h4 style="margin:1rem 0 .5rem;">4. Acceptable Use</h4>
+          <p>You agree not to: attempt unauthorised access to other accounts or data; use the portal for any unlawful purpose; share, copy, or distribute student or staff records without authorisation.</p>
+          <h4 style="margin:1rem 0 .5rem;">5. Data Accuracy</h4>
+          <p>Results, attendance, and fee records displayed are managed by school staff. Any discrepancies should be reported to the school registrar or relevant teacher.</p>
+          <h4 style="margin:1rem 0 .5rem;">6. Termination</h4>
+          <p>The school reserves the right to suspend or revoke portal access at any time without prior notice for breach of these terms.</p>
+          <h4 style="margin:1rem 0 .5rem;">7. Contact</h4>
+          <p>For questions, contact the school ICT office at <strong>admin@sacredheartcollegeaba.com</strong>.</p>
+        `
+      },
+      privacy: {
+        title: 'Privacy Policy — Sacred Heart College Portal',
+        body: `
+          <h4 style="margin:0 0 .5rem;">1. Information We Collect</h4>
+          <p>We collect: name, email, phone number, relationship to student, and the information you provide during account registration. For students, we store academic results, attendance records, and fee payment history.</p>
+          <h4 style="margin:1rem 0 .5rem;">2. How We Use Your Information</h4>
+          <p>Information is used solely to: provide access to academic records; facilitate communication between parents and the school; process fee payments and generate reports.</p>
+          <h4 style="margin:1rem 0 .5rem;">3. Data Sharing</h4>
+          <p>We do not sell, rent, or share your personal data with third parties. Student records are accessible only to the student's own parent/guardian, class teacher, and school administrators.</p>
+          <h4 style="margin:1rem 0 .5rem;">4. Data Security</h4>
+          <p>All passwords are stored using strong one-way hashing (bcrypt). Access to the portal is protected by session-based authentication with automatic expiry.</p>
+          <h4 style="margin:1rem 0 .5rem;">5. Data Retention</h4>
+          <p>Student academic records are retained permanently for school reference after graduation. Portal account credentials may be deactivated after a student leaves the school.</p>
+          <h4 style="margin:1rem 0 .5rem;">6. Your Rights</h4>
+          <p>You may request correction of inaccurate personal information by contacting the school registrar. Account deletion requests should be directed to the school ICT office.</p>
+          <h4 style="margin:1rem 0 .5rem;">7. Contact</h4>
+          <p>Privacy questions: <strong>admin@sacredheartcollegeaba.com</strong> · Eziukwu Road, Aba, Abia State.</p>
+        `
+      }
+    };
+
+    window.showTermsModal = function(type) {
+      var content = TERMS_CONTENT[type];
+      if (!content) return;
+      document.getElementById('terms-modal-title').textContent = content.title;
+      document.getElementById('terms-modal-body').innerHTML = content.body;
+      document.getElementById('terms-modal').style.display = 'grid';
+    };
   </script>
 
   <script type="module" src="auth.js"></script>

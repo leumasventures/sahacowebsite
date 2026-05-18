@@ -55,46 +55,8 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ── Patch 1: Classes ──────────────────────────────────────────────────── */
-  var _origOpenClassModal = window.openClassModal;
-  window.openClassModal = function (cls) {
-    if (typeof _origOpenClassModal === 'function') _origOpenClassModal(cls);
-
-    setTimeout(function () {
-      var form = document.getElementById('class-form');
-      if (!form || form.dataset.bridged) return;
-      form.dataset.bridged = '1';
-
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var name  = (document.getElementById('cls-name') || {}).value.trim();
-        var level = window._activeTierModal || 'Junior';
-        var arms  = window._modalArms || [];
-        if (!name) return;
-
-        var isEdit = !!cls;
-        var id     = cls && cls.id;
-        var data   = { name: name, level: level, arms: arms };
-
-        if (isEdit) {
-          Object.assign(cls, data);
-          (App.data.students || []).forEach(function (s) { if (s.class === cls._prevName) s.class = name; });
-          (App.data.teachers || []).forEach(function (t) { if (t.assignedClass === cls._prevName) t.assignedClass = name; });
-        } else {
-          var newCls = Object.assign({ id: Date.now() }, data);
-          App.data.classes = App.data.classes || [];
-          App.data.classes.push(newCls);
-        }
-
-        if (typeof window.apiSaveClass === 'function') {
-          window.apiSaveClass(Object.assign({ id: id }, data), isEdit);
-        }
-
-        if (typeof window.closeModal   === 'function') closeModal();
-        if (typeof window.renderClasses === 'function') renderClasses();
-        if (typeof window.toast === 'function') toast(isEdit ? 'Class updated!' : data.name + ' added!', 'success');
-      };
-    }, 80);
-  };
+  /* script.js now handles class API calls directly — persistence_patch only
+     handles confirmDeleteClass which is called from inline onclick */
 
   window.confirmDeleteClass = function (id) {
     var cls = (App.data.classes || []).find(function (c) { return c.id === id; });
@@ -104,70 +66,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (t.assignedClass === cls.name) { t.assignedClass = ''; t.assignedArm = ''; }
       });
     }
-    App.data.classes = App.data.classes.filter(function (c) { return c.id !== id; });
-
     var p = typeof window.apiDeleteClass === 'function'
       ? window.apiDeleteClass(id)
       : Promise.resolve();
-
     p.then(function () {
+      App.data.classes = App.data.classes.filter(function (c) { return c.id !== id; });
       if (typeof window.closeModal    === 'function') closeModal();
       if (typeof window.renderClasses === 'function') renderClasses();
       if (typeof window.toast === 'function') toast('"' + cls.name + '" deleted.', 'warning');
+    }).catch(function (err) {
+      if (typeof window.toast === 'function') toast('Error deleting class: ' + (err.message || 'Unknown error'), 'error');
     });
   };
 
   /* ── Patch 2: Students ─────────────────────────────────────────────────── */
-  var _origOpenStudentModal = window.openStudentModal;
-  window.openStudentModal = function (student) {
-    if (typeof _origOpenStudentModal === 'function') _origOpenStudentModal(student);
-
-    setTimeout(function () {
-      var form = document.getElementById('student-form');
-      if (!form || form.dataset.bridged) return;
-      form.dataset.bridged = '1';
-
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var isEdit = !!student;
-        var data = {
-          name:   ((document.getElementById('st-name')   || {}).value || '').trim(),
-          class:   (document.getElementById('st-class')  || {}).value,
-          arm:     (document.getElementById('st-arm')    || {}).value,
-          gender:  (document.getElementById('st-gender') || {}).value,
-          dob:     (document.getElementById('st-dob')    || {}).value,
-          parent:  ((document.getElementById('st-parent')|| {}).value || '').trim(),
-          phone:   ((document.getElementById('st-phone') || {}).value || '').trim(),
-        };
-        if (!data.name) return;
-
-        if (isEdit) {
-          data.attendance = parseInt((document.getElementById('st-attendance') || {}).value) || student.attendance;
-          Object.assign(student, data);
-        } else {
-          data.attendance = 100;
-        }
-
-        var p = typeof window.apiSaveStudent === 'function'
-          ? window.apiSaveStudent(data, isEdit ? student.id : null)
-          : Promise.resolve(null);
-
-        p.then(function (result) {
-          if (!isEdit) {
-            var newId = (result && result.id) || ('SHC/' + String((App.data.students || []).length).padStart(3, '0'));
-            data.id = newId;
-            App.data.students = App.data.students || [];
-            App.data.students.push(Object.assign({}, data));
-          }
-          if (typeof window.closeModal      === 'function') closeModal();
-          if (typeof window.renderStudents  === 'function') {
-            renderStudents(window._currentFilter || '', window._currentFilters || {});
-          }
-          if (typeof window.toast === 'function') toast(isEdit ? 'Student updated!' : 'Student added! ID: ' + data.id, 'success');
-        });
-      };
-    }, 80);
-  };
+  /* script.js now handles student create/update API calls directly.
+     Only confirmDeleteStudent and confirmTransfer are handled here. */
 
   window.confirmDeleteStudent = function (id) {
     var s    = (App.data.students || []).find(function (st) { return st.id === id; });
@@ -209,37 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   /* ── Patch 3: Subjects ─────────────────────────────────────────────────── */
-  var _origOpenSubjectModal = window.openSubjectModal;
-  window.openSubjectModal = function () {
-    if (typeof _origOpenSubjectModal === 'function') _origOpenSubjectModal();
-
-    setTimeout(function () {
-      var form = document.getElementById('subj-form');
-      if (!form || form.dataset.bridged) return;
-      form.dataset.bridged = '1';
-
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var name  = ((document.getElementById('sb-name')  || {}).value || '').trim();
-        var code  = ((document.getElementById('sb-code')  || {}).value || '').trim().toUpperCase();
-        var level = (document.getElementById('sb-level')  || {}).value;
-        var type  = (document.getElementById('sb-type')   || {}).value;
-        if (!name || !code) return;
-
-        var data = { name: name, code: code, level: level, type: type };
-
-        var p = typeof window.apiSaveSubject === 'function'
-          ? window.apiSaveSubject(data, null)
-          : Promise.resolve();
-
-        p.then(function () {
-          if (typeof window.closeModal     === 'function') closeModal();
-          if (typeof window.renderSubjects === 'function') renderSubjects();
-          if (typeof window.toast === 'function') toast('Subject added!', 'success');
-        });
-      };
-    }, 80);
-  };
+  /* script.js now handles subject create API calls directly.
+     Only deleteSubject is handled here. */
 
   window.deleteSubject = function (id) {
     if (!confirm('Remove this subject?')) return;
@@ -248,42 +133,20 @@ document.addEventListener('DOMContentLoaded', function () {
       : Promise.resolve();
 
     p.then(function () {
+      App.data.subjects = (App.data.subjects || []).filter(function (s) { return s.id !== id; });
       if (typeof window.renderSubjects === 'function') renderSubjects();
       if (typeof window.toast === 'function') toast('Subject removed.', 'warning');
+    }).catch(function (err) {
+      if (typeof window.toast === 'function') toast('Error removing subject: ' + (err.message || 'Unknown error'), 'error');
     });
   };
 
   /* ── Patch 4: Staff ────────────────────────────────────────────────────── */
-  var _origSmSubmitForm = window.smSubmitForm;
-  window.smSubmitForm = function () {
-    if (typeof _origSmSubmitForm === 'function') _origSmSubmitForm();
+  /* script.js smSubmitForm now calls the API directly (async).
+     persistence_patch must NOT call apiSaveStaff again — it was causing
+     double submissions (409 Email already in use / 500 duplicate key). */
 
-    var id   = window._currentEditStaffId || null;
-    var name = ((document.getElementById('sf-name') || {}).value || '').trim();
-    if (!name) return;
-
-    var data = {
-      name:          name,
-      gender:        (document.getElementById('sf-gender')     || {}).value,
-      phone:         (document.getElementById('sf-phone')      || {}).value,
-      email:         (document.getElementById('sf-email')      || {}).value,
-      dateJoined:    (document.getElementById('sf-joined')     || {}).value,
-      status:        (document.getElementById('sf-status')     || {}).value,
-      category:      (document.getElementById('sf-category')   || {}).value,
-      position:      (document.getElementById('sf-position')   || {}).value,
-      department:    (document.getElementById('sf-department') || {}).value,
-      subject:       (document.getElementById('sf-subject')    || {}).value,
-      classUnit:     (document.getElementById('sf-class')      || {}).value,
-      arm:           (document.getElementById('sf-arm')        || {}).value,
-      qualification: (document.getElementById('sf-qual')       || {}).value,
-      experience:    (document.getElementById('sf-exp')        || {}).value,
-      notes:         (document.getElementById('sf-notes')      || {}).value,
-    };
-
-    if (typeof window.apiSaveStaff === 'function') {
-      window.apiSaveStaff(data, id);
-    }
-  };
+  /* Staff is fully handled by script.js smSubmitForm — no patch needed here */
 
   /* ── Patch 5: Fixtures ─────────────────────────────────────────────────── */
   var _origOpenFixtureModal = window.openFixtureModal;
@@ -362,67 +225,8 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   /* ── Patch 8: Arms CRUD ─────────────────────────────────────────────────── */
-  var _origAddArm = window.addArm;
-  window.addArm = function (classId) {
-    var cls = App.data.classes && App.data.classes.find(function (c) { return c.id === classId; });
-    if (!cls) return;
-    if (typeof _origAddArm === 'function') _origAddArm(classId);
-
-    setTimeout(function () {
-      var form = document.getElementById('arm-form');
-      if (!form || form.dataset.bridged) return;
-      form.dataset.bridged = '1';
-
-      form.onsubmit = function (e) {
-        e.preventDefault();
-        var raw     = (document.getElementById('arm-letter') || {}).value || '';
-        var letters = raw.split(',').map(function (l) { return l.trim().toUpperCase(); }).filter(Boolean);
-        var errEl   = document.getElementById('arm-error');
-
-        if (!letters.length) {
-          if (errEl) { errEl.textContent = 'Enter at least one arm letter.'; errEl.style.display = ''; }
-          return;
-        }
-        var dupes = letters.filter(function (l) { return cls.arms && cls.arms.indexOf(l) !== -1; });
-        if (dupes.length) {
-          if (errEl) { errEl.textContent = 'Already exists: ' + dupes.join(', '); errEl.style.display = ''; }
-          return;
-        }
-
-        letters.forEach(function (l) { if (!cls.arms) cls.arms = []; cls.arms.push(l); });
-
-        var p = typeof window.apiAddArm === 'function'
-          ? window.apiAddArm(classId, letters)
-          : Promise.resolve();
-
-        p.then(function () {
-          if (typeof window.closeModal       === 'function') closeModal();
-          if (typeof window.refreshArmsGrid  === 'function') refreshArmsGrid(cls);
-          if (typeof window.toast === 'function') toast('Arm' + (letters.length > 1 ? 's' : '') + ' added!', 'success');
-        });
-      };
-    }, 80);
-  };
-
-  window.confirmDeleteArm = function (classId, arm) {
-    var cls = App.data.classes && App.data.classes.find(function (c) { return c.id === classId; });
-    if (!cls) return;
-
-    (App.data.teachers || []).forEach(function (t) {
-      if (t.assignedClass === cls.name && t.assignedArm === arm) t.assignedArm = '';
-    });
-    cls.arms = (cls.arms || []).filter(function (a) { return a !== arm; });
-
-    var p = typeof window.apiDeleteArm === 'function'
-      ? window.apiDeleteArm(classId, arm)
-      : Promise.resolve();
-
-    p.then(function () {
-      if (typeof window.closeModal      === 'function') closeModal();
-      if (typeof window.refreshArmsGrid === 'function') refreshArmsGrid(cls);
-      if (typeof window.toast === 'function') toast('Arm ' + cls.name + ' ' + arm + ' removed.', 'warning');
-    });
-  };
+  /* script.js addArm and confirmDeleteArm now call Classes.addArm /
+     Classes.deleteArm directly — no patch needed here */
 
   console.info('[persistence-patch] All mutation handlers wired to API.');
 });

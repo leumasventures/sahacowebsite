@@ -33,6 +33,7 @@
 
   var SESSION_KEY = 'shc_session';
   var TOKEN_KEY   = 'shc_token';    // stores the JWT returned in the login response body
+  var PRIV_VER    = 'v5';           // bump this whenever PRIVILEGES changes to clear stale cache
   var SIGNUP_KEY  = 'shc_signup_requests';
 
   // All portal pages live at the root.
@@ -40,14 +41,15 @@
     Admin:   '/dashboard.html',
     Teacher: '/dashboard.html',
     Staff:   '/dashboard.html',
+    Bursar:  '/student-finance.html',
     Student: '/dashboard.html',
-    Parent:  '/parentPortal.html',
-    // lowercase aliases (in case the server returns lowercase)
+    Parent:  '/dashboard.html',
     admin:   '/dashboard.html',
     teacher: '/dashboard.html',
     staff:   '/dashboard.html',
+    bursar:  '/student-finance.html',
     student: '/dashboard.html',
-    parent:  '/parentPortal.html',
+    parent:  '/dashboard.html',
   };
 
   var PUBLIC_PAGES = ['login.html', 'index.html', 'about.html', 'contact.html', ''];
@@ -56,13 +58,13 @@
 
   var PRIVILEGES = {
     Admin: {
-      allowedSections:     ['dashboard','classes','arms','students','teachers','subjects','results','report-cards','attendance','fixtures','parent-portal','settings'],
+      allowedSections:     ['dashboard','classes','arms','students','teachers','subjects','results','report-cards','attendance','fixtures','parent-portal','settings','timetable','fees','access-tokens','users','former-students','former-staff'],
       canEnterResults:     true,  canTakeAttendance:   true,  canViewResults:  true,
       canAddRemarks:       true,  canViewReports:      true,  canManageStaff:  true,
       canManageStudents:   true,  canViewParentPortal: true,  canAccessSettings: true,
     },
     Teacher: {
-      allowedSections:     ['dashboard','students','results','report-cards','attendance','fixtures'],
+      allowedSections:     ['dashboard','students','results','report-cards','attendance','fixtures','timetable'],
       canEnterResults:     true,  canTakeAttendance:   true,  canViewResults:  true,
       canAddRemarks:       true,  canViewReports:      true,  canManageStaff:  false,
       canManageStudents:   false, canViewParentPortal: false, canAccessSettings: false,
@@ -72,6 +74,13 @@
       canEnterResults:     false, canTakeAttendance:   true,  canViewResults:  false,
       canAddRemarks:       false, canViewReports:      false, canManageStaff:  false,
       canManageStudents:   false, canViewParentPortal: false, canAccessSettings: false,
+    },
+    Bursar: {
+      allowedSections:     ['dashboard','fees','students','former-students'],
+      canEnterResults:     false, canTakeAttendance:   false, canViewResults:  false,
+      canAddRemarks:       false, canViewReports:      false, canManageStaff:  false,
+      canManageStudents:   false, canViewParentPortal: false, canAccessSettings: false,
+      canManageFinance:    true,
     },
     Parent: {
       allowedSections:     ['parent-portal'],
@@ -125,14 +134,21 @@
   /* ── SESSION CACHE ──────────────────────────────────────────────────────── */
 
   function _readCache() {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }
+    try {
+      var c = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      // Bust cache if privileges version changed
+      if (c && c._privVer !== PRIV_VER) { sessionStorage.removeItem(SESSION_KEY); return null; }
+      return c;
+    }
     catch (e) { return null; }
   }
 
   function _writeCache(user, privileges) {
     if (!user) return;
+    sessionStorage.removeItem('shc_logged_out'); // clear on new login
     var role = user.role || '';
     var entry = {
+      _privVer:      PRIV_VER,
       role:          role,
       name:          user.name          || '',
       email:         user.email         || '',
@@ -236,6 +252,8 @@
    */
   function logout(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    // Mark that we explicitly logged out — prevents auto-redirect on login page
+    sessionStorage.setItem('shc_logged_out', '1');
     _post('/auth/logout').catch(function () {}).then(function () {
       _clearCache();
       global.location.href = '/login.html';
@@ -799,16 +817,15 @@
         if (!_signupState.pendingData) return;
         _setLoading(submit, true);
 
-        var entry = _addSignupRequest(_signupState.pendingData);
-        console.info('[SHC Auth] Signup request saved locally:', entry.id);
-
-        // Send to backend (best-effort — graceful fallback if route not yet live)
+        // Send to backend — required, not best-effort
         _post('/auth/signup-request', {
           type: _signupState.pendingData.type,
           data: _signupState.pendingData.data,
-        }).catch(function () {}).then(function () {
+        }).then(function (resp) {
           _setLoading(submit, false);
-          var email   = _signupState.pendingData.data.email;
+          // Also save locally for session reference
+          _addSignupRequest(_signupState.pendingData);
+          var email     = _signupState.pendingData.data.email;
           var typeLabel = _signupState.pendingData.type === 'staff' ? 'staff' : 'parent';
           var successMsg = document.getElementById('success-msg');
           if (successMsg) {
@@ -822,6 +839,12 @@
               link.addEventListener('click', function (e) { e.preventDefault(); _switchView(link.dataset.switch); });
             });
           }, 100);
+        }).catch(function (err) {
+          _setLoading(submit, false);
+          var msg = (err && err.message) || 'Could not submit request. Please try again.';
+          // Show error near submit button
+          var errEl = document.getElementById('terms-error');
+          if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
         });
       });
     }
@@ -915,11 +938,19 @@
       _initStep2();
       _initStep3();
 
-      // Auto-redirect if already logged in
-      verifySession().then(function (session) {
-        if (session) global.location.href = ROLE_HOME[session.role] || '/dashboard.html';
-        _sessionReadyResolve(null); // login page — no guard needed
-      });
+      // Auto-redirect if already logged in — but NOT if user just logged out
+      var justLoggedOut = sessionStorage.getItem('shc_logged_out') === '1';
+      if (justLoggedOut) {
+        // Clear the flag and the refresh cookie by calling logout endpoint
+        sessionStorage.removeItem('shc_logged_out');
+        _post('/auth/logout').catch(function () {});  // invalidate refresh token server-side
+        _sessionReadyResolve(null);
+      } else {
+        verifySession().then(function (session) {
+          if (session) global.location.href = ROLE_HOME[session.role] || '/dashboard.html';
+          _sessionReadyResolve(null); // login page — no guard needed
+        });
+      }
 
       return;   // don't run the protected-page guard on the login page
     }

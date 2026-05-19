@@ -1,0 +1,714 @@
+'use strict';
+/**
+ * classes.js  —  Sacred Heart College Eziukwu Aba (SAHARCO)
+ * Classes & Arms + Class Promotion
+ * Depends on: App, priv, grade(), ordinal(), btnStyle(), labelStyle(),
+ *             inputStyle(), selectStyle(), showModal(), closeModal(),
+ *             toast(), confirmDlg(), denyAccess() from script.js
+ */
+function renderClasses() {
+  if (!priv.canManage()) { accessDeniedPage('classes'); return; }
+
+  const section  = document.getElementById('classes');
+  const classes  = App.data.classes || [];
+  const students = App.data.students || [];
+
+  /* Per-tier counts */
+  const tierStats = {};
+  TIER_ORDER.forEach(tier => {
+    const tClasses  = classes.filter(c => c.level === tier);
+    const tStudents = students.filter(s => tClasses.some(c => c.name === s.class));
+    tierStats[tier] = {
+      classes:  tClasses.length,
+      arms:     tClasses.reduce((n, c) => n + (c.arms?.length || 0), 0),
+      students: tStudents.length,
+    };
+  });
+
+  const totalClasses  = classes.length;
+  const totalArms     = classes.reduce((n, c) => n + (c.arms?.length || 0), 0);
+  const totalStudents = students.length;
+
+  section.innerHTML = `
+    <!-- ── Page header ── -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 style="margin:0 0 .2rem;font-size:1.5rem;">Classes &amp; Arms</h2>
+        <p style="margin:0;color:#6b7280;font-size:.875rem;">Manage all school levels, classes, and arm assignments</p>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <input id="class-search" placeholder="🔍 Search…" oninput="filterClassTable()"
+          style="${inputStyle('sm')};max-width:180px;">
+        <button onclick="openClassModal()" style="${btnStyle('primary')}">+ Add Class</button>
+      </div>
+    </div>
+
+    <!-- ── Summary stat cards ── -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.75rem;">
+      <div style="background:#1e3a5f;color:#fff;border-radius:12px;padding:1rem 1.1rem;">
+        <div style="font-size:1.4rem;">🏫</div>
+        <div style="font-size:1.6rem;font-weight:800;line-height:1.1;">${totalClasses}</div>
+        <div style="font-size:.72rem;opacity:.8;margin-top:.15rem;">Total Classes</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:1rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid #6366f1;">
+        <div style="font-size:1.3rem;">🚪</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#6366f1;line-height:1.1;">${totalArms}</div>
+        <div style="font-size:.72rem;color:#6b7280;margin-top:.15rem;">Total Arms</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:1rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid #0891b2;">
+        <div style="font-size:1.3rem;">👩‍🎓</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#0891b2;line-height:1.1;">${totalStudents}</div>
+        <div style="font-size:.72rem;color:#6b7280;margin-top:.15rem;">Total Students</div>
+      </div>
+      ${TIER_ORDER.map(tier => {
+        const t  = CLASS_TIERS[tier];
+        const ts = tierStats[tier];
+        if (ts.classes === 0) return '';
+        return `
+        <div style="background:#fff;border-radius:12px;padding:1rem 1.1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid ${t.color};">
+          <div style="font-size:1.2rem;">${t.icon}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${t.color};line-height:1.1;">${ts.classes}</div>
+          <div style="font-size:.72rem;color:#6b7280;margin-top:.15rem;">${tier}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- ── Tier filter tabs ── -->
+    <div id="tier-tabs" style="display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <button class="tier-tab active" data-tier="all" onclick="setTierFilter('all')"
+        style="${tierTabStyle(true)}">All Tiers</button>
+      ${TIER_ORDER.filter(t => tierStats[t].classes > 0).map(tier => `
+        <button class="tier-tab" data-tier="${tier}" onclick="setTierFilter('${tier}')"
+          style="${tierTabStyle(false, tier)}">
+          ${CLASS_TIERS[tier].icon} ${tier}
+          <span style="background:rgba(0,0,0,.12);color:inherit;border-radius:999px;padding:.05rem .45rem;font-size:.7rem;margin-left:.3rem;">${tierStats[tier].classes}</span>
+        </button>`).join('')}
+    </div>
+
+    <!-- ── Table or empty state ── -->
+    ${classes.length === 0
+      ? emptyClassState()
+      : `<div style="overflow-x:auto;border-radius:12px;border:1px solid #e5e7eb;background:#fff;">
+          <table id="classes-table" style="${tableStyle()};border-radius:12px;overflow:hidden;">
+            <thead><tr style="${thRowStyle()}">
+              <th style="${thStyle('40px')}">#</th>
+              <th style="${thStyle()}">Class Name</th>
+              <th style="${thStyle('130px')}">Level / Tier</th>
+              <th style="${thStyle('80px')}">Age Range</th>
+              <th style="${thStyle()}">Arms</th>
+              <th style="${thStyle('110px')}">Students</th>
+              <th style="${thStyle('140px')}">Actions</th>
+            </tr></thead>
+            <tbody id="classes-tbody">
+              ${classes.map((c, i) => classRow(c, i)).join('')}
+            </tbody>
+          </table>
+        </div>`
+    }`;
+
+  // Set the active filter state
+  window._activeTierFilter = 'all';
+}
+
+/* ── TAB STYLE HELPER ────────────────────────────────────────── */
+function tierTabStyle(active, tier = null) {
+  const t = tier ? CLASS_TIERS[tier] : null;
+  if (active && !tier) {
+    return 'padding:.35rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:700;cursor:pointer;background:#1e3a5f;color:#fff;border:none;transition:all .15s;';
+  }
+  if (t) {
+    const isActive = false; // toggled via JS class swap
+    return `padding:.35rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:600;cursor:pointer;background:${t.surface};color:${t.text};border:1px solid ${t.border};transition:all .15s;`;
+  }
+  return 'padding:.35rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:600;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;transition:all .15s;';
+}
+
+/* ── TIER FILTER ─────────────────────────────────────────────── */
+window.setTierFilter = function(tier) {
+  window._activeTierFilter = tier;
+
+  // Update tab highlight
+  document.querySelectorAll('.tier-tab').forEach(btn => {
+    const btnTier = btn.dataset.tier;
+    const t = CLASS_TIERS[btnTier];
+    if (btnTier === tier) {
+      if (btnTier === 'all') {
+        btn.style.cssText = tierTabStyle(true);
+      } else {
+        btn.style.cssText = `padding:.35rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:700;cursor:pointer;background:${t.color};color:#fff;border:1px solid ${t.color};transition:all .15s;`;
+      }
+    } else {
+      btn.style.cssText = btnTier === 'all'
+        ? 'padding:.35rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:600;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;transition:all .15s;'
+        : tierTabStyle(false, btnTier);
+    }
+  });
+
+  // Show/hide rows
+  filterClassTable();
+};
+
+/* ── SEARCH + TIER FILTER ────────────────────────────────────── */
+window.filterClassTable = function() {
+  const q    = (document.getElementById('class-search')?.value || '').toLowerCase();
+  const tier = window._activeTierFilter || 'all';
+  document.querySelectorAll('#classes-tbody tr').forEach(row => {
+    const matchSearch = row.textContent.toLowerCase().includes(q);
+    const matchTier   = tier === 'all' || row.dataset.tier === tier;
+    row.style.display = (matchSearch && matchTier) ? '' : 'none';
+  });
+};
+
+/* ── SINGLE ROW RENDERER ─────────────────────────────────────── */
+function classRow(c, i) {
+  const studentCount = (App.data.students || []).filter(s => s.class === c.name).length;
+  const tier = CLASS_TIERS[c.level] || CLASS_TIERS['Junior'];
+  const ageRange = tier.ageRange || '–';
+
+  const armChips = (c.arms || []).map(a =>
+    `<span style="display:inline-block;background:${tier.surface};border:1px solid ${tier.border};color:${tier.text};border-radius:6px;padding:.12rem .5rem;font-size:.75rem;font-weight:600;margin:.1rem .1rem;">${a}</span>`
+  ).join('');
+
+  const studentBadgeColor = studentCount === 0
+    ? 'background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;'
+    : `background:${tier.surface};color:${tier.text};border:1px solid ${tier.border};`;
+
+  return `<tr id="class-row-${c.id}" data-tier="${c.level}" style="${trStyle()}">
+    <td style="${tdStyle()};color:#9ca3af;font-size:.82rem;">${i + 1}</td>
+    <td style="${tdStyle()};font-weight:700;font-size:.95rem;">${c.name}</td>
+    <td style="${tdStyle()}">
+      <span style="${tierBadgeStyle(c.level)}">${tier.icon} ${c.level}</span>
+    </td>
+    <td style="${tdStyle()};font-size:.78rem;color:#9ca3af;white-space:nowrap;">${ageRange}</td>
+    <td style="${tdStyle()}">
+      <div style="display:flex;flex-wrap:wrap;gap:.15rem;">
+        ${armChips || `<span style="font-size:.78rem;color:#d1d5db;">—</span>`}
+      </div>
+    </td>
+    <td style="${tdStyle()}">
+      <span style="${studentBadgeColor}display:inline-block;padding:.2rem .6rem;border-radius:9999px;font-size:.75rem;font-weight:600;">
+        ${studentCount} student${studentCount !== 1 ? 's' : ''}
+      </span>
+    </td>
+    <td style="${tdStyle()}">
+      <button onclick="editClass(${c.id})" style="${btnStyle('secondary', 'sm')}">✏ Edit</button>
+      <button onclick="openPromoteClassModal('${c.name}')" style="${btnStyle('warning', 'sm')}" title="Move all students to next class">⬆ Promote</button>
+      <button onclick="deleteClass(${c.id})" style="${btnStyle('danger', 'sm')}">🗑</button>
+    </td>
+  </tr>`;
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────── */
+function emptyClassState() {
+  return `
+    <div style="background:#fff;border-radius:12px;padding:4rem 2rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <div style="font-size:3.5rem;margin-bottom:1rem;">🏫</div>
+      <h3 style="margin:0 0 .4rem;color:#374151;">No classes yet</h3>
+      <p style="color:#9ca3af;margin:0 0 .75rem;max-width:360px;margin-inline:auto;font-size:.875rem;">
+        Get started by adding your school tiers — Day Care, Nursery, Primary, Junior, or Senior.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1.5rem;">
+        ${TIER_ORDER.map(tier => {
+          const t = CLASS_TIERS[tier];
+          return `<span style="background:${t.surface};color:${t.text};border:1px solid ${t.border};border-radius:9999px;padding:.25rem .75rem;font-size:.8rem;font-weight:600;">${t.icon} ${tier}</span>`;
+        }).join('')}
+      </div>
+      <button onclick="openClassModal()" style="${btnStyle('primary')}">+ Add First Class</button>
+    </div>`;
+}
+
+/* ── EDIT / DELETE ───────────────────────────────────────────── */
+window.editClass = function(id) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  openClassModal(App.data.classes.find(c => c.id === id));
+};
+
+window.deleteClass = function(id) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls = (App.data.classes || []).find(c => c.id === id);
+  if (!cls) return;
+
+  const enrolled = (App.data.students || []).filter(s => s.class === cls.name).length;
+  const teachers = (App.data.teachers || []).filter(t => t.assignedClass === cls.name).length;
+
+  if (enrolled > 0) {
+    showModal(`
+      <div style="text-align:center;padding:.5rem 0 1rem;">
+        <div style="font-size:2.5rem;margin-bottom:.75rem;">⚠️</div>
+        <h3 style="margin:0 0 .5rem;">Cannot Delete Class</h3>
+        <p style="color:#6b7280;margin:0 0 1.5rem;">
+          <strong>${cls.name}</strong> has <strong>${enrolled} enrolled student${enrolled !== 1 ? 's' : ''}</strong>.
+          Re-assign or remove all students first.
+        </p>
+        <button onclick="closeModal()" style="${btnStyle('primary')}">OK, Got It</button>
+      </div>`);
+    return;
+  }
+
+  const teacherNote = teachers > 0
+    ? `<div style="font-size:.85rem;color:#d97706;background:#fef3c7;border-radius:8px;padding:.6rem .9rem;margin:.75rem 0 0;text-align:left;">⚠ ${teachers} teacher assignment${teachers !== 1 ? 's' : ''} will also be cleared.</div>`
+    : '';
+
+  const tier = CLASS_TIERS[cls.level] || {};
+
+  showModal(`
+    <div style="text-align:center;padding:.5rem 0 1rem;">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🗑️</div>
+      <h3 style="margin:0 0 .5rem;">Delete Class?</h3>
+      <div style="margin:.5rem auto .25rem;display:inline-flex;align-items:center;gap:.4rem;background:${tier.surface || '#f9fafb'};color:${tier.text || '#374151'};border:1px solid ${tier.border || '#e5e7eb'};padding:.3rem .8rem;border-radius:9999px;font-size:.85rem;font-weight:600;">
+        ${tier.icon || ''} ${cls.name}
+      </div>
+      <p style="color:#6b7280;margin:.75rem 0 0;">This cannot be undone.</p>
+      ${teacherNote}
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:center;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmDeleteClass(${id})" style="${btnStyle('danger')}">Yes, Delete</button>
+      </div>
+    </div>`);
+};
+
+window.confirmDeleteClass = async function(id) {
+  const cls = (App.data.classes || []).find(c => c.id === id);
+  if (!cls) return;
+  try {
+    await Classes.delete(cls.name);
+    if (App.data.teachers) {
+      App.data.teachers.forEach(t => { if (t.assignedClass === cls.name) { t.assignedClass = ''; t.assignedArm = ''; } });
+    }
+    App.data.classes = App.data.classes.filter(c => c.id !== id);
+    closeModal();
+    renderClasses();
+    toast(`"${cls.name}" deleted.`, 'warning');
+  } catch (err) {
+    closeModal();
+    toast('Error deleting class: ' + (err.message || 'Unknown error'), 'error');
+  }
+};
+
+/* ── PROMOTE CLASS ───────────────────────────────────────────── */
+/* Standard Nigerian school promotion order                       */
+const CLASS_PROMOTION_MAP = {
+  // Day Care
+  'Creche':    'Toddler',    'Toddler':   'Reception',
+  // Nursery
+  'Nursery 1': 'Nursery 2', 'Nursery 2': 'Nursery 3',
+  'Nursery 3': 'Primary 1',
+  // Primary
+  'Primary 1': 'Primary 2', 'Primary 2': 'Primary 3',
+  'Primary 3': 'Primary 4', 'Primary 4': 'Primary 5',
+  'Primary 5': 'Primary 6', 'Primary 6': 'JSS 1',
+  // Junior Secondary
+  'JSS 1':  'JSS 2',  'JSS 2':  'JSS 3',
+  'JSS 3':  'SS 1',
+  // Senior Secondary
+  'SS 1':  'SS 2',   'SS 2':  'SS 3',
+  'SSS 1': 'SSS 2',  'SSS 2': 'SSS 3',
+};
+
+window.openPromoteClassModal = function(className) {
+  const cls        = (App.data.classes || []).find(c => c.name === className);
+  const nextName   = CLASS_PROMOTION_MAP[className];
+  const nextClass  = nextName ? (App.data.classes || []).find(c => c.name === nextName) : null;
+  const students   = (App.data.students || []).filter(s =>
+    (s.class === className || s.class_name === className) && s.active !== false);
+  const isGraduating = !nextName || className === 'SS 3' || className === 'SSS 3' || className === 'Primary 6';
+
+  const classOpts  = (App.data.classes || []).map(c =>
+    `<option value="${c.name}" ${c.name === nextName ? 'selected' : ''}>${c.name}</option>`).join('');
+
+  showModal(`
+    <h3 style="margin:0 0 .5rem;">⬆ Promote ${className}</h3>
+    <p style="color:#6b7280;font-size:.85rem;margin:0 0 1.25rem;">
+      Move <strong>${students.length} student${students.length !== 1 ? 's' : ''}</strong> from
+      <strong>${className}</strong> to their next class.
+    </p>
+
+    ${isGraduating ? `
+    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:.9rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#92400e;">
+      <strong>⚠️ Final Year Class</strong><br>
+      ${className} is the last class in the progression. Students will be
+      <strong>archived as Graduated</strong> if you choose "Graduate & Archive".
+      Or select a custom destination class below.
+    </div>` : ''}
+
+    <div style="display:flex;flex-direction:column;gap:.9rem;">
+      <div>
+        <label style="${labelStyle()}">Destination Class</label>
+        <select id="promo-dest" style="${selectStyle()};width:100%;">
+          <option value="">-- Select --</option>${classOpts}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="promo-session" value="${App.data.schoolInfo?.session || ''}"
+               placeholder="e.g. 2025/2026" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Arm (leave blank to keep each student's current arm)</label>
+        <select id="promo-arm" style="${selectStyle()};width:100%;">
+          <option value="">Keep current arm</option>
+          ${['A','B','C','D','E'].map(a => `<option value="${a}">${a}</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="background:#eff6ff;border-radius:8px;padding:.75rem 1rem;font-size:.83rem;color:#1d4ed8;">
+        <strong>${students.length}</strong> student${students.length !== 1 ? 's' : ''} will be moved.
+        Their results, attendance and fee records remain linked to their ID.
+      </div>
+
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        ${isGraduating ? `<button onclick="graduateAndArchive('${className}')"
+          style="${btnStyle('warning')}">🎓 Graduate & Archive</button>` : ''}
+        <button onclick="submitPromoteClass('${className}')"
+          style="${btnStyle('primary')}">⬆ Promote Students</button>
+      </div>
+    </div>`);
+};
+
+window.submitPromoteClass = async function(fromClass) {
+  const destClass = document.getElementById('promo-dest')?.value;
+  const session   = document.getElementById('promo-session')?.value || '';
+  const arm       = document.getElementById('promo-arm')?.value     || null;
+
+  if (!destClass) { toast('Select a destination class', 'error'); return; }
+  if (destClass === fromClass) { toast('Destination must be different from current class', 'error'); return; }
+
+  const students = (App.data.students || []).filter(s =>
+    (s.class === fromClass || s.class_name === fromClass) && s.active !== false);
+  if (!students.length) { toast('No active students in ' + fromClass, 'warning'); return; }
+
+  if (!confirmDlg(`Promote ${students.length} student${students.length !== 1 ? 's' : ''} from ${fromClass} → ${destClass}?`)) return;
+
+  try {
+    let promoted = 0, failed = 0;
+    const destCls = (App.data.classes || []).find(c => c.name === destClass);
+
+    for (const s of students) {
+      const newArm = arm || s.arm;
+      try {
+        await Students.update(s.id, { class: destClass, arm: newArm });
+        s.class = destClass; s.class_name = destClass; s.arm = newArm;
+        promoted++;
+      } catch (e) { failed++; }
+    }
+
+    closeModal();
+    if (promoted > 0) {
+      toast(`✅ ${promoted} student${promoted !== 1 ? 's' : ''} promoted to ${destClass}${failed ? ` (${failed} failed)` : ''}`, 'success');
+    } else {
+      toast(`Promotion failed for all students.`, 'error');
+    }
+    renderClasses();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.graduateAndArchive = async function(fromClass) {
+  const session = document.getElementById('promo-session')?.value || '';
+  const students = (App.data.students || []).filter(s =>
+    (s.class === fromClass || s.class_name === fromClass) && s.active !== false);
+  if (!students.length) { toast('No active students in ' + fromClass, 'warning'); return; }
+
+  if (!confirmDlg(`Archive ${students.length} student${students.length !== 1 ? 's' : ''} from ${fromClass} as Graduated? This cannot be easily undone.`)) return;
+
+  let archived = 0, failed = 0;
+  for (const s of students) {
+    try {
+      await Archive.archiveStudent(s.id, {
+        exit_reason:  'Graduated',
+        exit_session: session,
+        exit_term:    'Third Term',
+      });
+      const idx = App.data.students.findIndex(st => st.id === s.id);
+      if (idx > -1) App.data.students.splice(idx, 1);
+      archived++;
+    } catch(e) { failed++; }
+  }
+
+  closeModal();
+  toast(`🎓 ${archived} student${archived !== 1 ? 's' : ''} graduated & archived${failed ? ` (${failed} failed)` : ''}`, 'success');
+  renderClasses();
+};
+
+/* ── MODAL ───────────────────────────────────────────────────── */
+function openClassModal(cls = null) {
+  const isEdit   = !!cls;
+  let modalArms  = cls ? [...(cls.arms || [])] : [];
+  let activeLevel = cls?.level || 'Primary';
+
+  /* ── ARM CHIP RENDERER ── */
+  const renderArmChips = () => {
+    const container = document.getElementById('arm-chips');
+    if (!container) return;
+    const tier = CLASS_TIERS[activeLevel] || CLASS_TIERS['Primary'];
+
+    container.innerHTML = modalArms.map(a => `
+      <span style="display:inline-flex;align-items:center;gap:.3rem;background:${tier.surface};border:1px solid ${tier.border};color:${tier.text};border-radius:8px;padding:.2rem .6rem;font-size:.84rem;font-weight:700;margin:.15rem;">
+        ${a}
+        <button type="button" onclick="removeArmChip('${a}')"
+          style="background:none;border:none;cursor:pointer;color:${tier.text};font-size:.85rem;padding:0;line-height:1;opacity:.7;">✕</button>
+      </span>`).join('') +
+      `<button type="button" id="add-arm-btn" onclick="toggleAddArmInput()"
+        style="${btnStyle('secondary', 'sm')};font-size:.78rem;">+ Arm</button>
+       <span id="add-arm-inline" style="display:none;align-items:center;gap:.35rem;">
+         <input id="new-arm-input" placeholder="e.g. D" maxlength="6"
+           style="${inputStyle('sm')};width:80px;"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();addArmFromInput();}">
+         <button type="button" onclick="addArmFromInput()" style="${btnStyle('primary', 'sm')}">Add</button>
+       </span>`;
+  };
+
+  /* ── QUICK ARM PRESETS ── */
+  const renderArmPresets = () => {
+    const container = document.getElementById('arm-presets');
+    if (!container) return;
+    const tier = CLASS_TIERS[activeLevel] || CLASS_TIERS['Primary'];
+    container.innerHTML = tier.armSuggestions.map(a => `
+      <button type="button" onclick="quickAddArm('${a}')"
+        style="background:${modalArms.includes(a) ? tier.color : tier.surface};color:${modalArms.includes(a) ? '#fff' : tier.text};border:1px solid ${tier.border};border-radius:6px;padding:.2rem .55rem;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .12s;">
+        ${a}${modalArms.includes(a) ? ' ✓' : ''}
+      </button>`).join('');
+  };
+
+  /* ── CLASS NAME PRESETS ── */
+  const renderClassPresets = () => {
+    const container = document.getElementById('class-presets');
+    if (!container) return;
+    const tier    = CLASS_TIERS[activeLevel] || CLASS_TIERS['Primary'];
+    const existing = new Set((App.data.classes || []).filter(c => c.id !== cls?.id).map(c => c.name));
+    container.innerHTML = `
+      <div style="font-size:.75rem;color:#9ca3af;margin-bottom:.3rem;">Quick-fill:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.35rem;">
+        ${tier.presets.map(p => {
+          const used = existing.has(p);
+          return `<button type="button" onclick="${used ? '' : `fillClassName('${p}')`}"
+            style="padding:.2rem .6rem;border-radius:6px;font-size:.78rem;font-weight:600;cursor:${used ? 'not-allowed' : 'pointer'};
+                   background:${used ? '#f3f4f6' : tier.surface};color:${used ? '#d1d5db' : tier.text};border:1px solid ${used ? '#e5e7eb' : tier.border};
+                   text-decoration:${used ? 'line-through' : 'none'};"
+            title="${used ? 'Already exists' : `Add ${p}`}">
+            ${p}${used ? ' ✓' : ''}
+          </button>`;
+        }).join('')}
+      </div>`;
+  };
+
+  /* ── TIER DESCRIPTION HELPER ── */
+  const renderTierDesc = () => {
+    const container = document.getElementById('tier-desc');
+    if (!container) return;
+    const tier = CLASS_TIERS[activeLevel];
+    if (!tier) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.5rem;background:${tier.surface};border:1px solid ${tier.border};border-radius:8px;padding:.55rem .85rem;font-size:.82rem;color:${tier.text};">
+        <span style="font-size:1.1rem;">${tier.icon}</span>
+        <span><strong>${activeLevel}</strong> — ${tier.ageRange}</span>
+      </div>`;
+  };
+
+  /* ── Expose arm helpers globally (inline onclick) ── */
+  window.removeArmChip = (a) => { modalArms = modalArms.filter(x => x !== a); renderArmChips(); renderArmPresets(); };
+  window.toggleAddArmInput = () => {
+    const el = document.getElementById('add-arm-inline');
+    el.style.display = el.style.display === 'none' ? 'inline-flex' : 'none';
+    if (el.style.display !== 'none') document.getElementById('new-arm-input')?.focus();
+  };
+  window.addArmFromInput = () => {
+    const val = (document.getElementById('new-arm-input')?.value || '').trim().toUpperCase();
+    if (!val) return;
+    if (modalArms.includes(val)) { toast(`Arm "${val}" already exists.`, 'warning'); return; }
+    modalArms.push(val);
+    document.getElementById('new-arm-input').value = '';
+    document.getElementById('add-arm-inline').style.display = 'none';
+    renderArmChips();
+    renderArmPresets();
+  };
+  window.quickAddArm = (a) => {
+    if (modalArms.includes(a)) {
+      modalArms = modalArms.filter(x => x !== a);
+    } else {
+      modalArms.push(a);
+    }
+    renderArmChips();
+    renderArmPresets();
+  };
+  window.fillClassName = (name) => {
+    const inp = document.getElementById('cls-name');
+    if (inp) { inp.value = name; }
+  };
+
+  /* ── MODAL HTML ── */
+  showModal(`
+    <div style="min-width:360px;max-width:520px;">
+      <h3 style="margin:0 0 1.25rem;font-size:1.1rem;">
+        ${isEdit ? `✏ Edit Class — ${cls.name}` : '➕ Add New Class'}
+      </h3>
+      <form id="class-form">
+
+        <!-- Level / Tier selector -->
+        <label style="${labelStyle()}">School Level / Tier <span style="color:#ef4444;">*</span></label>
+        <div id="level-tiles" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:.5rem;margin-bottom:.75rem;">
+          ${TIER_ORDER.map(tier => {
+            const t = CLASS_TIERS[tier];
+            const sel = activeLevel === tier;
+            return `
+              <button type="button" data-level="${tier}" onclick="selectTierTile('${tier}')"
+                style="padding:.5rem .4rem;border-radius:10px;border:2px solid ${sel ? t.color : t.border};
+                       background:${sel ? t.color : t.surface};color:${sel ? '#fff' : t.text};
+                       cursor:pointer;font-size:.75rem;font-weight:700;text-align:center;
+                       transition:all .15s;line-height:1.4;">
+                <div style="font-size:1.3rem;">${t.icon}</div>
+                ${tier}
+              </button>`;
+          }).join('')}
+        </div>
+        <div id="tier-desc" style="margin-bottom:1rem;"></div>
+
+        <!-- Class name -->
+        <label style="${labelStyle()}">Class Name <span style="color:#ef4444;">*</span></label>
+        <input id="cls-name" value="${cls?.name || ''}" placeholder="e.g. Primary 3, JSS 1, Creche…"
+          style="${inputStyle()}" required autocomplete="off">
+        <div id="class-presets" style="margin-top:.4rem;margin-bottom:.25rem;"></div>
+        <div id="cls-name-error" style="color:#ef4444;font-size:.8rem;margin-top:.25rem;display:none;"></div>
+
+        <!-- Arms -->
+        <label style="${labelStyle()};margin-top:.9rem;">Arms / Sections</label>
+        <div id="arm-chips" style="display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;padding:.5rem .6rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;min-height:46px;"></div>
+
+        <div style="margin-top:.5rem;">
+          <div style="font-size:.75rem;color:#9ca3af;margin-bottom:.3rem;">Quick-add arms:</div>
+          <div id="arm-presets" style="display:flex;flex-wrap:wrap;gap:.35rem;"></div>
+        </div>
+        <p style="font-size:.75rem;color:#9ca3af;margin:.4rem 0 0;">At least one arm is required. Click to toggle.</p>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:.75rem;margin-top:1.75rem;justify-content:flex-end;">
+          <button type="button" onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+          <button type="submit" style="${btnStyle('primary')}">${isEdit ? '💾 Save Changes' : '✅ Add Class'}</button>
+        </div>
+      </form>
+    </div>`);
+
+  /* ── Tier tile switch (must be global for onclick) ── */
+  window.selectTierTile = function(tier) {
+    activeLevel = tier;
+
+    // Visually update tiles
+    document.querySelectorAll('#level-tiles button').forEach(btn => {
+      const t   = CLASS_TIERS[btn.dataset.level];
+      const sel = btn.dataset.level === tier;
+      btn.style.borderColor  = sel ? t.color : t.border;
+      btn.style.background   = sel ? t.color : t.surface;
+      btn.style.color        = sel ? '#fff'  : t.text;
+    });
+
+    // If switching tier and not editing, pre-fill arm suggestions
+    if (!isEdit && modalArms.length === 0) {
+      modalArms = [...(CLASS_TIERS[tier]?.armSuggestions?.slice(0, 3) || ['A','B','C'])];
+    }
+
+    renderTierDesc();
+    renderArmChips();
+    renderArmPresets();
+    renderClassPresets();
+  };
+
+  /* Initialise rendered sub-components */
+  renderTierDesc();
+  renderArmChips();
+  renderArmPresets();
+  renderClassPresets();
+
+  /* ── Form default arms for new class ── */
+  if (!isEdit && modalArms.length === 0) {
+    modalArms = [...(CLASS_TIERS[activeLevel]?.armSuggestions?.slice(0, 3) || ['A','B','C'])];
+    renderArmChips();
+    renderArmPresets();
+  }
+
+  /* ── Form submit ── */
+  document.getElementById('class-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const name    = document.getElementById('cls-name').value.trim();
+    const level   = activeLevel;
+    const nameErr = document.getElementById('cls-name-error');
+
+    if (!name) {
+      nameErr.textContent = 'Class name is required.';
+      nameErr.style.display = '';
+      document.getElementById('cls-name').focus();
+      return;
+    }
+
+    const duplicate = (App.data.classes || []).find(
+      c => c.name.toLowerCase() === name.toLowerCase() && c.id !== cls?.id
+    );
+    if (duplicate) {
+      nameErr.textContent = `A class named "${duplicate.name}" already exists (${duplicate.level}).`;
+      nameErr.style.display = '';
+      document.getElementById('cls-name').focus();
+      return;
+    }
+    nameErr.style.display = 'none';
+
+    if (modalArms.length === 0) {
+      toast('Add at least one arm.', 'error');
+      return;
+    }
+
+    try {
+      if (isEdit) {
+        const oldName = cls.name;
+        // Call API using class NAME (not numeric id) as the key
+        await Classes.update(oldName, { name, level });
+        // Sync arms: post new set
+        await Classes.addArm(name, { arms: modalArms }).catch(() => {});
+
+        Object.assign(cls, { name, level, arms: [...modalArms] });
+        if (oldName !== name) {
+          (App.data.students || []).forEach(s => { if (s.class === oldName) s.class = name; });
+          (App.data.teachers || []).forEach(t => { if (t.assignedClass === oldName) t.assignedClass = name; });
+        }
+        closeModal();
+        renderClasses();
+        setTimeout(() => {
+          const row = document.getElementById(`class-row-${cls.id}`);
+          if (row) {
+            row.style.transition = 'background .15s';
+            row.style.background = CLASS_TIERS[level]?.surface || '#d1fae5';
+            setTimeout(() => { row.style.background = ''; }, 1500);
+          }
+        }, 80);
+        toast('Class updated!', 'success');
+      } else {
+        // Create via API — response gives us the real DB id
+        const resp = await Classes.create({ name, level, arms: modalArms });
+        const saved = resp.data || resp;
+        const newCls = { id: saved.id || Date.now(), name: saved.name || name, level: saved.level || level, arms: [...modalArms] };
+        App.data.classes = App.data.classes || [];
+        App.data.classes.push(newCls);
+        closeModal();
+        renderClasses();
+        toast(`${CLASS_TIERS[level]?.icon || ''} ${name} added!`, 'success');
+      }
+    } catch (err) {
+      toast('Error saving class: ' + (err.message || 'Unknown error'), 'error');
+    }
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   8. CLASS ARMS  (Admin only)
+
+   Improvements over original:
+   ✦ Summary stats bar (total arms, avg size, largest arm, empty arms)
+   ✦ Empty-state when no classes exist
+   ✦ Per-class collapse / expand toggle
+   ✦ Arm cards show: student count, teacher assignments, capacity bar
+   ✦ Add arm: duplicate check, auto-uppercase, multi-add support
+   ✦ Rename arm: updates all student + teacher records
+   ✦ Delete arm: blocked if students enrolled; warns if teachers assigned
+   ✦ Move Students: reassign all students from one arm to another in one click
+   ✦ Reorder arms: drag handle or ▲▼ buttons (no external dep)
+   ✦ View Students: quick popover listing enrolled students
+   ✦ Fixtures: generateArmFixtures() seeds realistic starter data
+─────────────────────────────────────────────────────────────────────────────── */

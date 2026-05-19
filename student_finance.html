@@ -342,10 +342,10 @@ async function boot() {
   if (!token) { location.href = 'login.html'; return; }
 
   try {
-    // Verify session and check role
-    const meResp = await apiFetch('/auth/me').catch(() => null);
-    const role   = meResp?.user?.role || meResp?.data?.role || null;
-    const ALLOWED = ['Admin', 'Bursar', 'Teacher'];  // who can use this portal
+    // Get role from session storage (set by auth.js on login - no extra API call needed)
+    const session = JSON.parse(sessionStorage.getItem('shc_session') || 'null');
+    const role    = session?.role || null;
+    const ALLOWED = ['Admin', 'Bursar', 'Teacher'];
 
     if (role && !ALLOWED.includes(role)) {
       document.body.innerHTML = `
@@ -360,41 +360,70 @@ async function boot() {
       return;
     }
 
-    // Add Bursar label to topbar if applicable
-    if (role === 'Bursar' && meResp?.user?.name) {
+    // Show role in topbar
+    if (role && session?.name) {
       const nameEl = document.querySelector('.topbar-brand p');
-      if (nameEl) nameEl.textContent = `Student Finance Portal — ${meResp.user.name} (Bursar)`;
+      if (nameEl) nameEl.textContent = `Student Finance Portal — ${session.name} (${role})`;
     }
 
-    // Load school info
-    const si = await apiFetch('/admin/settings').catch(() => ({ data: {} }));
-    _schoolInfo = si.data || {};
+    // Load school info — try admin endpoint, fall back to school_settings directly
+    const si = await apiFetch('/admin/').catch(() => null);
+    if (si?.data) {
+      _schoolInfo = si.data;
+    } else {
+      // Fallback: use what's in session or defaults
+      _schoolInfo = {
+        school_name:     'Sacred Heart College Eziukwu Aba',
+        principal_name:  'Rev. Fr. Sullivan Obinna Achilihu',
+        current_session: session?.session || '',
+        current_term:    session?.term    || '',
+      };
+    }
     const sn = _schoolInfo.school_name || 'Sacred Heart College Eziukwu Aba';
     $('school-name-top').textContent = sn;
 
     // Load students
-    const resp = await apiFetch('/students');
-    const students = (resp.data || []).sort((a,b) => a.name.localeCompare(b.name));
-    const sel = $('stu-picker');
-    sel.innerHTML = '<option value="">— Select a student —</option>' +
-      students.map(s => `<option value="${s.id}">${s.name} — ${s.class||''} ${s.arm||''}</option>`).join('');
+    const resp     = await apiFetch('/students');
+    const students = (resp.data || []).sort((a, b) => a.name.localeCompare(b.name));
+    const sel      = $('stu-picker');
+    sel.innerHTML  = '<option value="">— Select a student —</option>' +
+      students.map(s =>
+        `<option value="${s.id}">${s.name} — ${s.class || s.class_name || ''} ${s.arm || ''}</option>`
+      ).join('');
 
     // Auto-select from URL param
     const params = new URLSearchParams(location.search);
-    const pid = params.get('studentId') || params.get('id');
+    const pid    = params.get('studentId') || params.get('id');
     if (pid) { sel.value = pid; selectStudent(pid); }
 
-  } catch(e) { toast('Failed to load: ' + e.message, 'error'); }
+  } catch(e) {
+    // Show error but still render the page shell
+    toast('Load error: ' + e.message + ' — try refreshing', 'error');
+    console.error('[SFP boot]', e);
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
    SELECT STUDENT
 ════════════════════════════════════════════════════════════════ */
 async function selectStudent(id) {
-  if (!id) { _student = null; $('sfp-main').innerHTML = '<div class="empty"><div class="empty-icon">👈</div><p>Select a student.</p></div>'; return; }
+  if (!id) {
+    _student = null;
+    $('sfp-main').innerHTML = '<div class="empty"><div class="empty-icon">👈</div><p>Select a student.</p></div>';
+    return;
+  }
   try {
-    const resp = await apiFetch('/students/' + encodeURIComponent(id));
-    _student   = resp.data || resp;
+    // Try dedicated endpoint first, fall back to building from summary
+    let studentData = null;
+    try {
+      const resp = await apiFetch('/students/' + encodeURIComponent(id));
+      studentData = resp.data || resp;
+    } catch(e) {
+      // Fall back: get basic info from the summary endpoint
+      const sumResp = await apiFetch('/student-finance/summary?sid=' + encodeURIComponent(id)).catch(() => null);
+      studentData = sumResp?.data?.student || { id, name: id, class_name: '', arm: '' };
+    }
+    _student = studentData;
 
     // Update URL without reload
     const url = new URL(location.href);
@@ -417,7 +446,7 @@ async function selectStudent(id) {
 async function loadBalanceChip() {
   if (!_student) return;
   try {
-    const resp = await apiFetch('/student-finance/' + _student.id + '/summary');
+    const resp = await apiFetch('/student-finance/summary?sid=' + encodeURIComponent(_student.id));
     const bal  = parseFloat(resp.data?.ledger?.balance || 0);
     const chip = $('stu-balance-chip');
     chip.innerHTML = `<span class="balance-chip ${bal > 0 ? 'balance-owed' : 'balance-clear'}">${bal > 0 ? '⚠ Owes ' + fmt(bal) : '✓ Account Clear'}</span>`;
@@ -454,7 +483,7 @@ function switchView(view) {
 async function renderOverview() {
   const main = $('sfp-main');
   try {
-    const summaryResp = await apiFetch('/student-finance/' + _student.id + '/summary');
+    const summaryResp = await apiFetch('/student-finance/summary?sid=' + encodeURIComponent(_student.id));
     const summary  = summaryResp.data;
     const ledger   = summary.ledger;
     const leviesData = summary.unpaid;
@@ -467,8 +496,8 @@ async function renderOverview() {
 
     // Get recent activity from summary + charges for the outstanding section
     const [chargesResp, leviesResp] = await Promise.all([
-      apiFetch('/student-finance/' + _student.id + '/charges'),
-      apiFetch('/student-finance/' + _student.id + '/levies'),
+      apiFetch('/student-finance/charges?sid=' + encodeURIComponent(_student.id)),
+      apiFetch('/student-finance/levies?sid=' + encodeURIComponent(_student.id)),
     ]);
     const payments = chargesResp.data || [];
     const levies   = leviesResp.data  || [];
@@ -569,7 +598,7 @@ async function renderOverview() {
 async function renderCharges() {
   const main = $('sfp-main');
   try {
-    const resp = await apiFetch('/student-finance/' + _student.id + '/charges');
+    const resp = await apiFetch('/student-finance/charges?sid=' + encodeURIComponent(_student.id));
     const all  = resp.data || [];
     const sc   = { Paid:'#16a34a',Partial:'#d97706',Unpaid:'#dc2626',Waived:'#6b7280',overdue:'#dc2626' };
 
@@ -610,7 +639,7 @@ async function renderCharges() {
 async function renderPayments() {
   const main = $('sfp-main');
   try {
-    const resp = await apiFetch('/student-finance/' + _student.id + '/payments');
+    const resp = await apiFetch('/student-finance/payments?sid=' + encodeURIComponent(_student.id));
     const paid = resp.data || [];
     const total = paid.reduce((a,p) => a+parseFloat(p.amount||0), 0);
 
@@ -656,7 +685,7 @@ async function renderPayments() {
 async function renderLevies() {
   const main = $('sfp-main');
   try {
-    const resp  = await apiFetch('/student-finance/' + _student.id + '/levies');
+    const resp  = await apiFetch('/student-finance/levies?sid=' + encodeURIComponent(_student.id));
     const levies = resp.data || [];
     const sc = { Paid:'#16a34a', Unpaid:'#dc2626', Partial:'#d97706', Waived:'#6b7280', Exempt:'#7c3aed' };
 
@@ -692,7 +721,7 @@ async function renderLevies() {
 async function renderLedger() {
   const main = $('sfp-main');
   try {
-    const resp    = await apiFetch('/student-finance/' + _student.id + '/ledger');
+    const resp    = await apiFetch('/student-finance/ledger?sid=' + encodeURIComponent(_student.id));
     const entries = resp.data    || [];
     const totalCharged = parseFloat(resp.totalCharged || 0);
     const totalPaid    = parseFloat(resp.totalPaid    || 0);
@@ -837,7 +866,7 @@ async function submitAdjustment() {
   const session= $('adj-session')?.value || null;
   if (!amount || !desc) { toast('Amount and description are required', 'error'); return; }
   try {
-    await apiFetch('/student-finance/' + _student.id + '/adjustment', {
+    await apiFetch('/student-finance/adjustment?sid=' + encodeURIComponent(_student.id), {
       method: 'POST',
       body: { type, amount, description: desc, reference: ref, term, session },
     });
@@ -878,7 +907,7 @@ async function submitQuickPay(chargeId, feeType, expectedAmount, term) {
   if (!amtPaid || !date) { toast('Amount and date required', 'error'); return; }
   const status = amtPaid >= expectedAmount ? 'Paid' : 'Partial';
   try {
-    const payResp = await apiFetch('/student-finance/' + _student.id + '/pay', { method: 'POST', body: { chargeId, amountPaid: amtPaid, date, method, reference: ref } });
+    const payResp = await apiFetch('/student-finance/pay?sid=' + encodeURIComponent(_student.id), { method: 'POST', body: { chargeId, amountPaid: amtPaid, date, method, reference: ref } });
     // Use receipt data returned by server (has student name, class etc. from DB)
     const receiptData = {
       ...(payResp.data?.receiptData || {}),
@@ -970,7 +999,7 @@ async function submitDirectPayment() {
   const ref     = $('dp-ref')?.value || null;
   if (!feeType || !amount || !date) { toast('Fee type, amount, date are required', 'error'); return; }
   try {
-    const resp = await apiFetch('/student-finance/' + _student.id + '/charge', { method: 'POST', body: {
+    const resp = await apiFetch('/student-finance/charge?sid=' + encodeURIComponent(_student.id), { method: 'POST', body: {
       feeType, amount, date, term, status, reference: ref,
     }});
     const receiptData = {
@@ -1010,7 +1039,7 @@ async function submitAddCharge() {
   const term    = $('ac-term')?.value;
   if (!feeType || !amount) { toast('Fee type and amount required', 'error'); return; }
   try {
-    await apiFetch('/student-finance/' + _student.id + '/charge', { method: 'POST', body: {
+    await apiFetch('/student-finance/charge?sid=' + encodeURIComponent(_student.id), { method: 'POST', body: {
       feeType, amount, date, term, status: 'Unpaid',
     }});
     closeModal();
@@ -1154,7 +1183,7 @@ function printStatement() { window.print(); }
 
 function exportStudentCSV() {
   if (!_student) { toast('Select a student first', 'warning'); return; }
-  window.open(API + '/student-finance/' + _student.id + '/export', '_blank');
+  window.open(API + '/student-finance/export?sid=' + encodeURIComponent(_student.id), '_blank');
 }
 
 /* ── Boot ── */

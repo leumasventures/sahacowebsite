@@ -38,11 +38,23 @@ function renderParentPortal() {
   const section = document.getElementById('parent-portal');
   if (!section) return;
 
-  section.innerHTML = `
-    <div style="max-width:720px;margin:2rem auto;">
-      <h2 style="margin:0 0 .4rem;color:#1e40af;">Parent / Guardian Portal</h2>
-      <p style="color:#64748b;margin:0 0 2rem;">Enter the unique access token provided by the school to view your child's report card.</p>
+  const user    = App.currentUser;
+  const wardId  = user?.wardId || user?.ward_id || null;
+  const isParent= user?.role === 'Parent';
 
+  // Linked parent — show their child's financial dashboard automatically
+  if (isParent && wardId) {
+    _renderParentDashboard(section, wardId);
+    return;
+  }
+
+  // Unlinked / token-based access
+  section.innerHTML = `
+    <div style="max-width:760px;margin:2rem auto;">
+      <h2 style="margin:0 0 .4rem;color:#1e40af;">Parent / Guardian Portal</h2>
+      <p style="color:#64748b;margin:0 0 2rem;">
+        Enter the access token provided by the school to view your child's academic and financial records.
+      </p>
       <div style="background:#fff;border-radius:14px;padding:2rem;box-shadow:0 4px 16px rgba(0,0,0,.1);margin-bottom:2rem;">
         <label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.5rem;">Access Token</label>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
@@ -51,14 +63,154 @@ function renderParentPortal() {
                    font-family:monospace;font-size:1rem;letter-spacing:1.5px;text-transform:uppercase;outline:none;"
             onkeydown="if(event.key==='Enter')validateParentToken()">
           <button onclick="validateParentToken()" style="padding:.65rem 1.5rem;background:#1e3a5f;color:#fff;border:none;
-            border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;">View Report Card</button>
+            border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;">View Records</button>
         </div>
         <div id="pp-error" style="color:#ef4444;font-size:.85rem;margin-top:.5rem;min-height:1.25rem;"></div>
       </div>
-
       <div id="pp-report-output"></div>
     </div>`;
 }
+
+async function _renderParentDashboard(section, wardId) {
+  section.innerHTML = `<div style="max-width:860px;margin:0 auto;"><div style="text-align:center;padding:2rem;color:#9ca3af;">Loading your child's records…</div></div>`;
+  try {
+    const BASE  = (window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api');
+    const token = sessionStorage.getItem('shc_token');
+    const hdr   = { Authorization: `Bearer ${token}` };
+
+    const [sumResp, chargesResp, leviesResp] = await Promise.all([
+      fetch(`${BASE}/student-finance/summary?sid=${encodeURIComponent(wardId)}`, { headers: hdr, credentials:'include' }).then(r=>r.json()),
+      fetch(`${BASE}/student-finance/charges?sid=${encodeURIComponent(wardId)}`, { headers: hdr, credentials:'include' }).then(r=>r.json()),
+      fetch(`${BASE}/student-finance/levies?sid=${encodeURIComponent(wardId)}`,  { headers: hdr, credentials:'include' }).then(r=>r.json()),
+    ]);
+
+    const student  = sumResp.data?.student  || {};
+    const ledger   = sumResp.data?.ledger   || {};
+    const unpaid   = sumResp.data?.unpaid   || {};
+    const school   = sumResp.data?.school   || {};
+    const charges  = chargesResp.data || [];
+    const levies   = leviesResp.data  || [];
+
+    const bal        = parseFloat(ledger.balance || 0);
+    const paidPct    = ledger.percentPaid || 0;
+    const schoolName = school.school_name || 'Sacred Heart College Eziukwu Aba';
+    const termStr    = school.current_term    || App.data.schoolInfo?.term    || '';
+    const sessionStr = school.current_session || App.data.schoolInfo?.session || '';
+
+    const sc = { Paid:'#16a34a', Partial:'#d97706', Unpaid:'#dc2626', Waived:'#6b7280' };
+    const badge = (s) => `<span style="background:${sc[s]||'#6b7280'}22;color:${sc[s]||'#6b7280'};border-radius:9999px;padding:.15rem .65rem;font-size:.73rem;font-weight:700;">${s}</span>`;
+
+    section.innerHTML = `
+      <div style="max-width:860px;margin:0 auto;">
+
+        <!-- Header card -->
+        <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:14px;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div style="font-size:1.3rem;font-weight:800;">${student.name||wardId}</div>
+            <div style="font-size:.85rem;opacity:.85;margin-top:.2rem;">${student.class||''} ${student.arm||''} · ID: ${student.id||wardId}</div>
+            <div style="font-size:.8rem;opacity:.75;margin-top:.1rem;">${schoolName} · ${termStr} ${sessionStr}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:.75rem;opacity:.75;margin-bottom:.2rem;">Account Balance</div>
+            <div style="font-size:1.8rem;font-weight:800;color:${bal>0?'#fca5a5':'#86efac'};">
+              ${bal > 0 ? '₦'+bal.toLocaleString('en-NG') : '✓ Cleared'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:.85rem;margin-bottom:1.5rem;">
+          ${[
+            ['Total Charged',  '₦'+parseFloat(ledger.totalCharged||0).toLocaleString(), '#1e3a5f'],
+            ['Total Paid',     '₦'+parseFloat(ledger.totalPaid||0).toLocaleString(),    '#16a34a'],
+            ['Balance',        bal>0 ? '₦'+bal.toLocaleString() : '✓ Clear',             bal>0?'#dc2626':'#16a34a'],
+            ['Unpaid Items',   unpaid.totalCount||0,                                     (unpaid.totalCount||0)>0?'#dc2626':'#16a34a'],
+          ].map(([l,v,c])=>`
+            <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${c};">
+              <div style="font-size:.68rem;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:.2rem;">${l}</div>
+              <div style="font-size:1.2rem;font-weight:700;color:${c};">${v}</div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Progress bar -->
+        <div style="background:#fff;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.25rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.83rem;color:#6b7280;margin-bottom:.55rem;">
+            <span>Payment Progress — ${termStr}</span>
+            <span style="font-weight:700;color:${paidPct>=100?'#16a34a':'#1e3a5f'};">${paidPct}% paid</span>
+          </div>
+          <div style="height:10px;background:#e5e7eb;border-radius:5px;overflow:hidden;">
+            <div style="width:${paidPct}%;height:100%;background:${paidPct>=100?'#16a34a':'#2563eb'};border-radius:5px;"></div>
+          </div>
+        </div>
+
+        <!-- Alert -->
+        ${unpaid.totalCount > 0 ? `
+          <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:1rem 1.4rem;margin-bottom:1.25rem;">
+            <div style="font-weight:700;color:#dc2626;margin-bottom:.3rem;">⚠ ${unpaid.totalCount} Outstanding — ₦${parseFloat(unpaid.totalAmount||0).toLocaleString()}</div>
+            <div style="font-size:.84rem;color:#6b7280;">Please contact the school bursar to make payment and obtain a receipt.</div>
+          </div>` :
+          `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:.9rem 1.4rem;margin-bottom:1.25rem;font-weight:600;color:#16a34a;">✅ All charges are settled for this term.</div>`
+        }
+
+        <!-- Fee charges -->
+        ${charges.length ? `
+          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.25rem;">
+            <div style="padding:.85rem 1.25rem;border-bottom:1px solid #e5e7eb;font-weight:700;color:#1e3a5f;font-size:.9rem;">📋 Fee Charges (${charges.length})</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+              <thead><tr style="background:#f9fafb;">
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">FEE</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TERM</th>
+                <th style="padding:.55rem 1rem;text-align:right;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STATUS</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE PAID</th>
+              </tr></thead>
+              <tbody>${charges.map(c=>`
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:.55rem 1rem;font-weight:600;">${c.fee_type}</td>
+                  <td style="padding:.55rem 1rem;font-size:.82rem;color:#6b7280;">${c.term}</td>
+                  <td style="padding:.55rem 1rem;text-align:right;font-weight:700;">₦${parseFloat(c.amount||0).toLocaleString()}</td>
+                  <td style="padding:.55rem 1rem;">${badge(c.status)}</td>
+                  <td style="padding:.55rem 1rem;font-size:.78rem;color:#9ca3af;">${c.payment_date ? new Date(c.payment_date).toLocaleDateString('en-NG') : '—'}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>` : ''}
+
+        <!-- Levies -->
+        ${levies.length ? `
+          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+            <div style="padding:.85rem 1.25rem;border-bottom:1px solid #e5e7eb;font-weight:700;color:#1e3a5f;font-size:.9rem;">🎯 Levies & Special Fees (${levies.length})</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+              <thead><tr style="background:#f9fafb;">
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">LEVY</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CATEGORY</th>
+                <th style="padding:.55rem 1rem;text-align:right;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">STATUS</th>
+                <th style="padding:.55rem 1rem;text-align:left;font-size:.74rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DUE DATE</th>
+              </tr></thead>
+              <tbody>${levies.map(l=>`
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                  <td style="padding:.55rem 1rem;font-weight:600;">${l.levy_name}</td>
+                  <td style="padding:.55rem 1rem;font-size:.78rem;color:#6b7280;">${l.category||'—'}</td>
+                  <td style="padding:.55rem 1rem;text-align:right;font-weight:700;">₦${parseFloat(l.amount_paid||0).toLocaleString()}</td>
+                  <td style="padding:.55rem 1rem;">${badge(l.status)}</td>
+                  <td style="padding:.55rem 1rem;font-size:.78rem;color:#9ca3af;">${l.due_date ? new Date(l.due_date).toLocaleDateString('en-NG') : '—'}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>` : ''}
+
+      </div>`;
+  } catch(e) {
+    section.innerHTML = `<div style="max-width:760px;margin:0 auto;">
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:1.5rem;color:#dc2626;">
+        <strong>Could not load financial records.</strong><br>
+        <span style="font-size:.85rem;">${e.message}</span>
+      </div>
+    </div>`;
+  }
+}
+
 
 window.validateParentToken = function () {
   const raw   = (document.getElementById('pp-token-input')?.value || '').trim().toUpperCase();
@@ -233,231 +385,6 @@ window.generateParentToken = function (studentId) {
   } else {
     alert('Token: ' + token);
   }
-};
-
-
-/* ─────────────────────────────────────────────────────────────
-   B. FEES / FINANCE MODULE
-───────────────────────────────────────────────────────────── */
-
-/* Ensure data store exists */
-(function initFeesStore() {
-  if (!App.data.fees)         App.data.fees = [];
-  if (!App.data.feeStructure) App.data.feeStructure = [
-    { id: 1, label: 'Tuition Fee',      amount: 45000, level: 'All' },
-    { id: 2, label: 'Development Levy', amount: 10000, level: 'All' },
-    { id: 3, label: 'Exam Fee',         amount: 5000,  level: 'Senior' },
-    { id: 4, label: 'PTA Dues',         amount: 3000,  level: 'All' },
-  ];
-})();
-
-(function addFeesNav() {
-  document.addEventListener('DOMContentLoaded', function () {
-    /* Inject Fees nav item after Attendance if not already there */
-    const navUl = document.querySelector('.sidebar-nav ul');
-    if (!navUl || document.getElementById('nav-li-fees')) return;
-    const attLi = document.getElementById('nav-li-attendance');
-    if (!attLi) return;
-    const li = document.createElement('li');
-    li.id = 'nav-li-fees';
-    li.innerHTML = `<a href="#fees" data-section="fees"><span class="ni">💰</span> Fees</a>`;
-    attLi.insertAdjacentElement('afterend', li);
-
-    /* Inject section placeholder */
-    const main = document.querySelector('main.page-content');
-    if (main && !document.getElementById('fees')) {
-      const sec = document.createElement('section');
-      sec.id = 'fees'; sec.className = 'content-section hidden';
-      main.appendChild(sec);
-    }
-  });
-})();
-
-function renderFees() {
-  if (typeof priv !== 'undefined' && priv.isParent()) { navigate('results'); return; }
-  const section = document.getElementById('fees');
-  if (!section) return;
-
-  const canManage = typeof priv !== 'undefined' ? priv.canManage() : true;
-  const fees = App.data.fees || [];
-  const students = App.data.students || [];
-
-  /* Summary */
-  const totalExpected = students.length * App.data.feeStructure
-    .reduce((a, f) => a + f.amount, 0);
-  const totalPaid = fees.reduce((a, f) => a + (f.amount || 0), 0);
-  const outstanding = totalExpected - totalPaid;
-
-  const _bs = (type, size = 'md') => {
-    const pad = size === 'sm' ? '.3rem .7rem' : '.55rem 1.1rem';
-    const colors = { primary:'background:#1e3a5f;color:#fff;', secondary:'background:#e5e7eb;color:#374151;',
-      success:'background:#22c55e;color:#fff;', danger:'background:#ef4444;color:#fff;', info:'background:#06b6d4;color:#fff;' };
-    return `${colors[type]||colors.primary}border:none;padding:${pad};border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:500;margin:.15rem;`;
-  };
-
-  section.innerHTML = `
-    <h2 style="margin:0 0 1.5rem;">Fees & Finance</h2>
-
-    <!-- Stats -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.75rem;">
-      ${[
-        ['💰','Total Expected',  '₦' + totalExpected.toLocaleString(),   '#2563eb'],
-        ['✅','Total Collected', '₦' + totalPaid.toLocaleString(),        '#22c55e'],
-        ['⚠️','Outstanding',    '₦' + outstanding.toLocaleString(),      outstanding>0?'#ef4444':'#22c55e'],
-        ['👥','Students',        students.length,                          '#7c3aed'],
-      ].map(([icon, label, val, color]) => `
-        <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid ${color};">
-          <div style="font-size:1.3rem;">${icon}</div>
-          <div style="font-size:1.5rem;font-weight:700;color:${color};line-height:1.2;">${val}</div>
-          <div style="font-size:.78rem;color:#6b7280;margin-top:.1rem;">${label}</div>
-        </div>`).join('')}
-    </div>
-
-    <!-- Toolbar -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-      <h3 style="margin:0;">Payment Records</h3>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        ${canManage ? `<button onclick="openFeePaymentModal()" style="${_bs('primary')}">+ Record Payment</button>` : ''}
-        <button onclick="exportFeesCSV()" style="${_bs('secondary')}">⬇ Export CSV</button>
-      </div>
-    </div>
-
-    <!-- Search -->
-    <input id="fees-search" placeholder="🔍 Search student name or class…" oninput="filterFeesTable(this.value)"
-      style="padding:.45rem .75rem;border:1px solid #d1d5db;border-radius:8px;font-size:.875rem;width:100%;max-width:280px;margin-bottom:1rem;outline:none;">
-
-    <!-- Table -->
-    <div style="overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-      <table style="width:100%;border-collapse:collapse;font-size:.875rem;" id="fees-table">
-        <thead><tr style="background:#f9fafb;">
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Student</th>
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Class</th>
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Term</th>
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Fee Type</th>
-          <th style="padding:.65rem 1rem;text-align:right;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Amount</th>
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Date</th>
-          <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Status</th>
-          ${canManage ? '<th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:#6b7280;font-size:.8rem;text-transform:uppercase;border-bottom:1px solid #e5e7eb;">Actions</th>' : ''}
-        </tr></thead>
-        <tbody id="fees-tbody">
-          ${fees.length === 0
-            ? `<tr><td colspan="8" style="text-align:center;padding:3rem;color:#9ca3af;">No payment records yet.</td></tr>`
-            : fees.map(f => {
-                const stu = students.find(s => s.id === f.studentId);
-                return `<tr style="border-bottom:1px solid #f3f4f6;" data-search="${(stu?.name||'').toLowerCase()} ${(stu?.class||'').toLowerCase()}">
-                  <td style="padding:.65rem 1rem;font-weight:500;">${stu?.name || f.studentId}</td>
-                  <td style="padding:.65rem 1rem;">${stu ? stu.class + ' ' + stu.arm : '—'}</td>
-                  <td style="padding:.65rem 1rem;">${f.term}</td>
-                  <td style="padding:.65rem 1rem;">${f.feeType}</td>
-                  <td style="padding:.65rem 1rem;text-align:right;font-weight:600;color:#1e3a5f;">₦${(f.amount||0).toLocaleString()}</td>
-                  <td style="padding:.65rem 1rem;">${f.date}</td>
-                  <td style="padding:.65rem 1rem;">
-                    <span style="padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600;
-                      background:${f.status==='Paid'?'#dcfce7':'#fef3c7'};color:${f.status==='Paid'?'#166534':'#92400e'};">
-                      ${f.status}
-                    </span>
-                  </td>
-                  ${canManage ? `<td style="padding:.65rem 1rem;">
-                    <button onclick="deleteFeeRecord('${f.id}')" style="${_bs('danger','sm')}">🗑</button>
-                  </td>` : ''}
-                </tr>`;
-              }).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-window.filterFeesTable = function (q) {
-  const lq = q.toLowerCase();
-  document.querySelectorAll('#fees-tbody tr[data-search]').forEach(row => {
-    row.style.display = row.dataset.search.includes(lq) ? '' : 'none';
-  });
-};
-
-window.openFeePaymentModal = function () {
-  if (!App || typeof showModal !== 'function') return;
-  const stuOpts = App.data.students.map(s =>
-    `<option value="${s.id}">${s.name} (${s.class} ${s.arm})</option>`).join('');
-  const feeOpts = App.data.feeStructure.map(f =>
-    `<option value="${f.label}">${f.label} — ₦${f.amount.toLocaleString()}</option>`).join('');
-
-  showModal(`
-    <h3 style="margin:0 0 1.5rem;">Record Fee Payment</h3>
-    <form id="fee-form" style="display:grid;gap:1rem;">
-      <div>
-        <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Student *</label>
-        <select id="fee-student" style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;" required>
-          <option value="">— Select student —</option>${stuOpts}
-        </select>
-      </div>
-      <div>
-        <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Fee Type *</label>
-        <select id="fee-type" style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;" required>${feeOpts}</select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div>
-          <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Amount (₦) *</label>
-          <input type="number" id="fee-amount" min="0" style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;" required>
-        </div>
-        <div>
-          <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Date *</label>
-          <input type="date" id="fee-date" value="${new Date().toISOString().split('T')[0]}"
-            style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;" required>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div>
-          <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Term</label>
-          <select id="fee-term" style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;">
-            <option>First Term</option><option selected>Second Term</option><option>Third Term</option>
-          </select>
-        </div>
-        <div>
-          <label style="display:block;font-size:.875rem;font-weight:500;color:#374151;margin-bottom:.3rem;">Status</label>
-          <select id="fee-status" style="width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;">
-            <option>Paid</option><option>Partial</option>
-          </select>
-        </div>
-      </div>
-      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.5rem;">
-        <button type="button" onclick="closeModal()" style="padding:.55rem 1.1rem;background:#e5e7eb;color:#374151;border:none;border-radius:8px;cursor:pointer;font-weight:500;">Cancel</button>
-        <button type="submit" style="padding:.55rem 1.1rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500;">Save Payment</button>
-      </div>
-    </form>`);
-
-  document.getElementById('fee-form').onsubmit = (e) => {
-    e.preventDefault();
-    const studentId = document.getElementById('fee-student').value;
-    const feeType   = document.getElementById('fee-type').value;
-    const amount    = parseFloat(document.getElementById('fee-amount').value);
-    if (!studentId || !feeType || isNaN(amount)) return;
-    App.data.fees.push({
-      id: 'FEE' + Date.now(),
-      studentId, feeType, amount,
-      date:   document.getElementById('fee-date').value,
-      term:   document.getElementById('fee-term').value,
-      status: document.getElementById('fee-status').value,
-    });
-    closeModal();
-    renderFees();
-    toast('Payment recorded!', 'success');
-  };
-};
-
-window.deleteFeeRecord = function (id) {
-  if (!confirm('Delete this payment record?')) return;
-  App.data.fees = App.data.fees.filter(f => f.id !== id);
-  renderFees();
-  toast('Record deleted.', 'warning');
-};
-
-window.exportFeesCSV = function () {
-  const rows = [['Student', 'Class', 'Arm', 'Fee Type', 'Amount', 'Date', 'Term', 'Status']];
-  (App.data.fees || []).forEach(f => {
-    const s = App.data.students.find(st => st.id === f.studentId);
-    rows.push([s?.name||f.studentId, s?.class||'', s?.arm||'', f.feeType, f.amount, f.date, f.term, f.status]);
-  });
-  _downloadCSV(rows, 'fees_records.csv');
 };
 
 
@@ -1318,3 +1245,821 @@ document.addEventListener('DOMContentLoaded', function () {
       pushNotification('No results recorded yet. Start by entering results.', 'info');
   }, 800);
 });
+/* ═══════════════════════════════════════════════════════════════════════════
+   B. FEE SETUP  —  Admin + Bursar only
+   Dashboard sidebar 📋 Fee Setup.
+   All payment recording, receipts, ledger → student-finance.html
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── nav case wired in script.js navigate() → calls renderFees() ── */
+
+let _feeSetupTab = 'fees';
+
+function renderFees() {
+  const isBursar = App.currentUser?.role === 'Bursar';
+  if (!priv.isAdmin() && !isBursar) { accessDeniedPage('fees'); return; }
+  const section = document.getElementById('fees');
+  if (!section) return;
+
+  const T = id =>
+    'padding:.5rem 1.1rem;border:none;cursor:pointer;font-weight:600;font-size:.83rem;border-radius:8px;transition:all .15s;' +
+    (_feeSetupTab === id ? 'background:#1e3a5f;color:#fff;' : 'background:#f1f5f9;color:#475569;');
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">📋 Fee Setup</h2>
+      <button onclick="window.open('student-finance.html','_blank')"
+        style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;
+               padding:.55rem 1.3rem;border-radius:10px;font-weight:700;cursor:pointer;font-size:.875rem;">
+        🏦 Open Finance Portal →
+      </button>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+      <button onclick="feeSetupSwitchTab('fees')"   style="${T('fees')}">📌 Regular Fees</button>
+      <button onclick="feeSetupSwitchTab('levies')" style="${T('levies')}">🎯 Levies</button>
+      <button onclick="feeSetupSwitchTab('all')"    style="${T('all')}">📋 All Templates</button>
+      <button onclick="feeSetupSwitchTab('charge')" style="${T('charge')}">⚡ Bulk Charge</button>
+    </div>
+    <div id="fee-setup-body"></div>`;
+
+  feeSetupLoadTab(_feeSetupTab);
+}
+
+window.feeSetupSwitchTab = function(tab) { _feeSetupTab = tab; renderFees(); };
+
+function feeSetupLoadTab(tab) {
+  const el = document.getElementById('fee-setup-body');
+  if (!el) return;
+  if      (tab === 'fees')   feeTabRegular(el);
+  else if (tab === 'levies') feeTabLevies(el);
+  else if (tab === 'all')    feeTabAll(el);
+  else if (tab === 'charge') feeTabCharge(el);
+}
+
+/* ── shared helpers ── */
+const _fsClassOpts = () => (App.data.classes||[]).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+const _fsTermOpts  = () => ['First Term','Second Term','Third Term'].map(t=>`<option value="${t}">${t}</option>`).join('');
+const _fsSession   = () => App.data.schoolInfo?.session || '';
+const _fsCurrency  = n  => '₦' + parseFloat(n||0).toLocaleString();
+
+/* ══════════════════════════════════════════════════════════════════
+   TAB 1 — REGULAR FEES
+══════════════════════════════════════════════════════════════════ */
+function feeTabRegular(el) {
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:minmax(300px,360px) 1fr;gap:1.25rem;align-items:start;flex-wrap:wrap;">
+
+      <!-- CREATE FORM -->
+      <div style="background:#fff;border-radius:12px;padding:1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);position:sticky;top:1rem;">
+        <h4 style="margin:0 0 1rem;color:#1e3a5f;font-size:.95rem;padding-bottom:.75rem;border-bottom:1px solid #e5e7eb;">➕ New Fee Template</h4>
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+
+          <div>
+            <label style="${labelStyle()}">Fee Name *</label>
+            <input id="fs-ft-label" placeholder="e.g. School Fees, PTA Levy, Computer Levy"
+              style="${inputStyle()};width:100%;" autocomplete="off">
+          </div>
+
+          <div>
+            <label style="${labelStyle()}">Amount (₦) *</label>
+            <input id="fs-ft-amount" type="number" min="0" step="100" placeholder="0"
+              style="${inputStyle()};width:100%;">
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:.9rem;border:1px solid #e5e7eb;">
+            <div style="font-size:.73rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;">Who pays?</div>
+            <select id="fs-ft-level" onchange="feeSetupToggleClass('fs-ft-class-wrap','fs-ft-level')" style="${selectStyle()};width:100%;">
+              <option value="All">All Classes</option>
+              <option value="Junior">Junior Classes only (JSS 1–3)</option>
+              <option value="Senior">Senior Classes only (SS 1–3)</option>
+              <option value="Class">One Specific Class</option>
+            </select>
+            <div id="fs-ft-class-wrap" style="margin-top:.6rem;display:none;">
+              <label style="${labelStyle()}">Select Class</label>
+              <select id="fs-ft-class" style="${selectStyle()};width:100%;">
+                <option value="">— pick class —</option>${_fsClassOpts()}
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+            <div>
+              <label style="${labelStyle()}">Term</label>
+              <select id="fs-ft-term" style="${selectStyle()};width:100%;">
+                <option value="">Every Term</option>${_fsTermOpts()}
+              </select>
+            </div>
+            <div>
+              <label style="${labelStyle()}">Session</label>
+              <input id="fs-ft-session" value="${_fsSession()}" placeholder="e.g. 2025/2026"
+                style="${inputStyle()};width:100%;">
+            </div>
+          </div>
+
+          <div>
+            <label style="${labelStyle()}">Description (optional)</label>
+            <textarea id="fs-ft-desc" rows="2" placeholder="Brief note about this fee"
+              style="${inputStyle()};resize:none;width:100%;"></textarea>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer;">
+            <input type="checkbox" id="fs-ft-mandatory" checked style="width:15px;height:15px;">
+            Mandatory
+          </label>
+
+          <button onclick="feeSetupSubmitFee()"
+            style="${btnStyle('primary')};width:100%;justify-content:center;padding:.7rem;">
+            💾 Save Fee Template
+          </button>
+        </div>
+      </div>
+
+      <!-- LIST -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+          <h4 style="margin:0;font-size:.9rem;color:#374151;">Saved Fee Templates</h4>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <select id="fs-fl-class" onchange="feeSetupLoadFeeList()" style="${selectStyle()}">
+              <option value="">All Classes</option>${_fsClassOpts()}
+            </select>
+            <select id="fs-fl-term" onchange="feeSetupLoadFeeList()" style="${selectStyle()}">
+              <option value="">All Terms</option>${_fsTermOpts()}
+            </select>
+          </div>
+        </div>
+        <div id="fs-fee-list"></div>
+      </div>
+    </div>`;
+
+  feeSetupLoadFeeList();
+}
+
+window.feeSetupToggleClass = function(wrapId, selectId) {
+  const v = document.getElementById(selectId)?.value;
+  const w = document.getElementById(wrapId);
+  if (w) w.style.display = v === 'Class' ? '' : 'none';
+};
+
+window.feeSetupLoadFeeList = async function() {
+  const el   = document.getElementById('fs-fee-list');
+  if (!el) return;
+  const cls  = document.getElementById('fs-fl-class')?.value;
+  const term = document.getElementById('fs-fl-term')?.value;
+  el.innerHTML = `<div style="text-align:center;padding:1.5rem;color:#9ca3af;">Loading…</div>`;
+  try {
+    const resp  = await Fees.getStructure(cls ? { class: cls } : {});
+    let   items = resp.data || [];
+    if (term) items = items.filter(f => !f.term || f.term === term);
+
+    if (!items.length) {
+      el.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
+                    color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">📌</div>
+          <p style="margin:0;">No fee templates yet.<br>Use the form to create one.</p>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">FEE NAME</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">APPLIES TO</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TERM</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+            <th style="padding:.6rem 1rem;text-align:center;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+          </tr></thead>
+          <tbody>
+            ${items.map(f => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.6rem 1rem;">
+                  <div style="font-weight:600;">${f.label}</div>
+                  ${f.description ? `<div style="font-size:.72rem;color:#9ca3af;">${f.description}</div>` : ''}
+                </td>
+                <td style="padding:.6rem 1rem;font-size:.82rem;color:#475569;">${f.class_name || f.level || 'All'}</td>
+                <td style="padding:.6rem 1rem;font-size:.82rem;color:#475569;">${f.term || 'Every Term'}</td>
+                <td style="padding:.6rem 1rem;text-align:right;font-weight:700;color:#059669;">${_fsCurrency(f.amount)}</td>
+                <td style="padding:.6rem 1rem;text-align:center;">
+                  <div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;">
+                    <button onclick="feeSetupEditFee(${JSON.stringify(f).replace(/"/g,'&quot;')})"
+                      style="${btnStyle('outline','sm')}" title="Edit">✏️</button>
+                    <button onclick="feeSetupChargeNow('fee',${f.id},'${f.label.replace(/'/g,"\\'")}',${f.amount},'${f.class_name||''}','${f.level||'All'}')"
+                      style="${btnStyle('secondary','sm')}" title="Re-charge any students not yet charged">⚡ Re-charge</button>
+                    <button onclick="feeSetupDeleteFee(${f.id})"
+                      style="${btnStyle('danger','sm')}">🗑</button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+  }
+};
+
+window.feeSetupSubmitFee = async function() {
+  const label = document.getElementById('fs-ft-label')?.value?.trim();
+  const amt   = parseFloat(document.getElementById('fs-ft-amount')?.value || 0);
+  if (!label)  { toast('Fee name is required', 'error'); return; }
+  if (!amt)    { toast('Enter a valid amount', 'error'); return; }
+  const level = document.getElementById('fs-ft-level')?.value;
+  const cls   = level === 'Class' ? (document.getElementById('fs-ft-class')?.value || '') : '';
+  if (level === 'Class' && !cls) { toast('Select a specific class', 'error'); return; }
+  const payload = {
+    label, amount: amt,
+    level:       level === 'Class' ? 'All' : level,
+    class_name:  cls  || null,
+    term:        document.getElementById('fs-ft-term')?.value    || null,
+    session:     document.getElementById('fs-ft-session')?.value || null,
+    description: document.getElementById('fs-ft-desc')?.value    || null,
+    mandatory:   document.getElementById('fs-ft-mandatory')?.checked ? 1 : 0,
+  };
+  try {
+    const resp = cls
+      ? await Fees.assignFeeToClass({ ...payload, class_name: cls })
+      : await Fees.addStructureItem(payload);
+    // reset form
+    ['fs-ft-label','fs-ft-amount','fs-ft-desc'].forEach(id => {
+      const e = document.getElementById(id); if (e) e.value = '';
+    });
+    document.getElementById('fs-ft-level').value   = 'All';
+    document.getElementById('fs-ft-term').value    = '';
+    document.getElementById('fs-ft-session').value = _fsSession();
+    document.getElementById('fs-ft-mandatory').checked = true;
+    document.getElementById('fs-ft-class-wrap').style.display = 'none';
+    const charged = resp?.data?.autoCharged || resp?.charged || 0;
+    toast(`✅ Fee saved! Charged to ${charged} student${charged!==1?'s':''} automatically.`, 'success');
+    feeSetupLoadFeeList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.feeSetupEditFee = function(f) {
+  showModal(`
+    <h3 style="margin:0 0 1.1rem;">✏️ Edit Fee Template</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;">
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Fee Name *</label>
+        <input id="efs-label" value="${f.label||''}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Amount (₦) *</label>
+        <input id="efs-amount" type="number" min="0" value="${f.amount||0}" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Level</label>
+        <select id="efs-level" style="${selectStyle()};width:100%;">
+          <option ${f.level==='All'?'selected':''} value="All">All</option>
+          <option ${f.level==='Junior'?'selected':''} value="Junior">Junior</option>
+          <option ${f.level==='Senior'?'selected':''} value="Senior">Senior</option>
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Specific Class</label>
+        <select id="efs-class" style="${selectStyle()};width:100%;">
+          <option value="">— None —</option>${_fsClassOpts()}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Term</label>
+        <select id="efs-term" style="${selectStyle()};width:100%;">
+          <option value="">All Terms</option>${_fsTermOpts()}
+        </select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="efs-session" value="${f.session||''}" placeholder="e.g. 2025/2026" style="${inputStyle()};width:100%;">
+      </div>
+      <div>
+        <label style="${labelStyle()}">Mandatory</label>
+        <select id="efs-mandatory" style="${selectStyle()};width:100%;">
+          <option value="1" ${f.mandatory!==0?'selected':''}>Yes</option>
+          <option value="0" ${f.mandatory===0?'selected':''}>No</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="${labelStyle()}">Description</label>
+        <textarea id="efs-desc" rows="2" style="${inputStyle()};width:100%;resize:none;">${f.description||''}</textarea>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:.75rem;justify-content:flex-end;margin-top:.5rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="feeSetupSaveEditFee(${f.id})" style="${btnStyle('primary')}">💾 Save Changes</button>
+      </div>
+    </div>`);
+  // Set select values after modal renders
+  setTimeout(() => {
+    const cs = document.getElementById('efs-class');
+    if (cs) cs.value = f.class_name||'';
+    const ts = document.getElementById('efs-term');
+    if (ts) ts.value = f.term||'';
+  }, 50);
+};
+
+window.feeSetupSaveEditFee = async function(id) {
+  const label = document.getElementById('efs-label')?.value?.trim();
+  const amount = parseFloat(document.getElementById('efs-amount')?.value || 0);
+  if (!label || !amount) { toast('Name and amount required', 'error'); return; }
+  try {
+    await Fees.updateStructureItem(id, {
+      label, amount,
+      level:       document.getElementById('efs-level')?.value    || 'All',
+      class_name:  document.getElementById('efs-class')?.value    || null,
+      term:        document.getElementById('efs-term')?.value     || null,
+      session:     document.getElementById('efs-session')?.value  || null,
+      mandatory:   parseInt(document.getElementById('efs-mandatory')?.value),
+      description: document.getElementById('efs-desc')?.value     || null,
+    });
+    closeModal();
+    toast('Updated!', 'success');
+    feeSetupLoadFeeList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.feeSetupDeleteFee = async function(id) {
+  if (!confirmDlg('Delete this fee template?')) return;
+  try {
+    await Fees.deleteStructureItem(id);
+    toast('Deleted', 'warning');
+    feeSetupLoadFeeList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   TAB 2 — LEVIES / SPECIAL FEES
+══════════════════════════════════════════════════════════════════ */
+const LEVY_CATS = ['Sports','Graduation','Cultural','Interhouse','Excursion','Uniform','ID Card','Library','Technology','Medical','Other'];
+const LEVY_EMOJI = {Sports:'⚽',Graduation:'🎓',Cultural:'🎭',Interhouse:'🏁',Excursion:'🚌',Uniform:'👔','ID Card':'🪪',Library:'📚',Technology:'💻',Medical:'🏥',Other:'📌'};
+
+function feeTabLevies(el) {
+  const catOpts = LEVY_CATS.map(c=>`<option value="${c}">${LEVY_EMOJI[c]||'📌'} ${c}</option>`).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:minmax(300px,360px) 1fr;gap:1.25rem;align-items:start;">
+
+      <!-- CREATE FORM -->
+      <div style="background:#fff;border-radius:12px;padding:1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);position:sticky;top:1rem;">
+        <h4 style="margin:0 0 1rem;color:#1e3a5f;font-size:.95rem;padding-bottom:.75rem;border-bottom:1px solid #e5e7eb;">➕ New Levy</h4>
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+
+          <div>
+            <label style="${labelStyle()}">Levy Name *</label>
+            <input id="fs-lv-name" placeholder="e.g. Sports Day Fee, Graduation Fee"
+              style="${inputStyle()};width:100%;" autocomplete="off">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+            <div>
+              <label style="${labelStyle()}">Amount (₦) *</label>
+              <input id="fs-lv-amount" type="number" min="0" step="100" placeholder="0"
+                style="${inputStyle()};width:100%;">
+            </div>
+            <div>
+              <label style="${labelStyle()}">Category</label>
+              <select id="fs-lv-cat" style="${selectStyle()};width:100%;">${catOpts}</select>
+            </div>
+          </div>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:.9rem;border:1px solid #e5e7eb;">
+            <div style="font-size:.73rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;">Who pays?</div>
+            <select id="fs-lv-target" onchange="feeSetupToggleClass('fs-lv-class-wrap','fs-lv-target')" style="${selectStyle()};width:100%;">
+              <option value="All">All Students</option>
+              <option value="Junior">Junior Classes (JSS)</option>
+              <option value="Senior">Senior Classes (SS)</option>
+              <option value="Class">One Specific Class</option>
+            </select>
+            <div id="fs-lv-class-wrap" style="margin-top:.6rem;display:none;">
+              <label style="${labelStyle()}">Select Class</label>
+              <select id="fs-lv-class" style="${selectStyle()};width:100%;">
+                <option value="">— pick class —</option>${_fsClassOpts()}
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+            <div>
+              <label style="${labelStyle()}">Term</label>
+              <select id="fs-lv-term" style="${selectStyle()};width:100%;">
+                <option value="">Any Term</option>${_fsTermOpts()}
+              </select>
+            </div>
+            <div>
+              <label style="${labelStyle()}">Due Date</label>
+              <input id="fs-lv-due" type="date" style="${inputStyle()};width:100%;">
+            </div>
+          </div>
+
+          <div>
+            <label style="${labelStyle()}">Description (optional)</label>
+            <textarea id="fs-lv-desc" rows="2" placeholder="Brief description"
+              style="${inputStyle()};resize:none;width:100%;"></textarea>
+          </div>
+
+          <button onclick="feeSetupSubmitLevy()"
+            style="${btnStyle('secondary')};width:100%;justify-content:center;padding:.7rem;">
+            💾 Save Levy
+          </button>
+        </div>
+      </div>
+
+      <!-- LIST -->
+      <div>
+        <h4 style="margin:0 0 .75rem;font-size:.9rem;color:#374151;">Saved Levies</h4>
+        <div id="fs-levy-list"></div>
+      </div>
+    </div>`;
+
+  feeSetupLoadLevyList();
+}
+
+window.feeSetupLoadLevyList = async function() {
+  const el = document.getElementById('fs-levy-list');
+  if (!el) return;
+  el.innerHTML = `<div style="text-align:center;padding:1.5rem;color:#9ca3af;">Loading…</div>`;
+  try {
+    const resp  = await Levies.getAll();
+    const items = resp.data || [];
+    if (!items.length) {
+      el.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
+                    color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">🎯</div>
+          <p style="margin:0;">No levies yet.<br>Use the form to add one.</p>
+        </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">LEVY NAME</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CATEGORY</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">APPLIES TO</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+            <th style="padding:.6rem 1rem;text-align:center;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>
+          </tr></thead>
+          <tbody>
+            ${items.map(l => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.6rem 1rem;">
+                  <div style="font-weight:600;">${l.name}</div>
+                  ${l.description ? `<div style="font-size:.72rem;color:#9ca3af;">${l.description}</div>` : ''}
+                  ${l.due_date ? `<div style="font-size:.72rem;color:#d97706;">Due: ${new Date(l.due_date).toLocaleDateString('en-NG')}</div>` : ''}
+                </td>
+                <td style="padding:.6rem 1rem;">
+                  <span style="background:#eff6ff;color:#2563eb;border-radius:4px;padding:.15rem .5rem;font-size:.72rem;font-weight:600;">
+                    ${LEVY_EMOJI[l.category]||'📌'} ${l.category||'Other'}
+                  </span>
+                </td>
+                <td style="padding:.6rem 1rem;font-size:.82rem;color:#475569;">${l.class_name||l.target||'All'}</td>
+                <td style="padding:.6rem 1rem;text-align:right;font-weight:700;color:#059669;">${_fsCurrency(l.amount)}</td>
+                <td style="padding:.6rem 1rem;text-align:center;">
+                  <div style="display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;">
+                    <button onclick="feeSetupEditLevy(${JSON.stringify(l).replace(/"/g,'&quot;')})"
+                      style="${btnStyle('outline','sm')}" title="Edit">✏️</button>
+                    <button onclick="feeSetupChargeNow('levy',${l.id},'${l.name.replace(/'/g,"\\'")}',${l.amount},'${l.class_name||''}','${l.target||'All'}')"
+                      style="${btnStyle('secondary','sm')}" title="Re-charge any students not yet charged">⚡ Re-charge</button>
+                    <button onclick="feeSetupDeleteLevy(${l.id})"
+                      style="${btnStyle('danger','sm')}">🗑</button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+  }
+};
+
+window.feeSetupSubmitLevy = async function() {
+  const name = document.getElementById('fs-lv-name')?.value?.trim();
+  const amt  = parseFloat(document.getElementById('fs-lv-amount')?.value || 0);
+  if (!name) { toast('Levy name is required', 'error'); return; }
+  if (!amt)  { toast('Enter a valid amount', 'error'); return; }
+  const target = document.getElementById('fs-lv-target')?.value;
+  const cls    = target === 'Class' ? (document.getElementById('fs-lv-class')?.value || '') : '';
+  if (target === 'Class' && !cls) { toast('Select a specific class', 'error'); return; }
+  try {
+    const resp = await Levies.create({
+      name, amount: amt,
+      category:    document.getElementById('fs-lv-cat')?.value,
+      target,
+      class_name:  cls  || null,
+      term:        document.getElementById('fs-lv-term')?.value || null,
+      due_date:    document.getElementById('fs-lv-due')?.value  || null,
+      description: document.getElementById('fs-lv-desc')?.value || null,
+      mandatory:   1,
+    });
+    ['fs-lv-name','fs-lv-amount','fs-lv-desc','fs-lv-due'].forEach(id => {
+      const e = document.getElementById(id); if (e) e.value = '';
+    });
+    document.getElementById('fs-lv-target').value = 'All';
+    document.getElementById('fs-lv-class-wrap').style.display = 'none';
+    const charged = resp?.data?.autoCharged || resp?.charged || 0;
+    toast(`✅ Levy saved! Charged to ${charged} student${charged!==1?'s':''} automatically.`, 'success');
+    feeSetupLoadLevyList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.feeSetupEditLevy = function(l) {
+  const catOpts = LEVY_CATS.map(c=>`<option value="${c}" ${l.category===c?'selected':''}>${LEVY_EMOJI[c]||'📌'} ${c}</option>`).join('');
+  showModal(`
+    <h3 style="margin:0 0 1.1rem;">✏️ Edit Levy</h3>
+    <div style="display:flex;flex-direction:column;gap:.8rem;">
+      <div>
+        <label style="${labelStyle()}">Levy Name *</label>
+        <input id="elv-name" value="${l.name||''}" style="${inputStyle()};width:100%;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <div>
+          <label style="${labelStyle()}">Amount (₦) *</label>
+          <input id="elv-amount" type="number" value="${l.amount||0}" style="${inputStyle()};width:100%;">
+        </div>
+        <div>
+          <label style="${labelStyle()}">Category</label>
+          <select id="elv-cat" style="${selectStyle()};width:100%;">${catOpts}</select>
+        </div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Applies To</label>
+        <select id="elv-target" style="${selectStyle()};width:100%;">
+          <option value="All"    ${l.target==='All'   ?'selected':''}>All Students</option>
+          <option value="Junior" ${l.target==='Junior'?'selected':''}>Junior Classes</option>
+          <option value="Senior" ${l.target==='Senior'?'selected':''}>Senior Classes</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <div>
+          <label style="${labelStyle()}">Term</label>
+          <select id="elv-term" style="${selectStyle()};width:100%;">
+            <option value="">Any Term</option>${_fsTermOpts()}
+          </select>
+        </div>
+        <div>
+          <label style="${labelStyle()}">Due Date</label>
+          <input id="elv-due" type="date" value="${l.due_date||''}" style="${inputStyle()};width:100%;">
+        </div>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Description</label>
+        <textarea id="elv-desc" rows="2" style="${inputStyle()};width:100%;resize:none;">${l.description||''}</textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.5rem;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="feeSetupSaveEditLevy(${l.id})" style="${btnStyle('primary')}">💾 Save</button>
+      </div>
+    </div>`);
+  setTimeout(() => {
+    const ts = document.getElementById('elv-term');
+    if (ts) ts.value = l.term || '';
+  }, 50);
+};
+
+window.feeSetupSaveEditLevy = async function(id) {
+  const name = document.getElementById('elv-name')?.value?.trim();
+  const amount = parseFloat(document.getElementById('elv-amount')?.value || 0);
+  if (!name || !amount) { toast('Name and amount required', 'error'); return; }
+  try {
+    await Levies.update(id, {
+      name, amount,
+      category:    document.getElementById('elv-cat')?.value    || null,
+      target:      document.getElementById('elv-target')?.value || 'All',
+      term:        document.getElementById('elv-term')?.value   || null,
+      due_date:    document.getElementById('elv-due')?.value    || null,
+      description: document.getElementById('elv-desc')?.value   || null,
+    });
+    closeModal();
+    toast('Levy updated!', 'success');
+    feeSetupLoadLevyList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.feeSetupDeleteLevy = async function(id) {
+  if (!confirmDlg('Delete this levy?')) return;
+  try {
+    await Levies.remove(id);
+    toast('Deleted', 'warning');
+    feeSetupLoadLevyList();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   TAB 3 — ALL TEMPLATES
+══════════════════════════════════════════════════════════════════ */
+async function feeTabAll(el) {
+  el.innerHTML = `<div style="text-align:center;padding:2rem;color:#9ca3af;">Loading all templates…</div>`;
+  try {
+    const [fr, lr] = await Promise.all([Fees.getStructure(), Levies.getAll()]);
+    const fees   = (fr.data||[]).map(f => ({...f, _t:'fee'}));
+    const levies = (lr.data||[]).map(l => ({...l, _t:'levy'}));
+    const all    = [...fees, ...levies].sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+
+    if (!all.length) {
+      el.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
+                    color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:2.5rem;">📋</div>
+          <p>No templates yet. Use the Fees and Levies tabs to create them.</p>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <div style="padding:.85rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+          <span style="font-weight:600;color:#374151;">${all.length} Templates — ${fees.length} fee${fees.length!==1?'s':''} · ${levies.length} lev${levies.length!==1?'ies':'y'}</span>
+          <button onclick="feeSetupSwitchTab('fees')" style="${btnStyle('primary','sm')}">+ Add Fee</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:.84rem;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TYPE</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">APPLIES TO</th>
+            <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">TERM</th>
+            <th style="padding:.6rem 1rem;text-align:right;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">AMOUNT</th>
+            <th style="padding:.6rem 1rem;text-align:center;font-size:.75rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTION</th>
+          </tr></thead>
+          <tbody>${all.map(t => {
+            const isLevy = t._t === 'levy';
+            const name   = isLevy ? t.name : t.label;
+            const tag    = isLevy
+              ? `<span style="background:#eff6ff;color:#2563eb;border-radius:4px;padding:.15rem .45rem;font-size:.71rem;font-weight:600;">${LEVY_EMOJI[t.category]||'📌'} Levy</span>`
+              : `<span style="background:#f0fdf4;color:#166534;border-radius:4px;padding:.15rem .45rem;font-size:.71rem;font-weight:600;">📌 Fee</span>`;
+            const applies = isLevy ? (t.class_name||t.target||'All') : (t.class_name||t.level||'All');
+            return `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.6rem 1rem;font-weight:600;">${name}</td>
+                <td style="padding:.6rem 1rem;">${tag}</td>
+                <td style="padding:.6rem 1rem;font-size:.82rem;color:#475569;">${applies}</td>
+                <td style="padding:.6rem 1rem;font-size:.82rem;color:#475569;">${t.term||'—'}</td>
+                <td style="padding:.6rem 1rem;text-align:right;font-weight:700;color:#059669;">${_fsCurrency(t.amount||0)}</td>
+                <td style="padding:.6rem 1rem;text-align:center;">
+                  <button onclick="feeSetupChargeNow('${t._t}',${t.id},'${name.replace(/'/g,"\\'")}',${t.amount||0},'${(isLevy?t.class_name:t.class_name)||''}','${(isLevy?t.target:t.level)||'All'}')"
+                    style="${btnStyle('primary','sm')}">⚡ Charge</button>
+                </td>
+              </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TAB 4 — BULK CHARGE
+══════════════════════════════════════════════════════════════════ */
+function feeTabCharge(el) {
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:1.25rem;align-items:start;">
+
+      <div style="background:#fff;border-radius:12px;padding:1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);position:sticky;top:1rem;">
+        <h4 style="margin:0 0 .6rem;color:#1e3a5f;font-size:.95rem;padding-bottom:.75rem;border-bottom:1px solid #e5e7eb;">
+          ⚡ Bulk Charge a Class
+        </h4>
+        <p style="font-size:.83rem;color:#6b7280;margin:0 0 1rem;">
+          Select a template and a class to create <em>Unpaid</em> charge records
+          for every active student. Already-charged students are skipped.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+          <div>
+            <label style="${labelStyle()}">Template *</label>
+            <select id="fs-bc-tpl" style="${selectStyle()};width:100%;">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Class</label>
+            <select id="fs-bc-class" style="${selectStyle()};width:100%;">
+              <option value="">All (use template target)</option>${_fsClassOpts()}
+            </select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Arm (optional)</label>
+            <select id="fs-bc-arm" style="${selectStyle()};width:100%;">
+              <option value="">All Arms</option>
+              ${['A','B','C','D','E'].map(a=>`<option value="${a}">${a}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+            <div>
+              <label style="${labelStyle()}">Term *</label>
+              <select id="fs-bc-term" style="${selectStyle()};width:100%;">${_fsTermOpts()}</select>
+            </div>
+            <div>
+              <label style="${labelStyle()}">Session</label>
+              <input id="fs-bc-session" value="${_fsSession()}" style="${inputStyle()};width:100%;">
+            </div>
+          </div>
+          <button onclick="feeSetupRunBulkCharge()"
+            style="${btnStyle('primary')};width:100%;justify-content:center;padding:.7rem;">
+            ⚡ Charge Students Now
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;font-size:.85rem;color:#1d4ed8;">
+          <strong>How it works:</strong><br>
+          1. Select a fee or levy template<br>
+          2. Choose a class (or leave blank to use the template's target group)<br>
+          3. Click Charge — every eligible active student gets an Unpaid charge record<br>
+          4. Go to the <strong>Student Finance Portal</strong> to record each payment
+        </div>
+        <div id="fs-bc-result"></div>
+      </div>
+    </div>`;
+
+  // Load template dropdown
+  Promise.all([Fees.getStructure(), Levies.getAll()]).then(([fr, lr]) => {
+    const sel    = document.getElementById('fs-bc-tpl');
+    if (!sel) return;
+    const fees   = fr.data  || [];
+    const levies = lr.data  || [];
+    sel.innerHTML = '<option value="">— select a template —</option>' +
+      (fees.length   ? `<optgroup label="📌 Regular Fees">${fees.map(f =>
+          `<option value="fee:${f.id}:${encodeURIComponent(f.label)}:${f.amount}:${f.class_name||''}:${f.level||'All'}">${f.label} — ${_fsCurrency(f.amount)}</option>`).join('')}</optgroup>` : '') +
+      (levies.length ? `<optgroup label="🎯 Levies">${levies.map(l =>
+          `<option value="levy:${l.id}:${encodeURIComponent(l.name)}:${l.amount}:${l.class_name||''}:${l.target||'All'}">${l.name} — ${_fsCurrency(l.amount)}</option>`).join('')}</optgroup>` : '');
+  }).catch(() => {});
+}
+
+window.feeSetupRunBulkCharge = async function() {
+  const tplVal  = document.getElementById('fs-bc-tpl')?.value;
+  const cls     = document.getElementById('fs-bc-class')?.value;
+  const arm     = document.getElementById('fs-bc-arm')?.value;
+  const term    = document.getElementById('fs-bc-term')?.value;
+  const session = document.getElementById('fs-bc-session')?.value;
+  const res     = document.getElementById('fs-bc-result');
+
+  if (!tplVal) { toast('Select a template first', 'error'); return; }
+  if (!term)   { toast('Select a term', 'error'); return; }
+
+  const [type, id, nameEnc, amount, tplClass, target] = tplVal.split(':');
+  const name        = decodeURIComponent(nameEnc);
+  const chargeClass = cls || tplClass || null;
+  const who         = chargeClass ? chargeClass + (arm ? ' ' + arm : '') : 'all ' + target.toLowerCase() + ' students';
+
+  if (!confirmDlg(`Charge "${name}" (${_fsCurrency(amount)}) to ${who} for ${term}?\n\nStudents already charged this term will be skipped.`)) return;
+
+  if (res) res.innerHTML = `<p style="color:#9ca3af;padding:1rem;">Charging…</p>`;
+
+  try {
+    let resp;
+    if (type === 'levy') {
+      resp = await Levies.charge(parseInt(id));
+    } else {
+      resp = await Fees.bulkCharge({
+        class:   chargeClass,
+        arm:     arm || null,
+        feeType: name,
+        amount:  parseFloat(amount),
+        term, session,
+      });
+    }
+    const charged = resp.data?.charged || 0;
+    const skipped = resp.data?.skipped || 0;
+
+    if (res) res.innerHTML = `
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1.25rem 1.5rem;">
+        <div style="font-size:1.5rem;font-weight:700;color:#166534;margin-bottom:.25rem;">
+          ✅ ${charged} student${charged!==1?'s':''} charged
+        </div>
+        <div style="font-size:.85rem;color:#6b7280;">
+          ${skipped} already charged this term (skipped)
+        </div>
+        <button onclick="window.open('student-finance.html','_blank')"
+          style="margin-top:.85rem;background:#1e3a5f;color:#fff;border:none;padding:.55rem 1.2rem;
+                 border-radius:8px;cursor:pointer;font-weight:600;font-size:.875rem;">
+          🏦 Open Finance Portal →
+        </button>
+      </div>`;
+    toast(`⚡ ${charged} charged, ${skipped} skipped`, 'success');
+  } catch(e) {
+    if (res) res.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+    toast('Error: ' + e.message, 'error');
+  }
+};
+
+/* ── Shared: charge a single template from the list ── */
+window.feeSetupChargeNow = async function(type, id, name, amount, className, target) {
+  const who = className ? `all students in ${className}` : `all ${target.toLowerCase()} students`;
+  if (!confirmDlg(`Charge "${name}" (${_fsCurrency(amount)}) to ${who}?\nStudents already charged this term will be skipped.`)) return;
+  try {
+    let resp;
+    if (type === 'levy') {
+      resp = await Levies.charge(id);
+    } else {
+      resp = await Fees.bulkCharge({
+        class: className || null,
+        feeType: name, amount,
+        term:    App.data.schoolInfo?.term    || 'First Term',
+        session: App.data.schoolInfo?.session || '',
+      });
+    }
+    toast(`⚡ ${resp.data?.charged||0} charged, ${resp.data?.skipped||0} skipped`, 'success');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};

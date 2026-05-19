@@ -82,7 +82,7 @@
     .mobile-close { position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 1.5rem; }
 
     /* ═══════════════════════════════════════
-       PAGE HERO — full-bleed, grotto image
+       PAGE HERO
     ═══════════════════════════════════════ */
     .page-hero {
       position: relative; overflow: hidden;
@@ -105,7 +105,6 @@
         rgba(30,4,4,0.96) 100%
       );
     }
-    /* large watermark cross */
     .page-hero::after {
       content: '✝';
       position: absolute; right: 5%; top: 50%; transform: translateY(-50%);
@@ -129,7 +128,6 @@
     .page-title em { color: var(--gold-light); font-style: italic; }
     .page-subtitle { font-size: 1rem; line-height: 1.75; color: rgba(255,255,255,0.62); max-width: 600px; padding-bottom: 3.5rem; }
 
-    /* In-page tabs anchored to hero bottom */
     .page-tabs-bar { position: relative; z-index: 2; border-top: 1px solid rgba(184,134,42,0.2); }
     .page-tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
     .page-tabs::-webkit-scrollbar { display: none; }
@@ -224,7 +222,6 @@
     .mv-card.mission .mv-card-footer { color: rgba(255,255,255,0.4); border-top-color: rgba(255,255,255,0.1); }
     .mv-card.vision  .mv-card-footer { color: var(--muted); border-top-color: var(--rule); }
 
-    /* Philosophy card below */
     .philosophy-card {
       margin-top: 2rem; background: var(--parchment);
       border: 1px solid var(--rule); border-radius: 16px;
@@ -241,7 +238,7 @@
     .philosophy-body p + p { margin-top: 0.85rem; }
 
     /* ═══════════════════════════════════════
-       CORE VALUES — FULL SECTION
+       CORE VALUES
     ═══════════════════════════════════════ */
     .values-section { background: var(--white); }
     .values-intro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; margin-bottom: 4rem; }
@@ -319,6 +316,73 @@
     .phil-pillar-desc { font-size: 0.8rem; line-height: 1.6; color: var(--muted); }
 
     /* ═══════════════════════════════════════
+       BOARDING & HOSTEL LIFE
+    ═══════════════════════════════════════ */
+    .hostel-section { background: var(--white); }
+
+    .hostel-hero-img {
+      position: relative; border-radius: 18px; overflow: hidden;
+      height: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      margin-bottom: 2.5rem;
+    }
+    .hostel-hero-img img { width: 100%; height: 100%; object-fit: cover; }
+    .hostel-hero-badge {
+      position: absolute; bottom: 2rem; left: 2rem;
+      background: rgba(30,4,4,0.85); backdrop-filter: blur(8px);
+      border: 1px solid rgba(184,134,42,0.4);
+      border-radius: 12px; padding: 0.85rem 1.4rem;
+      display: flex; flex-direction: column; gap: 0.2rem;
+    }
+    .hb-tag {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gold);
+    }
+    .hb-text {
+      font-family: var(--font-serif); font-size: 1.05rem;
+      color: var(--white); font-weight: 600;
+    }
+
+    .hostel-interior-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.75rem; margin-bottom: 2.5rem;
+    }
+    .hostel-interior-card {
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--rule);
+      box-shadow: 0 6px 28px rgba(0,0,0,0.07);
+      transition: box-shadow var(--tr), transform var(--tr);
+    }
+    .hostel-interior-card:hover { box-shadow: 0 14px 40px rgba(0,0,0,0.12); transform: translateY(-4px); }
+    .hostel-int-img { height: 280px; overflow: hidden; }
+    .hostel-int-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    .hostel-interior-card:hover .hostel-int-img img { transform: scale(1.04); }
+    .hostel-int-body { padding: 1.75rem; background: var(--cream); }
+    .hostel-int-icon { font-size: 1.6rem; margin-bottom: 0.6rem; }
+    .hostel-int-title {
+      font-family: var(--font-serif); font-size: 1.15rem;
+      font-weight: 700; color: var(--maroon); margin-bottom: 0.6rem;
+    }
+    .hostel-int-desc { font-size: 0.83rem; line-height: 1.7; color: var(--muted); }
+
+    .hostel-feature-strip {
+      display: flex; align-items: stretch;
+      background: var(--maroon); border-radius: 16px;
+      overflow: hidden; box-shadow: 0 8px 32px rgba(62,8,8,0.2);
+    }
+    .hostel-feature {
+      flex: 1; padding: 2rem 1.75rem; text-align: center;
+    }
+    .hostel-feature-divider {
+      width: 1px; background: rgba(184,134,42,0.2); flex-shrink: 0;
+    }
+    .hf-icon { font-size: 1.8rem; margin-bottom: 0.65rem; }
+    .hf-title {
+      font-family: var(--font-serif); font-size: 1rem;
+      font-weight: 700; color: var(--gold-light); margin-bottom: 0.4rem;
+    }
+    .hf-desc { font-size: 0.76rem; line-height: 1.55; color: rgba(255,255,255,0.5); }
+
+    /* ═══════════════════════════════════════
        SPIRITUAL FORMATION
     ═══════════════════════════════════════ */
     .spiritual { background: var(--maroon-dark); padding: 5.5rem 0; position: relative; overflow: hidden; }
@@ -349,7 +413,6 @@
     .spiritual-card-title { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--gold-light); margin-bottom: 0.5rem; }
     .spiritual-card-body { font-size: 0.82rem; line-height: 1.7; color: rgba(255,255,255,0.55); }
 
-    /* Sacred Heart devotion spotlight */
     .sacred-heart-bar {
       margin-top: 4rem; padding: 2.5rem;
       background: rgba(184,134,42,0.1);
@@ -452,6 +515,8 @@
       .cta-actions           { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
       .footer-inner          { grid-template-columns: 1fr 1fr; }
       .footer-brand          { grid-column: span 2; }
+      .hostel-interior-grid  { grid-template-columns: 1fr; }
+      .hostel-hero-img       { height: 360px; }
     }
     @media (max-width: 768px) {
       .nav { display: none; }
@@ -465,6 +530,9 @@
       .footer-brand { grid-column: span 1; }
       .sacred-heart-bar { grid-template-columns: 1fr; }
       .sh-bar-icon { font-size: 2.5rem; }
+      .hostel-feature-strip { flex-direction: column; }
+      .hostel-feature-divider { width: 100%; height: 1px; }
+      .hostel-hero-img { height: 260px; }
     }
     @media (max-width: 480px) {
       .values-grid { grid-template-columns: 1fr; }
@@ -474,23 +542,31 @@
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════
+  <!-- ═══════════════════════════════════════
        TOPBAR
   ═══════════════════════════════════════ -->
   <div class="topbar">
-    <div class="container">
+    <div class="container topbar-inner">
       <div class="topbar-items">
-        <div class="topbar-item"><span class="ti">✉</span><span>info@saharcoaba.edu.ng</span></div>
-        <div class="topbar-item"><span class="ti">☎</span><span>+234 806 000 0000</span></div>
-        <div class="topbar-item"><span class="ti">📍</span><span>Eziukwu, Aba, Abia State</span></div>
+        <div class="topbar-item">
+          <span class="ti">✉</span>
+          <span>sacredheartcollege1957@gmail.com</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">☎</span>
+          <span>+234 802 541 1061</span>
+        </div>
+        <div class="topbar-item">
+          <span class="ti">📍</span>
+          <span>Eziukwu, Aba, Abia State</span>
+        </div>
       </div>
       <span class="topbar-motto">"Testimonium Perhibere Veritati"</span>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════
-       HEADER
-  ═══════════════════════════════════════ -->
+
+  <!-- HEADER -->
   <header class="header" id="header">
     <div class="header-inner container">
       <div class="logo-wrap">
@@ -505,16 +581,12 @@
       </div>
       <nav class="nav">
         <ul class="nav-list">
-          <li><a href="#"      class="nav-link">Home</a></li>
-          <li><a href="about.html"     class="nav-link">About</a></li>
-          <li><a href="mission .html"      class="nav-link active">Mission</a></li>
-          <li><a href="contact.html"     class="nav-link">Contact</a></li>
+          <li><a href="#" class="nav-link">Home</a></li>
+          <li><a href="about.html" class="nav-link">About</a></li>
+          <li><a href="mission .html" class="nav-link active">Mission</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
           <li><a href="admission.html" class="nav-link">Admissions</a></li>
-          <li>
-            <a href="login.html" class="btn-admit nav-cta">
-              Login <ion-icon name="arrow-forward-outline"></ion-icon>
-            </a>
-          </li>
+          <li><a href="login.html" class="btn-admit nav-cta">Login</a></li>
         </ul>
       </nav>
       <button class="hamburger" id="hamburger" aria-label="Open menu">
@@ -526,17 +598,15 @@
   <!-- Mobile Nav -->
   <div class="mobile-nav" id="mobile-nav">
     <button class="mobile-close" id="mobile-close">✕</button>
-    <a href="index.html"            onclick="closeMobile()">Home</a>
-    <a href="about.html"            onclick="closeMobile()">About</a>
-    <a href="mission.html"          onclick="closeMobile()">Mission</a>
-    <a href="index.html#campus"     onclick="closeMobile()">Campus</a>
+    <a href="index.html" onclick="closeMobile()">Home</a>
+    <a href="about.html" onclick="closeMobile()">About</a>
+    <a href="mission.html" onclick="closeMobile()">Mission</a>
+    <a href="index.html#campus" onclick="closeMobile()">Campus</a>
     <a href="index.html#admissions" onclick="closeMobile()">Admissions</a>
-    <a href="index.html#contact"    onclick="closeMobile()">Contact</a>
+    <a href="index.html#contact" onclick="closeMobile()">Contact</a>
   </div>
 
-  <!-- ═══════════════════════════════════
-       PAGE HERO
-  ═══════════════════════════════════════ -->
+  <!-- PAGE HERO -->
   <div class="page-hero">
     <div class="page-hero-bg"></div>
     <div class="page-hero-overlay"></div>
@@ -562,6 +632,7 @@
           <a href="#mv"         class="page-tab">Mission &amp; Vision</a>
           <a href="#values"     class="page-tab">Core Values</a>
           <a href="#philosophy" class="page-tab">Our Philosophy</a>
+          <a href="#hostel"     class="page-tab">Hostel</a>
           <a href="#spiritual"  class="page-tab">Spiritual Formation</a>
           <a href="#excellence" class="page-tab">Excellence</a>
         </div>
@@ -569,9 +640,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════
-       MOTTO STRIP
-  ═══════════════════════════════════════ -->
+  <!-- MOTTO STRIP -->
   <div class="motto-strip" id="motto">
     <div class="container">
       <div class="motto-inner">
@@ -588,9 +657,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════
-       MISSION & VISION
-  ═══════════════════════════════════════ -->
+  <!-- MISSION & VISION -->
   <section class="section mv-section" id="mv">
     <div class="container">
       <div class="section-eyebrow">
@@ -603,7 +670,6 @@
       </p>
 
       <div class="mv-grid">
-        <!-- Mission -->
         <div class="mv-card mission">
           <div class="mv-card-inner">
             <div class="mv-card-tag">🎯 Mission Statement</div>
@@ -615,13 +681,10 @@
             <p class="mv-card-body" style="margin-top:1rem;">
               Rooted in the spirituality of the Sacred Heart of Jesus and guided by the Catholic Diocese of Aba, we believe that a truly educated person is not merely technically proficient but morally formed, spiritually alive, and socially responsible.
             </p>
-            <div class="mv-card-footer">
-              Founded 1957 · Catholic Diocese of Aba · Eziukwu, Aba
-            </div>
+            <div class="mv-card-footer">Founded 1957 · Catholic Diocese of Aba · Eziukwu, Aba</div>
           </div>
         </div>
 
-        <!-- Vision -->
         <div class="mv-card vision">
           <div class="mv-card-inner">
             <div class="mv-card-tag">🔭 Vision Statement</div>
@@ -633,14 +696,11 @@
             <p class="mv-card-body" style="margin-top:1rem;">
               We envision a SAHARCO that continues to raise the standard — investing in faculty excellence, modern facilities, digital literacy, and spiritual depth — so that every young man who passes through our gates is equipped for the challenges of the 21st century while remaining firmly anchored in eternal values.
             </p>
-            <div class="mv-card-footer">
-              A vision pursued since 1957 — and for generations to come
-            </div>
+            <div class="mv-card-footer">A vision pursued since 1957 — and for generations to come</div>
           </div>
         </div>
       </div>
 
-      <!-- Philosophy card -->
       <div class="philosophy-card">
         <div class="philosophy-icon-col">
           <div class="philosophy-icon-big">📜</div>
@@ -659,9 +719,7 @@
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════
-       SCRIPTURE INTERLUDE
-  ═══════════════════════════════════════ -->
+  <!-- SCRIPTURE INTERLUDE -->
   <div class="scripture-interlude">
     <div class="container">
       <p class="scripture-text">
@@ -672,18 +730,14 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════
-       CORE VALUES
-  ═══════════════════════════════════════ -->
+  <!-- CORE VALUES -->
   <section class="section values-section" id="values">
     <div class="container">
       <div class="values-intro-grid">
-        <!-- Image side -->
         <div class="values-image">
-          <img src="images/grotto.jpg" alt="Sacred Heart Grotto — heart of SAHARCO's spiritual identity" loading="lazy" />
+          <img src="images/grotto.jpg" alt="Sacred Heart Grotto" loading="lazy" />
           <div class="values-image-badge">"Character is the foundation of greatness."</div>
         </div>
-        <!-- Text side -->
         <div>
           <div class="section-eyebrow">
             <span class="rule"></span>
@@ -702,85 +756,31 @@
         </div>
       </div>
 
-      <!-- 8 Value Cards -->
       <div class="values-grid">
-        <div class="value-card">
-          <div class="value-card-num">01</div>
-          <div class="value-card-icon">✝️</div>
-          <div class="value-card-name">Faith</div>
-          <div class="value-card-desc">A living relationship with God, expressed through prayer, the sacraments, and the everyday choices of a Catholic man. Faith at SAHARCO is not an add-on — it is the foundation.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">02</div>
-          <div class="value-card-icon">📖</div>
-          <div class="value-card-name">Excellence</div>
-          <div class="value-card-desc">The relentless pursuit of the highest standard in everything — academic work, sport, art, and service. Excellence is not perfectionism; it is the refusal to accept less than your best.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">03</div>
-          <div class="value-card-icon">⚖️</div>
-          <div class="value-card-name">Integrity</div>
-          <div class="value-card-desc">Honesty and uprightness in all things — especially when no one is watching. A SAHARCO man keeps his word, acknowledges his mistakes, and refuses to compromise his conscience.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">04</div>
-          <div class="value-card-icon">🤝</div>
-          <div class="value-card-name">Service</div>
-          <div class="value-card-desc">Contributing selflessly to family, community, Church, and nation. True education is never merely for personal gain — it is given so that it may be given away to those in need.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">05</div>
-          <div class="value-card-icon">🛡️</div>
-          <div class="value-card-name">Discipline</div>
-          <div class="value-card-desc">Self-mastery: the ability to govern one's desires, emotions, and impulses in accordance with reason and faith. Discipline is freedom — it is what separates the reactive from the purposeful.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">06</div>
-          <div class="value-card-icon">🤲</div>
-          <div class="value-card-name">Compassion</div>
-          <div class="value-card-desc">The Sacred Heart's call to see Christ in every person — especially the marginalised, the suffering, and the forgotten. Compassion transforms knowledge into wisdom and ambition into vocation.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">07</div>
-          <div class="value-card-icon">🏆</div>
-          <div class="value-card-name">Brotherhood</div>
-          <div class="value-card-desc">Solidarity among students, staff, and alumni — the bonds forged at SAHARCO last a lifetime. Brotherhood means that no one is left behind, that we celebrate each other's successes, and bear each other's burdens.</div>
-          <div class="value-card-line"></div>
-        </div>
-        <div class="value-card">
-          <div class="value-card-num">08</div>
-          <div class="value-card-icon">💡</div>
-          <div class="value-card-name">Creativity</div>
-          <div class="value-card-desc">The imagination to see new possibilities, the courage to attempt what has not been tried, and the curiosity that keeps a mind alive and growing long after school is over.</div>
-          <div class="value-card-line"></div>
-        </div>
+        <div class="value-card"><div class="value-card-num">01</div><div class="value-card-icon">✝️</div><div class="value-card-name">Faith</div><div class="value-card-desc">A living relationship with God, expressed through prayer, the sacraments, and the everyday choices of a Catholic man. Faith at SAHARCO is not an add-on — it is the foundation.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">02</div><div class="value-card-icon">📖</div><div class="value-card-name">Excellence</div><div class="value-card-desc">The relentless pursuit of the highest standard in everything — academic work, sport, art, and service. Excellence is not perfectionism; it is the refusal to accept less than your best.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">03</div><div class="value-card-icon">⚖️</div><div class="value-card-name">Integrity</div><div class="value-card-desc">Honesty and uprightness in all things — especially when no one is watching. A SAHARCO man keeps his word, acknowledges his mistakes, and refuses to compromise his conscience.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">04</div><div class="value-card-icon">🤝</div><div class="value-card-name">Service</div><div class="value-card-desc">Contributing selflessly to family, community, Church, and nation. True education is never merely for personal gain — it is given so that it may be given away to those in need.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">05</div><div class="value-card-icon">🛡️</div><div class="value-card-name">Discipline</div><div class="value-card-desc">Self-mastery: the ability to govern one's desires, emotions, and impulses in accordance with reason and faith. Discipline is freedom — it is what separates the reactive from the purposeful.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">06</div><div class="value-card-icon">🤲</div><div class="value-card-name">Compassion</div><div class="value-card-desc">The Sacred Heart's call to see Christ in every person — especially the marginalised, the suffering, and the forgotten. Compassion transforms knowledge into wisdom and ambition into vocation.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">07</div><div class="value-card-icon">🏆</div><div class="value-card-name">Brotherhood</div><div class="value-card-desc">Solidarity among students, staff, and alumni — the bonds forged at SAHARCO last a lifetime. Brotherhood means that no one is left behind, that we celebrate each other's successes, and bear each other's burdens.</div><div class="value-card-line"></div></div>
+        <div class="value-card"><div class="value-card-num">08</div><div class="value-card-icon">💡</div><div class="value-card-name">Creativity</div><div class="value-card-desc">The imagination to see new possibilities, the courage to attempt what has not been tried, and the curiosity that keeps a mind alive and growing long after school is over.</div><div class="value-card-line"></div></div>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════
-       CATHOLIC EDUCATIONAL PHILOSOPHY
-  ═══════════════════════════════════════ -->
+  <!-- CATHOLIC EDUCATIONAL PHILOSOPHY -->
   <section class="section philosophy-section" id="philosophy">
     <div class="container">
       <div class="phil-grid">
-        <!-- Image stack -->
         <div class="phil-image-stack">
           <div class="phil-img-main">
             <img src="images/sahaco academic sections.JPG" alt="SAHARCO Academic Classrooms" loading="lazy" />
           </div>
           <div class="phil-img-secondary">
-            <img src="images/inside conference hall.jpg" alt="Conference Hall — Site of Formation" loading="lazy" />
+            <img src="images/inside conference hall.jpg" alt="Conference Hall" loading="lazy" />
           </div>
         </div>
-
-        <!-- Text -->
         <div>
           <div class="section-eyebrow">
             <span class="rule"></span>
@@ -791,34 +791,10 @@
             The Catholic tradition has been producing great schools for centuries — not by accident, but because it holds a rich and coherent understanding of the human person and the purpose of education. Sacred Heart College is proudly heir to that tradition.
           </p>
           <div class="phil-pillars">
-            <div class="phil-pillar">
-              <div class="phil-pillar-icon">🧠</div>
-              <div>
-                <div class="phil-pillar-title">Faith &amp; Reason Together</div>
-                <div class="phil-pillar-desc">The Catholic tradition insists that faith and reason are not rivals. SAHARCO teaches students to think rigorously and believe deeply — understanding that the same God who revealed himself in Scripture also wrote the laws of mathematics into the fabric of creation.</div>
-              </div>
-            </div>
-            <div class="phil-pillar">
-              <div class="phil-pillar-icon">🌱</div>
-              <div>
-                <div class="phil-pillar-title">Integral Human Development</div>
-                <div class="phil-pillar-desc">A Catholic school does not educate a student's intellect while leaving his soul and body untouched. Academics, spiritual life, physical development, emotional maturity, and social responsibility are developed together as dimensions of one human person.</div>
-              </div>
-            </div>
-            <div class="phil-pillar">
-              <div class="phil-pillar-icon">🕊️</div>
-              <div>
-                <div class="phil-pillar-title">Education as a Vocation</div>
-                <div class="phil-pillar-desc">Teaching at SAHARCO is understood as a participation in the mission of the Church — not merely a profession. Our teachers are committed to the formation of their students, not merely to the delivery of content.</div>
-              </div>
-            </div>
-            <div class="phil-pillar">
-              <div class="phil-pillar-icon">🌍</div>
-              <div>
-                <div class="phil-pillar-title">Education for the Common Good</div>
-                <div class="phil-pillar-desc">SAHARCO graduates are formed not to extract from society, but to contribute to it. The Church's social teaching — solidarity, subsidiarity, the preferential option for the poor — shapes how we understand the purpose of a good education.</div>
-              </div>
-            </div>
+            <div class="phil-pillar"><div class="phil-pillar-icon">🧠</div><div><div class="phil-pillar-title">Faith &amp; Reason Together</div><div class="phil-pillar-desc">The Catholic tradition insists that faith and reason are not rivals. SAHARCO teaches students to think rigorously and believe deeply — understanding that the same God who revealed himself in Scripture also wrote the laws of mathematics into the fabric of creation.</div></div></div>
+            <div class="phil-pillar"><div class="phil-pillar-icon">🌱</div><div><div class="phil-pillar-title">Integral Human Development</div><div class="phil-pillar-desc">A Catholic school does not educate a student's intellect while leaving his soul and body untouched. Academics, spiritual life, physical development, emotional maturity, and social responsibility are developed together as dimensions of one human person.</div></div></div>
+            <div class="phil-pillar"><div class="phil-pillar-icon">🕊️</div><div><div class="phil-pillar-title">Education as a Vocation</div><div class="phil-pillar-desc">Teaching at SAHARCO is understood as a participation in the mission of the Church — not merely a profession. Our teachers are committed to the formation of their students, not merely to the delivery of content.</div></div></div>
+            <div class="phil-pillar"><div class="phil-pillar-icon">🌍</div><div><div class="phil-pillar-title">Education for the Common Good</div><div class="phil-pillar-desc">SAHARCO graduates are formed not to extract from society, but to contribute to it. The Church's social teaching — solidarity, subsidiarity, the preferential option for the poor — shapes how we understand the purpose of a good education.</div></div></div>
           </div>
         </div>
       </div>
@@ -826,8 +802,82 @@
   </section>
 
   <!-- ═══════════════════════════════════
-       SPIRITUAL FORMATION
+       BOARDING & HOSTEL LIFE
   ═══════════════════════════════════════ -->
+  <section class="section hostel-section" id="hostel">
+    <div class="container">
+      <div class="section-eyebrow">
+        <span class="rule"></span>
+        <span class="eyebrow-label">Boarding Life</span>
+      </div>
+      <h2 class="section-title">A Home Away<br>from Home</h2>
+      <p class="section-body" style="max-width:640px; margin-bottom:3rem;">
+        Our newly constructed hostel facility reflects SAHARCO's commitment to providing a safe, comfortable, and well-ordered living environment where boarding students can rest, study, and grow in community. Built to modern standards, the hostel is more than accommodation — it is where brotherhood is forged.
+      </p>
+
+      <!-- Hero image — outside view -->
+      <div class="hostel-hero-img">
+        <img src="images/sahacohosteloutsideview.jpeg" alt="SAHARCO Hostel Building — Exterior View" loading="lazy" />
+        <div class="hostel-hero-badge">
+          <span class="hb-tag">New Facility</span>
+          <span class="hb-text">Modern Hostel Complex</span>
+        </div>
+      </div>
+
+      <!-- Two interior shots side by side -->
+      <div class="hostel-interior-grid">
+        <div class="hostel-interior-card">
+          <div class="hostel-int-img">
+            <img src="images/sahacohostelinsideroom.jpeg" alt="SAHARCO Hostel Room — Bunk Beds and Wardrobes" loading="lazy" />
+          </div>
+          <div class="hostel-int-body">
+            <div class="hostel-int-icon">🛏️</div>
+            <h3 class="hostel-int-title">Comfortable, Orderly Dormitories</h3>
+            <p class="hostel-int-desc">Each room is furnished with quality bunk beds, dedicated storage drawers, and individual wooden wardrobes — providing every student with his own organised personal space. Blue bedding in the school's colours reinforces a sense of pride and belonging.</p>
+          </div>
+        </div>
+        <div class="hostel-interior-card">
+          <div class="hostel-int-img">
+            <img src="images/sahacohostleroomview.jpeg" alt="SAHARCO Hostel Room — Detailed View" loading="lazy" />
+          </div>
+          <div class="hostel-int-body">
+            <div class="hostel-int-icon">🏠</div>
+            <h3 class="hostel-int-title">Purpose-Built for Student Life</h3>
+            <p class="hostel-int-desc">Rooms feature under-bed storage, well-lit windows, and tiled floors — designed for both practicality and hygiene. The layout encourages responsibility, as students maintain their own spaces as part of their daily formation in discipline and order.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature strip -->
+      <div class="hostel-feature-strip">
+        <div class="hostel-feature">
+          <div class="hf-icon">🔒</div>
+          <div class="hf-title">Safe &amp; Secure</div>
+          <div class="hf-desc">Controlled access and supervised environment 24/7</div>
+        </div>
+        <div class="hostel-feature-divider"></div>
+        <div class="hostel-feature">
+          <div class="hf-icon">💧</div>
+          <div class="hf-title">Reliable Water Supply</div>
+          <div class="hf-desc">Overhead tanks ensure constant water availability</div>
+        </div>
+        <div class="hostel-feature-divider"></div>
+        <div class="hostel-feature">
+          <div class="hf-icon">🪑</div>
+          <div class="hf-title">Quality Furniture</div>
+          <div class="hf-desc">Durable bunk beds with under-bed storage and wardrobes</div>
+        </div>
+        <div class="hostel-feature-divider"></div>
+        <div class="hostel-feature">
+          <div class="hf-icon">🌬️</div>
+          <div class="hf-title">Well-Ventilated Rooms</div>
+          <div class="hf-desc">Multiple windows in each room for natural light and airflow</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPIRITUAL FORMATION -->
   <section class="spiritual" id="spiritual">
     <div class="container">
       <div class="section-eyebrow">
@@ -838,47 +888,14 @@
       <p class="spiritual-intro">
         Spiritual formation is not a department at Sacred Heart College — it is the atmosphere of the whole school. Every aspect of life at SAHARCO is ordered toward helping students grow in their relationship with God and their understanding of what it means to live well.
       </p>
-
       <div class="spiritual-grid">
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">01</div>
-          <div class="spiritual-card-icon">🙏</div>
-          <div class="spiritual-card-title">Daily Prayer</div>
-          <div class="spiritual-card-body">Each school day begins and ends with communal prayer. Morning assembly, the Angelus, and evening prayer mark the rhythm of school life and remind students that all they do is offered to God.</div>
-        </div>
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">02</div>
-          <div class="spiritual-card-icon">⛪</div>
-          <div class="spiritual-card-title">Holy Mass</div>
-          <div class="spiritual-card-body">Regular celebration of the Eucharist is central to SAHARCO's Catholic identity. School Mass on feast days, Marian celebrations, and special occasions gather the whole school community around the altar.</div>
-        </div>
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">03</div>
-          <div class="spiritual-card-icon">🕊️</div>
-          <div class="spiritual-card-title">Retreats &amp; Recollections</div>
-          <div class="spiritual-card-body">Annual retreats for each class provide students with space for quiet reflection, confession, spiritual direction, and renewal. These are among the most formative experiences of a SAHARCO education.</div>
-        </div>
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">04</div>
-          <div class="spiritual-card-icon">📿</div>
-          <div class="spiritual-card-title">Marian Devotion</div>
-          <div class="spiritual-card-body">Devotion to Our Lady is woven into school life — the Rosary, Marian hymns, and the month of May celebrations form students in love for the Mother of God and her virtues of humility and service.</div>
-        </div>
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">05</div>
-          <div class="spiritual-card-icon">📖</div>
-          <div class="spiritual-card-title">Christian Religious Studies</div>
-          <div class="spiritual-card-body">CRS is taught not merely as an examinable subject but as genuine formation in Scripture, Church history, and moral theology — equipping students to give a reason for the faith they hold.</div>
-        </div>
-        <div class="spiritual-card">
-          <div class="spiritual-card-num">06</div>
-          <div class="spiritual-card-icon">🤲</div>
-          <div class="spiritual-card-title">Community Service</div>
-          <div class="spiritual-card-body">Students are regularly engaged in service to the surrounding Eziukwu community — visiting the sick, supporting the poor, and participating in diocesan outreach events. Faith without works is dead.</div>
-        </div>
+        <div class="spiritual-card"><div class="spiritual-card-num">01</div><div class="spiritual-card-icon">🙏</div><div class="spiritual-card-title">Daily Prayer</div><div class="spiritual-card-body">Each school day begins and ends with communal prayer. Morning assembly, the Angelus, and evening prayer mark the rhythm of school life and remind students that all they do is offered to God.</div></div>
+        <div class="spiritual-card"><div class="spiritual-card-num">02</div><div class="spiritual-card-icon">⛪</div><div class="spiritual-card-title">Holy Mass</div><div class="spiritual-card-body">Regular celebration of the Eucharist is central to SAHARCO's Catholic identity. School Mass on feast days, Marian celebrations, and special occasions gather the whole school community around the altar.</div></div>
+        <div class="spiritual-card"><div class="spiritual-card-num">03</div><div class="spiritual-card-icon">🕊️</div><div class="spiritual-card-title">Retreats &amp; Recollections</div><div class="spiritual-card-body">Annual retreats for each class provide students with space for quiet reflection, confession, spiritual direction, and renewal. These are among the most formative experiences of a SAHARCO education.</div></div>
+        <div class="spiritual-card"><div class="spiritual-card-num">04</div><div class="spiritual-card-icon">📿</div><div class="spiritual-card-title">Marian Devotion</div><div class="spiritual-card-body">Devotion to Our Lady is woven into school life — the Rosary, Marian hymns, and the month of May celebrations form students in love for the Mother of God and her virtues of humility and service.</div></div>
+        <div class="spiritual-card"><div class="spiritual-card-num">05</div><div class="spiritual-card-icon">📖</div><div class="spiritual-card-title">Christian Religious Studies</div><div class="spiritual-card-body">CRS is taught not merely as an examinable subject but as genuine formation in Scripture, Church history, and moral theology — equipping students to give a reason for the faith they hold.</div></div>
+        <div class="spiritual-card"><div class="spiritual-card-num">06</div><div class="spiritual-card-icon">🤲</div><div class="spiritual-card-title">Community Service</div><div class="spiritual-card-body">Students are regularly engaged in service to the surrounding Eziukwu community — visiting the sick, supporting the poor, and participating in diocesan outreach events. Faith without works is dead.</div></div>
       </div>
-
-      <!-- Sacred Heart devotion spotlight -->
       <div class="sacred-heart-bar">
         <div class="sh-bar-icon">❤️‍🔥</div>
         <div>
@@ -889,13 +906,10 @@
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════
-       COMMITMENT TO EXCELLENCE
-  ═══════════════════════════════════════ -->
+  <!-- COMMITMENT TO EXCELLENCE -->
   <section class="section excellence" id="excellence">
     <div class="container">
       <div class="excellence-grid">
-        <!-- Stats -->
         <div>
           <div class="section-eyebrow">
             <span class="rule"></span>
@@ -906,26 +920,12 @@
             Our mission is not mere aspiration — it has produced measurable results across generations of students who have gone on to distinguish themselves in every field.
           </p>
           <div class="excellence-stats">
-            <div class="e-stat">
-              <div class="e-stat-num">67+</div>
-              <div class="e-stat-label">Years of Excellence</div>
-            </div>
-            <div class="e-stat">
-              <div class="e-stat-num">3,000+</div>
-              <div class="e-stat-label">Proud Alumni</div>
-            </div>
-            <div class="e-stat">
-              <div class="e-stat-num">100%</div>
-              <div class="e-stat-label">Catholic Identity</div>
-            </div>
-            <div class="e-stat">
-              <div class="e-stat-num">6</div>
-              <div class="e-stat-label">Class Arms JS–SS</div>
-            </div>
+            <div class="e-stat"><div class="e-stat-num">67+</div><div class="e-stat-label">Years of Excellence</div></div>
+            <div class="e-stat"><div class="e-stat-num">3,000+</div><div class="e-stat-label">Proud Alumni</div></div>
+            <div class="e-stat"><div class="e-stat-num">100%</div><div class="e-stat-label">Catholic Identity</div></div>
+            <div class="e-stat"><div class="e-stat-num">6</div><div class="e-stat-label">Class Arms JS–SS</div></div>
           </div>
         </div>
-
-        <!-- Commitments -->
         <div>
           <div class="section-eyebrow" style="margin-bottom:1.4rem;">
             <span class="rule"></span>
@@ -935,70 +935,34 @@
             These are not promises we make lightly. They represent the standards every teacher, administrator, and student at SAHARCO is held to.
           </p>
           <div class="excellence-commitments">
-            <div class="commitment-row">
-              <div class="commitment-icon">📚</div>
-              <div>
-                <div class="commitment-title">Academic Rigour Without Compromise</div>
-                <div class="commitment-desc">Every student is challenged to reach his highest academic potential through structured teaching, regular assessment, and dedicated faculty support.</div>
-              </div>
-            </div>
-            <div class="commitment-row">
-              <div class="commitment-icon">🛡️</div>
-              <div>
-                <div class="commitment-title">A Safe, Ordered Environment</div>
-                <div class="commitment-desc">SAHARCO maintains firm and fair discipline — not to suppress boys, but to create the conditions in which they can flourish, focus, and grow.</div>
-              </div>
-            </div>
-            <div class="commitment-row">
-              <div class="commitment-icon">👨‍🏫</div>
-              <div>
-                <div class="commitment-title">Dedicated, Qualified Staff</div>
-                <div class="commitment-desc">Our teachers are professionals who invest in continuous development and who understand that their vocation extends beyond subject knowledge to human formation.</div>
-              </div>
-            </div>
-            <div class="commitment-row">
-              <div class="commitment-icon">🔬</div>
-              <div>
-                <div class="commitment-title">Modern Facilities &amp; Resources</div>
-                <div class="commitment-desc">From science laboratories to our e-library and ICT centre, SAHARCO invests in the infrastructure that enables 21st-century learning.</div>
-              </div>
-            </div>
-            <div class="commitment-row">
-              <div class="commitment-icon">🤝</div>
-              <div>
-                <div class="commitment-title">Partnership with Parents &amp; Diocese</div>
-                <div class="commitment-desc">The formation of a young man is a shared mission between the school, the family, and the Church. SAHARCO is committed to that partnership.</div>
-              </div>
-            </div>
+            <div class="commitment-row"><div class="commitment-icon">📚</div><div><div class="commitment-title">Academic Rigour Without Compromise</div><div class="commitment-desc">Every student is challenged to reach his highest academic potential through structured teaching, regular assessment, and dedicated faculty support.</div></div></div>
+            <div class="commitment-row"><div class="commitment-icon">🛡️</div><div><div class="commitment-title">A Safe, Ordered Environment</div><div class="commitment-desc">SAHARCO maintains firm and fair discipline — not to suppress boys, but to create the conditions in which they can flourish, focus, and grow.</div></div></div>
+            <div class="commitment-row"><div class="commitment-icon">👨‍🏫</div><div><div class="commitment-title">Dedicated, Qualified Staff</div><div class="commitment-desc">Our teachers are professionals who invest in continuous development and who understand that their vocation extends beyond subject knowledge to human formation.</div></div></div>
+            <div class="commitment-row"><div class="commitment-icon">🔬</div><div><div class="commitment-title">Modern Facilities &amp; Resources</div><div class="commitment-desc">From science laboratories to our e-library, ICT centre, and newly built hostel complex, SAHARCO invests in the infrastructure that enables 21st-century learning and living.</div></div></div>
+            <div class="commitment-row"><div class="commitment-icon">🤝</div><div><div class="commitment-title">Partnership with Parents &amp; Diocese</div><div class="commitment-desc">The formation of a young man is a shared mission between the school, the family, and the Church. SAHARCO is committed to that partnership.</div></div></div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════
-       CTA BANNER
-  ═══════════════════════════════════════ -->
+  <!-- CTA BANNER -->
   <div class="cta-banner">
     <div class="container">
       <div class="cta-inner">
         <div>
           <h2 class="cta-heading">Become Part of the<br>SAHARCO Story</h2>
-          <p class="cta-sub">
-            A school is only as strong as the people who believe in its mission. Whether as a student, a parent, or an Old Boy — there is a place for you here.
-          </p>
+          <p class="cta-sub">A school is only as strong as the people who believe in its mission. Whether as a student, a parent, or an Old Boy — there is a place for you here.</p>
         </div>
         <div class="cta-actions">
           <a href="index.html#admissions" class="btn-gold">Apply for Admission →</a>
-          <a href="about.html"            class="btn-outline-white">Learn Our History</a>
+          <a href="about.html" class="btn-outline-white">Learn Our History</a>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════
-       FOOTER
-  ═══════════════════════════════════════ -->
+  <!-- FOOTER -->
   <footer class="footer-contact" id="contact">
     <div class="container">
       <div class="footer-inner">
@@ -1037,22 +1001,19 @@
   </div>
 
   <script>
-    // Header scroll shadow
     const header = document.getElementById('header');
     window.addEventListener('scroll', () => {
       header.classList.toggle('scrolled', window.scrollY > 40);
     }, { passive: true });
 
-    // Mobile nav
     document.getElementById('hamburger').addEventListener('click', () =>
       document.getElementById('mobile-nav').classList.add('open'));
     document.getElementById('mobile-close').addEventListener('click', () =>
       document.getElementById('mobile-nav').classList.remove('open'));
     function closeMobile() { document.getElementById('mobile-nav').classList.remove('open'); }
 
-    // Active page tab on scroll
-    const tabIds = ['motto','mv','values','philosophy','spiritual','excellence'];
-    const tabs    = document.querySelectorAll('.page-tab');
+    const tabIds = ['motto','mv','values','philosophy','hostel','spiritual','excellence'];
+    const tabs   = document.querySelectorAll('.page-tab');
     window.addEventListener('scroll', () => {
       let current = tabIds[0];
       tabIds.forEach(id => {

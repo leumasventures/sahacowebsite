@@ -750,7 +750,8 @@
        3. script.js — App data model + navigate()
        4. persistence_patch.js
        5. script2.js — renderXxx() section renderers
-       6. script3.js — any additional helpers
+       6. script3.js — timetable, parent portal, fee setup, notifications
+       7. report-card.js — report card generator (2-page, print-ready)
        7. dashboard-init (inline, runs after all above)
 ═══════════════════════════════════════════════════════ -->
 <script src="auth.js"></script>
@@ -758,7 +759,20 @@
 <script src="script.js"></script>
 <script src="persistence_patch.js"></script>
 
+<!-- ── Feature modules ── -->
+<script src="classes.js"></script>
+<script src="students.js"></script>
+<script src="staff.js"></script>
+<script src="subjects.js"></script>
+<script src="results.js"></script>
+<script src="attendance.js"></script>
+<script src="fixtures.js"></script>
+<script src="settings.js"></script>
+<script src="change-password.js"></script>
+<script src="access-tokens.js"></script>
+<script src="users.js"></script>
 <script src="script3.js"></script>
+<script src="report-card.js"></script>
 
 <script>
 'use strict';

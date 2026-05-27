@@ -1319,23 +1319,59 @@ window.previewBulkStudents = function () {
     </div>`;
 };
 
-window.saveBulkStudents = function () {
+window.saveBulkStudents = async function () {
   if (!priv.canManage()) { denyAccess(); return; }
-  const cls   = document.getElementById('bulk-class').value;
-  const arm   = document.getElementById('bulk-arm').value;
-  const lines = document.getElementById('bulk-students-text').value.trim().split('\n').filter(Boolean);
-  let added   = 0;
+  const cls  = document.getElementById('bulk-class')?.value?.trim();
+  const arm  = document.getElementById('bulk-arm')?.value?.trim();
+  const text = document.getElementById('bulk-students-text')?.value?.trim();
+
+  if (!cls)  { toast('Select a class first.', 'error'); return; }
+  if (!arm)  { toast('Select an arm first.', 'error'); return; }
+  if (!text) { toast('Enter student names first.', 'error'); return; }
+
+  const lines = text.split('\n').filter(l => l.trim());
+  if (!lines.length) { toast('No student data entered.', 'error'); return; }
+
+  const students = [];
   lines.forEach(line => {
-    const p = line.split(',').map(x=>x.trim());
+    const p = line.split(',').map(x => x.trim());
     if (!p[0]) return;
-    App.data.students.push({
-      id: genStudentId(), name: p[0], class: cls, arm,
-      gender: p[1]||'Male', dob: p[2]||'', parent: p[3]||'', phone: p[4]||'', attendance: 100,
+    students.push({
+      name:   p[0],
+      gender: (['Male','Female'].includes(p[1]) ? p[1] : 'Male'),
+      dob:    p[2] || null,
+      parent: p[3] || '',
+      phone:  p[4] || '',
     });
-    added++;
   });
-  closeModal(); renderStudents(_currentFilter, _currentFilters);
-  toast(`${added} student${added!==1?'s':''} added!`, 'success');
+
+  if (!students.length) { toast('No valid rows found.', 'error'); return; }
+
+  const btn = document.querySelector('[onclick="saveBulkStudents()"]');
+  const origText = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+
+  try {
+    const payload = { class: cls, arm, students };
+    console.log('[bulk] sending:', payload);
+    const resp = await Students.bulkCreate(payload);
+    console.log('[bulk] response:', resp);
+
+    const imported = resp.imported ?? resp.data?.length ?? students.length;
+    const skipped  = resp.skipped ?? 0;
+
+    // Refresh from server
+    const fresh = await Students.getAll({ limit: 2000 });
+    if (fresh.data?.length) App.data.students = fresh.data;
+
+    closeModal();
+    renderStudents(_currentFilter, _currentFilters);
+    toast(`✅ ${imported} student${imported !== 1 ? 's' : ''} imported!${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+  } catch (e) {
+    console.error('[bulk] error:', e);
+    toast('Import failed: ' + (e.message || 'Unknown error — check console'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = origText || '✅ Import'; }
+  }
 };
 
 
@@ -1395,21 +1431,43 @@ function processStudentExcel(file) {
   reader.readAsArrayBuffer(file);
 }
 
-window.saveExcelStudents = function () {
+window.saveExcelStudents = async function () {
   if (!priv.canManage()) { denyAccess(); return; }
-  const cls    = document.getElementById('bulk-class').value;
-  const arm    = document.getElementById('bulk-arm').value;
-  const rows   = (window._parsedStudentExcel||[]).filter(p=>p.ok);
+  const cls  = document.getElementById('bulk-class')?.value;
+  const arm  = document.getElementById('bulk-arm')?.value;
+  const rows = (window._parsedStudentExcel || []).filter(p => p.ok);
+
+  if (!cls || !arm) { toast('Select a class and arm first.', 'error'); return; }
   if (!rows.length) { toast('No valid rows to import.', 'warning'); return; }
-  rows.forEach(p => {
-    App.data.students.push({
-      id: genStudentId(), name: p.name, class: cls, arm,
-      gender: p.gender, dob: p.dob, parent: p.parent, phone: p.phone, attendance: 100,
-    });
-  });
-  window._parsedStudentExcel = null;
-  closeModal(); renderStudents(_currentFilter, _currentFilters);
-  toast(`${rows.length} student${rows.length!==1?'s':''} imported!`, 'success');
+
+  const students = rows.map(p => ({
+    name:   p.name,
+    gender: p.gender || 'Male',
+    dob:    p.dob    || '',
+    parent: p.parent || '',
+    phone:  p.phone  || '',
+  }));
+
+  const btn = document.getElementById('btn-import-students');
+  if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+
+  try {
+    const resp = await Students.bulkCreate({ class: cls, arm, students });
+    const imported = resp.imported || resp.data?.length || students.length;
+    const skipped  = resp.skipped || 0;
+
+    // Refresh local student list from server
+    const fresh = await Students.getAll({ limit: 2000 });
+    App.data.students = fresh.data || App.data.students;
+
+    window._parsedStudentExcel = null;
+    closeModal();
+    renderStudents(_currentFilter, _currentFilters);
+    toast(`✅ ${imported} student${imported !== 1 ? 's' : ''} imported!${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+  } catch (e) {
+    toast('Import failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Import Students'; }
+  }
 };
 
 /** Download a minimal Excel template for bulk student import */
@@ -1491,7 +1549,10 @@ const STAFF_DEPARTMENTS = [
   'Security','Maintenance','Catering'
 ];
 
-const STAFF_SUBJECTS = [
+// STAFF_SUBJECTS and STAFF_CLASSES are computed dynamically from App.data
+// so they always reflect whatever subjects/classes the admin has set up.
+// Fallback to common defaults only if App.data hasn't loaded yet.
+const DEFAULT_SUBJECTS = [
   'Mathematics','English Language','Biology','Chemistry','Physics',
   'Economics','Government','Literature','Accounting','Geography',
   'CRS / MRS','Social Studies','Basic Technology','Agricultural Sci.',
@@ -1499,9 +1560,20 @@ const STAFF_SUBJECTS = [
   'Physical Education','Home Economics','Further Mathematics','Data Processing'
 ];
 
-const STAFF_CLASSES = [
-  'JSS 1','JSS 2','JSS 3','SS 1','SS 2','SS 3'
-];
+function getStaffSubjects() {
+  const fromDB = (App?.data?.subjects || []).map(s => s.name || s).filter(Boolean);
+  return fromDB.length ? fromDB : DEFAULT_SUBJECTS;
+}
+
+function getStaffClasses() {
+  const fromDB = (App?.data?.classes || []).map(c => c.name || c).filter(Boolean);
+  return fromDB.length ? fromDB : ['JSS 1','JSS 2','JSS 3','SS 1','SS 2','SS 3'];
+}
+
+// Keep backward-compatible array references (used in staff.js via STAFF_SUBJECTS / STAFF_CLASSES)
+// These are computed at call time so always fresh
+Object.defineProperty(window, 'STAFF_SUBJECTS', { get: getStaffSubjects, configurable: true });
+Object.defineProperty(window, 'STAFF_CLASSES',  { get: getStaffClasses,  configurable: true });
 
 const STAFF_STATUS_COLORS = {
   Active: 'success',

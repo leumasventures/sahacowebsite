@@ -119,7 +119,8 @@ function buildReportCard(student, cls, arm, term, session, school) {
 
   const totalScore   = results.reduce((s, r) => s + (r.total || 0), 0);
   const subjectCount = results.length;
-  const average      = subjectCount ? (totalScore / subjectCount).toFixed(1) : null;
+  const _dp           = typeof getDecimalPlaces === "function" ? getDecimalPlaces() : 1;
+  const average      = subjectCount ? (totalScore / subjectCount).toFixed(_dp) : null;
   const overallGrade = average ? grade(parseFloat(average)) : { letter: '—', remark: '—' };
 
   const canEditTeacher   = priv.isAdmin() || (priv.isTeacher() && priv.canActOnClass(cls, arm));
@@ -136,7 +137,8 @@ function buildReportCard(student, cls, arm, term, session, school) {
 
   const gradeBar = (raw) => {
     if (typeof raw !== 'number') return '';
-    const col = raw>=80?'#16a34a':raw>=70?'#2563eb':raw>=60?'#d97706':raw>=50?'#ea580c':'#dc2626';
+    const _pm = typeof getPassMark==="function"?getPassMark():40;
+    const col = raw>=80?'#16a34a':raw>=70?'#2563eb':raw>=60?'#d97706':raw>=_pm?'#ea580c':'#dc2626';
     return `<div style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:2px;">
       <div style="width:${raw}%;height:100%;background:${col};border-radius:2px;"></div></div>`;
   };
@@ -190,9 +192,12 @@ function buildReportCard(student, cls, arm, term, session, school) {
     ? `<img src="${school.logo}" style="width:80px;height:80px;object-fit:contain;" alt="logo">`
     : `<div style="width:80px;height:80px;border:2px solid #1e3a8a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#1e3a8a;text-align:center;">SCHOOL<br>LOGO</div>`;
 
-  const photoHtml = student.photo
-    ? `<img src="${student.photo}" style="width:80px;height:90px;object-fit:cover;border:2px solid #c7d7f5;border-radius:4px;" alt="photo">`
-    : `<div style="width:80px;height:90px;border:2px dashed #c7d7f5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#9ca3af;text-align:center;">STUDENT<br>PHOTO</div>`;
+  const _showPhoto = typeof showStudentPhoto==="function" ? showStudentPhoto() : false;
+  const photoHtml = _showPhoto
+    ? (student.photo
+        ? `<img src="${student.photo}" style="width:80px;height:90px;object-fit:cover;border:2px solid #c7d7f5;border-radius:4px;" alt="photo">`
+        : `<div style="width:80px;height:90px;border:2px dashed #c7d7f5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#9ca3af;text-align:center;">STUDENT<br>PHOTO</div>`)
+    : '';
 
   const stampHtml = `<div style="width:80px;height:80px;border:3px double #1e3a8a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#1e3a8a;text-align:center;letter-spacing:.5px;padding:6px;">
     <div style="font-size:8px;font-weight:900;">${(school.name||'SHC').split(' ').map(w=>w[0]).join('').slice(0,4)}</div>
@@ -430,6 +435,7 @@ function buildReportCard(student, cls, arm, term, session, school) {
 
       <!-- ── RIGHT: 3 Domains ── -->
       <div>
+      ${(typeof showDomainOnReport!=="function"||showDomainOnReport()) ? `
         <div style="background:#1e3a8a;color:#fff;padding:5px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Domain Assessments</div>
         ${[
           {label:'Cognitive Domain',   key:'cognitive',   bg:'#eff6ff',bg2:'#dbeafe',clr:'#1e40af'},
@@ -462,6 +468,7 @@ function buildReportCard(student, cls, arm, term, session, school) {
       </div>
     </div>
 
+      ` : ""}
     <!-- ── Behaviour Assessment ── -->
     <div style="border-top:2px solid #1e3a8a;">
       <div style="background:#1e3a8a;color:#fff;padding:5px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Behaviour Assessment</div>

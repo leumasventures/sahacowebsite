@@ -133,7 +133,21 @@ function smRenderTable() {
         <td style="font-size:.82rem;font-weight:500">${s.position || '-'}</td>
         <td><span class="sm-badge sm-badge-${catColors[s.category] || 'gray'}">${s.category || '-'}</span></td>
         <td style="font-size:.8rem;color:#8892a4">${s.department || '-'}</td>
-        <td style="font-size:.8rem">${s.classUnit || s.class || '-'}</td>
+        <td style="font-size:.8rem">
+          ${(() => {
+            const assignments = Array.isArray(s.assignments) && s.assignments.length
+              ? s.assignments
+              : (s.classUnit || s.class) ? [{ cls: s.classUnit || s.class, arm: s.arm || '', subject: s.subject || '' }] : [];
+            if (!assignments.length) return '<span style="color:#4a5568">—</span>';
+            return assignments.slice(0,2).map(a =>
+              `<div style="font-size:.73rem;background:rgba(79,142,247,.1);border-radius:4px;padding:.1rem .4rem;margin-bottom:.2rem;display:inline-block;margin-right:.2rem;">${a.subject||''} ${a.cls||''} ${a.arm && a.arm!=='N/A' ? a.arm : ''}</div>`
+            ).join('') + (assignments.length > 2 ? `<div style="font-size:.7rem;color:#8892a4">+${assignments.length-2} more</div>` : '');
+          })()}
+          ${(() => {
+            const tasks = Array.isArray(s.tasks) && s.tasks.length ? s.tasks : [];
+            return tasks.length ? `<div style="font-size:.7rem;color:#10b981;margin-top:.2rem">🗒 ${tasks.length} task${tasks.length>1?'s':''}</div>` : '';
+          })()}
+        </td>
         <td>
           ${credCount > 0
             ? `<span class="sm-cred-badge" onclick="smViewCredentials('${s.id}')">📎 ${credCount} file${credCount > 1 ? 's' : ''}</span>`
@@ -162,6 +176,32 @@ window.smViewProfile = function(id) {
       <span class="ci-size">${c.size}</span>
       <span style="color:#8892a4;font-size:.7rem">${c.type || ''}</span>
     </div>`).join('');
+
+  // Build assignments HTML
+  const assignments = Array.isArray(s.assignments) && s.assignments.length
+    ? s.assignments
+    : (s.classUnit || s.class || s.subject)
+      ? [{ subject: s.subject || '—', cls: s.classUnit || s.class || '—', arm: s.arm || '' }]
+      : [];
+
+  const assignHTML = assignments.length
+    ? assignments.map(a => `
+        <div style="display:flex;align-items:center;gap:.5rem;background:rgba(79,142,247,.1);border-radius:6px;padding:.4rem .7rem;margin-bottom:.35rem;">
+          <span style="font-size:.8rem;font-weight:600;color:#4f8ef7">📖 ${a.subject || 'N/A'}</span>
+          <span style="color:#4a5568;font-size:.75rem">→</span>
+          <span style="font-size:.8rem;font-weight:600;color:#10b981">${a.cls || a.class || 'N/A'} ${a.arm && a.arm !== 'N/A' ? a.arm : ''}</span>
+        </div>`).join('')
+    : '<span style="color:#4a5568;font-size:.78rem">No class assignments</span>';
+
+  // Build tasks HTML
+  const tasks = Array.isArray(s.tasks) ? s.tasks : (s.task ? [s.task] : []);
+  const tasksHTML = tasks.length
+    ? tasks.map(t => `
+        <div style="display:flex;align-items:center;gap:.4rem;background:rgba(16,185,129,.1);border-radius:5px;padding:.3rem .6rem;margin-bottom:.3rem;">
+          <span style="font-size:.78rem;font-weight:500;color:#10b981;">🗒 ${t}</span>
+        </div>`).join('')
+    : '<span style="color:#4a5568;font-size:.78rem">No tasks assigned</span>';
+
   showModal(`
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
       <div class="sm-avatar" style="width:56px;height:56px;font-size:1.1rem;background:linear-gradient(135deg,${smAvatarColor(s.id)},${smAvatarColor(s.id)}88)">${smGetInitials(s.name)}</div>
@@ -173,8 +213,8 @@ window.smViewProfile = function(id) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.83rem;">
       ${[
-        ['Staff ID', s.id], ['Category', s.category], ['Subject', s.subject || '-'],
-        ['Class/Unit', s.classUnit || s.class || '-'], ['Phone', s.phone || '-'], ['Email', s.email || '-'],
+        ['Staff ID', s.id], ['Category', s.category],
+        ['Phone', s.phone || '-'], ['Email', s.email || '-'],
         ['Gender', s.gender || '-'], ['Qualification', s.qualification || '-'],
         ['Experience', s.experience || '-'], ['Date Joined', s.dateJoined || '-'],
       ].map(([k, v]) => `
@@ -183,8 +223,19 @@ window.smViewProfile = function(id) {
           <div style="font-weight:500">${v}</div>
         </div>`).join('')}
     </div>
+
+    <div style="margin-top:1.1rem;">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4f8ef7;margin-bottom:.5rem">📚 Subject & Class Assignments (${assignments.length})</div>
+      <div>${assignHTML}</div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#10b981;margin-bottom:.5rem">🗒 Tasks & Duties (${tasks.length})</div>
+      <div>${tasksHTML}</div>
+    </div>
+
     ${s.notes ? `<div style="margin-top:1rem;padding:.75rem;border-radius:7px;background:rgba(0,0,0,.2);font-size:.82rem;color:#8892a4"><strong style="color:#e2e8f0">Notes:</strong> ${s.notes}</div>` : ''}
-    ${credHTML ? `<div style="margin-top:1rem;"><div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4f8ef7;margin-bottom:.6rem">Credentials</div><div class="sm-cred-list">${credHTML}</div></div>` : ''}
+    ${credHTML ? `<div style="margin-top:1rem;"><div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4f8ef7;margin-bottom:.6rem">📎 Credentials</div><div class="sm-cred-list">${credHTML}</div></div>` : ''}
     <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.5rem;">
       <button onclick="closeModal()" style="${btnStyle('secondary')}">Close</button>
       <button onclick="closeModal();openStaffModal('${s.id}')" style="${btnStyle('primary')}">Edit Profile</button>
@@ -225,8 +276,19 @@ window.openStaffModal = function(id = null) {
     .map(([grp, pos]) => `<optgroup label="${grp}">${pos.map(p => `<option ${s?.position === p ? 'selected' : ''}>${p}</option>`).join('')}</optgroup>`)
     .join('');
   const deptOpts = STAFF_DEPARTMENTS.map(d => `<option ${s?.department === d ? 'selected' : ''}>${d}</option>`).join('');
-  const classOpts = ['N/A', ...STAFF_CLASSES].map(c => `<option ${(s?.classUnit || s?.class || 'N/A') === c ? 'selected' : ''}>${c}</option>`).join('');
-  const subjOpts = ['N/A', ...STAFF_SUBJECTS].map(x => `<option ${(s?.subject || 'N/A') === x ? 'selected' : ''}>${x}</option>`).join('');
+  // Build subject options from App.data.subjects (live DB list)
+  const liveSubjects = (App?.data?.subjects || []).map(s => s.name || s).filter(Boolean);
+  const subjectList  = liveSubjects.length ? liveSubjects : STAFF_SUBJECTS;
+  const subjOpts = ['N/A', ...subjectList].map(x =>
+    `<option ${(s?.subject || 'N/A') === x ? 'selected' : ''}>${x}</option>`
+  ).join('');
+
+  // Build class options from App.data.classes (live DB list)
+  const liveClasses = (App?.data?.classes || []).map(c => c.name || c).filter(Boolean);
+  const classList   = liveClasses.length ? liveClasses : STAFF_CLASSES;
+  const classOpts = ['N/A', ...classList].map(c =>
+    `<option ${(s?.classUnit || s?.class || 'N/A') === c ? 'selected' : ''}>${c}</option>`
+  ).join('');
   const catOpts = ['Academic', 'Administrative', 'Support', 'Leadership'].map(c => `<option ${s?.category === c ? 'selected' : ''}>${c}</option>`).join('');
   const qualOpts = ['SSCE/WAEC', 'OND', 'HND', 'B.Sc/B.Ed/B.A', 'PGDE', 'M.Sc/M.Ed/M.A', 'MBA', 'Ph.D', 'Other'].map(q => `<option ${s?.qualification === q ? 'selected' : ''}>${q}</option>`).join('');
   const credTypeOpts = ['Certificate', 'Degree', 'NYSC', 'NIS Letter', 'ID Card', 'Appointment Letter', 'Reference Letter', 'Medical Certificate', 'TRCN Certificate', 'Other'].map(t => `<option>${t}</option>`).join('');
@@ -291,19 +353,37 @@ window.openStaffModal = function(id = null) {
         <label>Department</label>
         <select id="sf-department"><option value="">-- Select --</option>${deptOpts}</select>
       </div>
-      <div class="sm-form-group">
-        <label>Subject (if academic)</label>
-        <select id="sf-subject">${subjOpts}</select>
-      </div>
-      <div class="sm-form-group">
-        <label>Class / Unit</label>
-        <select id="sf-class">${classOpts}</select>
-      </div>
-      <div class="sm-form-group">
-        <label>Arm</label>
-        <select id="sf-arm">
-          ${['N/A', 'A', 'B', 'C', 'D', 'E'].map(a => `<option ${(s?.arm || 'N/A') === a ? 'selected' : ''}>${a}</option>`).join('')}
-        </select>
+
+      <div class="sm-form-section sm-span2"><span>📚 Subject & Class Assignments (can assign multiple)</span></div>
+
+      <!-- Multi-assignment builder -->
+      <div class="sm-span2">
+        <div id="sm-assignments-list" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:.75rem;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:.5rem;align-items:end;background:rgba(79,142,247,.06);border:1px dashed rgba(79,142,247,.3);border-radius:8px;padding:.75rem;">
+          <div>
+            <label style="font-size:.7rem;color:#8892a4;display:block;margin-bottom:.25rem;">Subject</label>
+            <select id="sf-new-subject" style="width:100%;padding:.4rem .6rem;background:var(--bg,#0f1117);border:1px solid var(--border,#2a2f42);border-radius:6px;color:var(--text,#e2e8f0);font-size:.8rem;">${subjOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:.7rem;color:#8892a4;display:block;margin-bottom:.25rem;">Class</label>
+            <select id="sf-new-class" style="width:100%;padding:.4rem .6rem;background:var(--bg,#0f1117);border:1px solid var(--border,#2a2f42);border-radius:6px;color:var(--text,#e2e8f0);font-size:.8rem;">${classOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:.7rem;color:#8892a4;display:block;margin-bottom:.25rem;">Arm</label>
+            <select id="sf-new-arm" style="width:100%;padding:.4rem .6rem;background:var(--bg,#0f1117);border:1px solid var(--border,#2a2f42);border-radius:6px;color:var(--text,#e2e8f0);font-size:.8rem;">
+              ${['N/A','A','B','C','D','E'].map(a=>`<option>${a}</option>`).join('')}
+            </select>
+          </div>
+          <button type="button" onclick="smAddAssignment()" style="padding:.4rem .8rem;background:#4f8ef7;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;white-space:nowrap;height:32px;align-self:end;">+ Add</button>
+        </div>
+        <div style="margin-top:.5rem;">
+          <label style="font-size:.7rem;color:#8892a4;display:block;margin-bottom:.25rem;">🗒 Task / Duty (optional — add multiple)</label>
+          <div id="sm-tasks-list" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.4rem;"></div>
+          <div style="display:flex;gap:.5rem;">
+            <input id="sf-new-task" placeholder="e.g. Form Teacher JS2A, Sports Coordinator, Labour Prefect Master…" style="flex:1;padding:.4rem .7rem;background:var(--bg,#0f1117);border:1px solid var(--border,#2a2f42);border-radius:6px;color:var(--text,#e2e8f0);font-size:.8rem;">
+            <button type="button" onclick="smAddTask()" style="padding:.4rem .8rem;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;">+ Add</button>
+          </div>
+        </div>
       </div>
 
       <div class="sm-form-section sm-span2"><span>Qualifications & Experience</span></div>
@@ -357,6 +437,9 @@ window.openStaffModal = function(id = null) {
     zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
     zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); smHandleFileDrop(e); });
   }
+
+  // Init multi-assignment state
+  smInitAssignments(s);
 };
 
 // ── File Handling ──────────────────────────────────────────────────────────────
@@ -395,6 +478,89 @@ window.smRemoveExistingCred = function(i, staffId) {
   toast('Credential removed', 'warning');
 };
 
+// ── Multi-assignment & task state ─────────────────────────────────────────────
+let _staffAssignments = [];  // [{subject, class, arm}]
+let _staffTasks       = [];  // ['Form Teacher JS2A', 'Sports Coordinator', ...]
+
+function smInitAssignments(s) {
+  // Load existing assignments from staff object
+  _staffAssignments = [];
+  _staffTasks       = [];
+
+  if (s) {
+    // Support both new format (assignments array) and legacy single fields
+    if (Array.isArray(s.assignments) && s.assignments.length) {
+      _staffAssignments = s.assignments.map(a => ({ subject: a.subject || '', cls: a.class || a.cls || '', arm: a.arm || 'N/A' }));
+    } else if (s.classUnit || s.class || s.subject) {
+      // Migrate legacy single assignment
+      _staffAssignments = [{ subject: s.subject || 'N/A', cls: s.classUnit || s.class || 'N/A', arm: s.arm || 'N/A' }];
+    }
+    // Load tasks
+    if (Array.isArray(s.tasks)) _staffTasks = [...s.tasks];
+    else if (s.task) _staffTasks = [s.task];
+  }
+
+  smRenderAssignments();
+  smRenderTasks();
+}
+
+window.smAddAssignment = function() {
+  const subject = document.getElementById('sf-new-subject')?.value || 'N/A';
+  const cls     = document.getElementById('sf-new-class')?.value   || 'N/A';
+  const arm     = document.getElementById('sf-new-arm')?.value     || 'N/A';
+  // Prevent exact duplicates
+  const exists = _staffAssignments.some(a => a.subject === subject && a.cls === cls && a.arm === arm);
+  if (exists) { toast('This exact assignment already exists', 'warning'); return; }
+  _staffAssignments.push({ subject, cls, arm });
+  smRenderAssignments();
+  toast('Assignment added', 'success');
+};
+
+window.smRemoveAssignment = function(i) {
+  _staffAssignments.splice(i, 1);
+  smRenderAssignments();
+};
+
+function smRenderAssignments() {
+  const el = document.getElementById('sm-assignments-list');
+  if (!el) return;
+  if (!_staffAssignments.length) {
+    el.innerHTML = `<div style="font-size:.75rem;color:#4a5568;padding:.4rem;font-style:italic;">No assignments yet — add subject/class/arm combinations below.</div>`;
+    return;
+  }
+  el.innerHTML = _staffAssignments.map((a, i) => `
+    <div style="display:flex;align-items:center;gap:.5rem;background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.2);border-radius:7px;padding:.45rem .75rem;">
+      <span style="font-size:.8rem;font-weight:600;color:#4f8ef7">📖 ${a.subject || 'N/A'}</span>
+      <span style="color:#4a5568;font-size:.75rem">→</span>
+      <span style="font-size:.8rem;font-weight:600;color:#10b981">${a.cls || 'N/A'} ${a.arm !== 'N/A' ? a.arm : ''}</span>
+      <button onclick="smRemoveAssignment(${i})" style="margin-left:auto;background:rgba(220,38,38,.15);color:#dc2626;border:none;border-radius:4px;cursor:pointer;padding:.1rem .4rem;font-size:.75rem;font-weight:700;">✕</button>
+    </div>`).join('');
+}
+
+window.smAddTask = function() {
+  const val = document.getElementById('sf-new-task')?.value.trim();
+  if (!val) return;
+  if (_staffTasks.includes(val)) { toast('Task already added', 'warning'); return; }
+  _staffTasks.push(val);
+  if (document.getElementById('sf-new-task')) document.getElementById('sf-new-task').value = '';
+  smRenderTasks();
+};
+
+window.smRemoveTask = function(i) {
+  _staffTasks.splice(i, 1);
+  smRenderTasks();
+};
+
+function smRenderTasks() {
+  const el = document.getElementById('sm-tasks-list');
+  if (!el) return;
+  el.innerHTML = _staffTasks.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:6px;padding:.35rem .65rem;">
+      <span style="font-size:.78rem;font-weight:500;color:#10b981;">🗒 ${t}</span>
+      <button onclick="smRemoveTask(${i})" style="margin-left:auto;background:rgba(220,38,38,.15);color:#dc2626;border:none;border-radius:4px;cursor:pointer;padding:.1rem .35rem;font-size:.72rem;font-weight:700;">✕</button>
+    </div>`).join('');
+}
+
 // ── Submit ─────────────────────────────────────────────────────────────────────
 window.smSubmitForm = async function() {
   const name = document.getElementById('sf-name')?.value.trim();
@@ -405,10 +571,12 @@ window.smSubmitForm = async function() {
   if (!category) { toast('Category is required', 'error'); return; }
   if (!position) { toast('Position is required', 'error'); return; }
 
-  const classVal = document.getElementById('sf-class')?.value;
-  const armVal   = document.getElementById('sf-arm')?.value;
+  // Build primary class/subject from first assignment (for backend legacy compat)
+  const firstAssign = _staffAssignments[0];
+  const primaryClass   = firstAssign?.cls     !== 'N/A' ? firstAssign?.cls     : null;
+  const primaryArm     = firstAssign?.arm     !== 'N/A' ? firstAssign?.arm     : null;
+  const primarySubject = firstAssign?.subject !== 'N/A' ? firstAssign?.subject : null;
 
-  // Map frontend field names to what the backend expects
   const data = {
     name,
     gender:        document.getElementById('sf-gender')?.value,
@@ -419,7 +587,11 @@ window.smSubmitForm = async function() {
     category,
     position,
     department:    document.getElementById('sf-department')?.value || null,
-    subject:       document.getElementById('sf-subject')?.value === 'N/A' ? null : (document.getElementById('sf-subject')?.value || null),
+    // Primary (legacy compat)
+    subject:       primarySubject,
+    // All assignments + tasks stored as JSON fields
+    assignments:   _staffAssignments,
+    tasks:         _staffTasks,
     qualification: document.getElementById('sf-qual')?.value      || null,
     experience:    document.getElementById('sf-exp')?.value       || null,
     notes:         document.getElementById('sf-notes')?.value     || null,
@@ -430,59 +602,53 @@ window.smSubmitForm = async function() {
   try {
     let savedStaff;
     if (_currentEditStaffId) {
-      // Update existing staff
       const resp = await Staff.update(_currentEditStaffId, data);
       savedStaff = resp.data || resp;
 
-      // Assign class if changed
-      const assignClass = classVal !== 'N/A' ? classVal : null;
-      const assignArm   = armVal   !== 'N/A' ? armVal   : null;
-      await Staff.assignClass(_currentEditStaffId, { classUnit: assignClass, arm: assignArm });
+      // Update primary class assignment
+      if (primaryClass) {
+        await Staff.assignClass(_currentEditStaffId, { classUnit: primaryClass, arm: primaryArm }).catch(() => {});
+      }
 
       // Update in-memory cache
       const cached = App.data.staff.find(x => x.id === _currentEditStaffId);
       if (cached) {
         Object.assign(cached, data, {
-          dateJoined: data.date_joined,
-          classUnit:  assignClass || '',
-          class:      assignClass || '',
-          arm:        assignArm  || '',
+          dateJoined:  data.date_joined,
+          classUnit:   primaryClass || '',
+          class:       primaryClass || '',
+          arm:         primaryArm  || '',
+          assignments: _staffAssignments,
+          tasks:       _staffTasks,
         });
       }
       toast('Staff member updated!', 'success');
     } else {
-      // Create new staff
       const resp = await Staff.create(data);
       savedStaff = resp.data || resp;
 
-      // Assign class after creation
-      if (classVal && classVal !== 'N/A') {
-        await Staff.assignClass(savedStaff.id, {
-          classUnit: classVal,
-          arm:       armVal !== 'N/A' ? armVal : null
-        });
-        savedStaff.classUnit    = classVal;
-        savedStaff.class        = classVal;
-        savedStaff.assignedClass= classVal;
-        savedStaff.arm          = armVal !== 'N/A' ? armVal : '';
-        savedStaff.assignedArm  = savedStaff.arm;
+      if (primaryClass) {
+        await Staff.assignClass(savedStaff.id, { classUnit: primaryClass, arm: primaryArm }).catch(() => {});
+        savedStaff.classUnit     = primaryClass;
+        savedStaff.class         = primaryClass;
+        savedStaff.assignedClass = primaryClass;
+        savedStaff.arm           = primaryArm || '';
+        savedStaff.assignedArm   = savedStaff.arm;
       }
 
-      // Normalise for local cache
-      savedStaff.dateJoined   = savedStaff.dateJoined || data.date_joined || '';
-      savedStaff.credentials  = newCreds;
-      savedStaff.role         = 'Staff';
+      savedStaff.dateJoined  = savedStaff.dateJoined || data.date_joined || '';
+      savedStaff.credentials = newCreds;
+      savedStaff.assignments = _staffAssignments;
+      savedStaff.tasks       = _staffTasks;
+      savedStaff.role        = 'Staff';
       App.data.staff.push(savedStaff);
       toast('Staff member added!', 'success');
     }
 
-    // Upload credentials if any
     if (newCreds.length && savedStaff?.id) {
-      try {
-        await Staff.uploadCredential(savedStaff.id, { credentials: newCreds });
-      } catch (credErr) {
-        toast('Staff saved but credential upload failed: ' + credErr.message, 'warning');
-      }
+      await Staff.uploadCredential(savedStaff.id, { credentials: newCreds }).catch(e => {
+        toast('Staff saved but credential upload failed: ' + e.message, 'warning');
+      });
     }
 
     closeModal();

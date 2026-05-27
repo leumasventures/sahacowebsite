@@ -330,59 +330,90 @@ function closeModal() { $('sfp-modal').classList.remove('open'); }
 /* ── State ── */
 let _student   = null;
 let _view      = 'overview';
-let _receipts  = [];   // session receipt log
+let _receipts  = [];
 let _schoolInfo= {};
+let _role      = '';        // 'Admin' | 'Bursar' | 'Teacher' | 'Staff' | 'Parent'
+let _wardId    = null;      // for Parent: their ward's student ID
+
+/* ── Role helpers ── */
+const canEdit    = () => ['Admin','Bursar'].includes(_role);   // can record payments/charges
+const canAdmin_  = () => _role === 'Admin';                    // can delete charges, do adjustments
+const isParent   = () => _role === 'Parent';
+const isViewOnly = () => !['Admin','Bursar'].includes(_role);  // Teacher, Staff, Parent = view only
 
 /* ════════════════════════════════════════════════════════════════
    BOOT — load students + school info
 ════════════════════════════════════════════════════════════════ */
 async function boot() {
-  // Redirect to login if not authenticated
   const token = getToken();
   if (!token) { location.href = 'login.html'; return; }
 
   try {
-    // Get role from session storage (set by auth.js on login - no extra API call needed)
     const session = JSON.parse(sessionStorage.getItem('shc_session') || 'null');
-    const role    = session?.role || null;
-    const ALLOWED = ['Admin', 'Bursar', 'Teacher'];
+    _role   = session?.role   || 'Teacher';
+    _wardId = session?.wardId || session?.ward_id || null;
 
-    if (role && !ALLOWED.includes(role)) {
+    const ALLOWED = ['Admin', 'Bursar', 'Teacher', 'Staff', 'Parent'];
+    if (!ALLOWED.includes(_role)) {
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;font-family:-apple-system,sans-serif;">
           <div style="text-align:center;padding:2rem;">
             <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
             <h2 style="color:#1e3a5f;margin:0 0 .5rem;">Access Restricted</h2>
-            <p style="color:#6b7280;margin:0 0 1.5rem;">The Student Finance Portal is only accessible to Admin, Bursar and Teachers.</p>
+            <p style="color:#6b7280;margin:0 0 1.5rem;">You do not have access to the Student Finance Portal.</p>
             <a href="dashboard.html" style="background:#1e3a5f;color:#fff;padding:.65rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:600;">← Back to Dashboard</a>
           </div>
         </div>`;
       return;
     }
 
-    // Show role in topbar
-    if (role && session?.name) {
+    // Update topbar with role badge
+    if (session?.name) {
       const nameEl = document.querySelector('.topbar-brand p');
-      if (nameEl) nameEl.textContent = `Student Finance Portal — ${session.name} (${role})`;
+      const roleBadgeColor = { Admin:'#dc2626', Bursar:'#7c3aed', Teacher:'#2563eb', Staff:'#0891b2', Parent:'#16a34a' }[_role] || '#6b7280';
+      if (nameEl) nameEl.innerHTML = `Student Finance Portal &nbsp;<span style="background:${roleBadgeColor};color:#fff;border-radius:5px;padding:.1rem .5rem;font-size:.68rem;font-weight:700;">${_role.toUpperCase()}</span>`;
     }
 
-    // Load school info — try admin endpoint, fall back to school_settings directly
+    // Hide edit-only actions for view-only users
+    if (isViewOnly()) {
+      const style = document.createElement('style');
+      style.textContent = `.edit-only { display: none !important; }`;
+      document.head.appendChild(style);
+    }
+    // Hide adjustment nav for non-admin
+    if (!canAdmin_()) {
+      document.querySelector('[data-view="adjustment"]')?.classList.add('edit-only');
+    }
+
+    // Load school info
     const si = await apiFetch('/admin/').catch(() => null);
-    if (si?.data) {
-      _schoolInfo = si.data;
-    } else {
-      // Fallback: use what's in session or defaults
-      _schoolInfo = {
-        school_name:     'Sacred Heart College Eziukwu Aba',
-        principal_name:  'Rev. Fr. Sullivan Obinna Achilihu',
-        current_session: session?.session || '',
-        current_term:    session?.term    || '',
-      };
-    }
-    const sn = _schoolInfo.school_name || 'Sacred Heart College Eziukwu Aba';
-    $('school-name-top').textContent = sn;
+    _schoolInfo = si?.data || {
+      school_name:     'Sacred Heart College Eziukwu Aba',
+      principal_name:  'Rev. Fr. Sullivan Obinna Achilihu',
+      current_session: session?.session || '',
+      current_term:    session?.term    || '',
+    };
+    $('school-name-top').textContent = _schoolInfo.school_name || 'Sacred Heart College Eziukwu Aba';
 
-    // Load students
+    // Parent: can only see their own ward
+    if (isParent()) {
+      if (_wardId) {
+        // Hide student picker, go straight to ward
+        $('stu-picker')?.closest('.stu-picker')?.style && ($('stu-picker').closest('.stu-picker').style.display = 'none');
+        selectStudent(_wardId);
+      } else {
+        // Check URL param
+        const params = new URLSearchParams(location.search);
+        const pid = params.get('studentId') || params.get('id');
+        if (pid) { selectStudent(pid); }
+        else {
+          $('sfp-main').innerHTML = `<div class="empty"><div class="empty-icon">🔒</div><p>No ward linked to your account. Contact the school administrator.</p></div>`;
+        }
+      }
+      return;
+    }
+
+    // Admin / Bursar / Teacher / Staff: load all students
     const resp     = await apiFetch('/students');
     const students = (resp.data || []).sort((a, b) => a.name.localeCompare(b.name));
     const sel      = $('stu-picker');
@@ -391,14 +422,12 @@ async function boot() {
         `<option value="${s.id}">${s.name} — ${s.class || s.class_name || ''} ${s.arm || ''}</option>`
       ).join('');
 
-    // Auto-select from URL param
     const params = new URLSearchParams(location.search);
     const pid    = params.get('studentId') || params.get('id');
     if (pid) { sel.value = pid; selectStudent(pid); }
 
   } catch(e) {
-    // Show error but still render the page shell
-    toast('Load error: ' + e.message + ' — try refreshing', 'error');
+    toast('Load error: ' + e.message, 'error');
     console.error('[SFP boot]', e);
   }
 }
@@ -410,6 +439,11 @@ async function selectStudent(id) {
   if (!id) {
     _student = null;
     $('sfp-main').innerHTML = '<div class="empty"><div class="empty-icon">👈</div><p>Select a student.</p></div>';
+    return;
+  }
+  // Parents can only view their ward
+  if (isParent() && _wardId && id !== _wardId) {
+    toast("You can only view your ward's account", 'error');
     return;
   }
   try {
@@ -461,6 +495,11 @@ async function loadBalanceChip() {
    NAVIGATION
 ════════════════════════════════════════════════════════════════ */
 function switchView(view) {
+  // Block adjustment view for non-admin
+  if (view === 'adjustment' && !canAdmin_()) {
+    toast('Only Admin can make manual adjustments', 'warning');
+    return;
+  }
   _view = view;
   document.querySelectorAll('.sfp-nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
@@ -504,7 +543,10 @@ async function renderOverview() {
     const recent5  = (summary.recentActivity || []).slice(0,5).reverse();
 
     main.innerHTML = `
-      <div class="section-title">📊 Financial Overview — ${_student.name}</div>
+      <div class="section-title">📊 Financial Overview
+      ${isViewOnly() ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem;">
+        <span>👁</span> <strong>View Only</strong> — You can view this student's financial records but cannot make changes. Contact the Admin or Bursar to record payments or make adjustments.
+      </div>` : ''} — ${_student.name}</div>
 
       <div class="stat-grid">
         ${[
@@ -552,7 +594,7 @@ async function renderOverview() {
                 <td>${p.term}</td>
                 <td style="font-weight:600;color:var(--danger);">${fmt(p.amount)}</td>
                 <td>${statusBadge(p.status)}</td>
-                <td><button class="btn btn-success btn-sm" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button></td>
+                <td><button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')>💳 Pay</button></td>
               </tr>`).join('')}
             ${levies.filter(l=>l.status==='Unpaid').slice(0,2).map(l=>`
               <tr>
@@ -560,7 +602,7 @@ async function renderOverview() {
                 <td>${l.term||'—'}</td>
                 <td style="font-weight:600;color:var(--danger);">${fmt(l.amount_paid)}</td>
                 <td>${statusBadge(l.status)}</td>
-                <td><button class="btn btn-success btn-sm" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button></td>
+                <td><button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})>💳 Pay</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -603,11 +645,14 @@ async function renderCharges() {
     const sc   = { Paid:'#16a34a',Partial:'#d97706',Unpaid:'#dc2626',Waived:'#6b7280',overdue:'#dc2626' };
 
     main.innerHTML = `
-      <div class="section-title">⚡ Charges for ${_student.name}</div>
+      <div class="section-title">⚡ Charges for
+      ${isViewOnly() ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem;">
+        <span>👁</span> <strong>View Only</strong> — You can view this student's financial records but cannot make changes. Contact the Admin or Bursar to record payments or make adjustments.
+      </div>` : ''} ${_student.name}</div>
       <div class="card">
         <div class="card-header">
           <h3>All Fee Charges (${all.length})</h3>
-          <button class="btn btn-primary btn-sm" onclick="openAddChargeModal()">+ Add Charge</button>
+          <button class="btn btn-primary btn-sm edit-only" onclick="openAddChargeModal()">+ Add Charge</button>
         </div>
         ${all.length ? `<table>
           <thead><tr><th>Fee Type</th><th>Term</th><th>Session</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
@@ -621,9 +666,9 @@ async function renderCharges() {
               <td>${statusBadge(p.status)}</td>
               <td>
                 <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
-                  ${p.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button>`:''}
+                  ${p.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')>💳 Pay</button>`:''}
                   <button class="btn btn-secondary btn-sm" onclick="generateReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾 Receipt</button>
-                  <button class="btn btn-danger btn-sm" onclick="deleteCharge('${p.id}')">🗑</button>
+                  <button class="btn btn-danger btn-sm edit-only" onclick="deleteCharge('${p.id}')">🗑</button>
                 </div>
               </td>
             </tr>`).join('')}
@@ -644,7 +689,10 @@ async function renderPayments() {
     const total = paid.reduce((a,p) => a+parseFloat(p.amount||0), 0);
 
     main.innerHTML = `
-      <div class="section-title">💳 Payment History — ${_student.name}</div>
+      <div class="section-title">💳 Payment History
+      ${isViewOnly() ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem;">
+        <span>👁</span> <strong>View Only</strong> — You can view this student's financial records but cannot make changes. Contact the Admin or Bursar to record payments or make adjustments.
+      </div>` : ''} — ${_student.name}</div>
       <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
         <div class="stat-card" style="border-left-color:#16a34a;min-width:160px;">
           <div class="sv" style="color:#16a34a;">${fmt(total)}</div>
@@ -658,7 +706,7 @@ async function renderPayments() {
       <div class="card">
         <div class="card-header">
           <h3>Payment Records</h3>
-          <button class="btn btn-primary btn-sm" onclick="openDirectPaymentModal()">+ Record Payment</button>
+          <button class="btn btn-primary btn-sm edit-only" onclick="openDirectPaymentModal()">+ Record Payment</button>
         </div>
         ${paid.length ? `<table>
           <thead><tr><th>Fee Type</th><th>Term</th><th>Amount</th><th>Date</th><th>Reference</th><th>Actions</th></tr></thead>
@@ -690,7 +738,10 @@ async function renderLevies() {
     const sc = { Paid:'#16a34a', Unpaid:'#dc2626', Partial:'#d97706', Waived:'#6b7280', Exempt:'#7c3aed' };
 
     main.innerHTML = `
-      <div class="section-title">🎯 Levies & Special Fees — ${_student.name}</div>
+      <div class="section-title">🎯 Levies
+      ${isViewOnly() ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem;">
+        <span>👁</span> <strong>View Only</strong> — You can view this student's financial records but cannot make changes. Contact the Admin or Bursar to record payments or make adjustments.
+      </div>` : ''} & Special Fees — ${_student.name}</div>
       <div class="card">
         <div class="card-header"><h3>All Levies (${levies.length})</h3></div>
         ${levies.length ? `<table>
@@ -704,7 +755,7 @@ async function renderLevies() {
               <td>${statusBadge(l.status)}</td>
               <td>
                 <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
-                  ${l.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button>`:''}
+                  ${l.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})>💳 Pay</button>`:''}
                   <button class="btn btn-secondary btn-sm" onclick="generateLevyReceipt(${JSON.stringify(l).replace(/"/g,'&quot;')})">🧾 Receipt</button>
                 </div>
               </td>
@@ -728,7 +779,10 @@ async function renderLedger() {
     const balance      = parseFloat(resp.balance      || 0);
 
     main.innerHTML = `
-      <div class="section-title">📒 Full Financial Ledger — ${_student.name}</div>
+      <div class="section-title">📒 Full Financial Ledger
+      ${isViewOnly() ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem;">
+        <span>👁</span> <strong>View Only</strong> — You can view this student's financial records but cannot make changes. Contact the Admin or Bursar to record payments or make adjustments.
+      </div>` : ''} — ${_student.name}</div>
       <div class="stat-grid" style="margin-bottom:1.25rem;">
         ${[['Total Debits',fmt(totalCharged),'#dc2626'],['Total Credits',fmt(totalPaid),'#16a34a'],['Net Balance',fmt(balance),balance>0?'#dc2626':'#16a34a'],['Entries',entries.length,'#2563eb']].map(([l,v,c])=>
           `<div class="stat-card" style="border-left-color:${c};"><div class="sv" style="color:${c};">${v}</div><div class="sl">${l}</div></div>`).join('')}
@@ -804,6 +858,10 @@ function renderReceipts() {
 ════════════════════════════════════════════════════════════════ */
 function renderAdjustment() {
   const main = $('sfp-main');
+  if (!canAdmin_()) {
+    main.innerHTML = `<div class="empty"><div class="empty-icon">🔒</div><p style="color:#dc2626;font-weight:600;">Access Restricted</p><p style="margin-top:.5rem;">Only Admin can make manual ledger adjustments.</p></div>`;
+    return;
+  }
   main.innerHTML = `
     <div class="section-title">⚖️ Ledger Adjustment — ${_student.name}</div>
     <div class="card" style="max-width:580px;">
@@ -851,13 +909,14 @@ function renderAdjustment() {
           <textarea id="adj-note" rows="2" placeholder="Internal note (not shown on receipts)"></textarea>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" onclick="submitAdjustment()">⚖️ Apply Adjustment</button>
+          <button class="btn btn-primary edit-only" onclick="submitAdjustment()">⚖️ Apply Adjustment</button>
         </div>
       </div>
     </div>`;
 }
 
 async function submitAdjustment() {
+  if (!canAdmin_()) { toast("Only Admin can make adjustments", "error"); return; }
   const type   = $('adj-type')?.value;
   const amount = parseFloat($('adj-amount')?.value || 0);
   const desc   = $('adj-desc')?.value?.trim();
@@ -880,6 +939,7 @@ async function submitAdjustment() {
    PAYMENT MODALS
 ════════════════════════════════════════════════════════════════ */
 function quickPayModal(chargeId, feeType, amount, term) {
+  if (!canEdit()) { toast("Only Admin or Bursar can record payments", "error"); return; }
   showModal(`
     <h3>💳 Record Payment</h3>
     <div style="background:#eff6ff;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#1d4ed8;">
@@ -925,6 +985,7 @@ async function submitQuickPay(chargeId, feeType, expectedAmount, term) {
 }
 
 function quickLevyPayModal(pmtId, levyName, amount) {
+  if (!canEdit()) { toast("Only Admin or Bursar can record payments", "error"); return; }
   showModal(`
     <h3>💳 Pay Levy — ${levyName}</h3>
     <div class="form-group"><label>Amount Paid (₦) *</label><input type="number" id="lqp-amount" value="${amount}" min="0"></div>
@@ -965,6 +1026,7 @@ async function submitLevyPay(pmtId, levyName, expectedAmount) {
 }
 
 function openDirectPaymentModal() {
+  if (!canEdit()) { toast("Only Admin or Bursar can record payments", "error"); return; }
   const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
   showModal(`
     <h3>➕ Record Direct Payment</h3>
@@ -1017,6 +1079,7 @@ async function submitDirectPayment() {
 }
 
 function openAddChargeModal() {
+  if (!canEdit()) { toast("Only Admin or Bursar can add charges", "error"); return; }
   const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
   showModal(`
     <h3>⚡ Add Charge</h3>
@@ -1050,6 +1113,7 @@ async function submitAddCharge() {
 }
 
 async function deleteCharge(id) {
+  if (!canAdmin_()) { toast("Only Admin can delete charges", "error"); return; }
   if (!confirm('Delete this charge record?')) return;
   try {
     await apiFetch('/fees/' + id, { method: 'DELETE' });  // still uses fees endpoint

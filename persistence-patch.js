@@ -35,6 +35,11 @@ document.addEventListener('DOMContentLoaded', function () {
     /* No session — auth.js is already redirecting; don't fire data requests */
     if (!session) return;
 
+    /* Boot the app — sets App.currentUser, wires sidebar, navigates */
+    if (typeof window.init === 'function') {
+      window.init();
+    }
+
     /* Hydrate App.data from the server */
     if (typeof window.loadAppData === 'function' && !window._appDataLoaded) {
       window.loadAppData().then(function () {

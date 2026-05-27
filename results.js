@@ -573,7 +573,8 @@ window.loadResultEntry = function() {
       <table style="${tableStyle()}">
         <thead><tr style="${thRowStyle()}">
           <th style="${thStyle()}">Student ID</th><th style="${thStyle()}">Name</th>
-          <th style="${thStyle()}">CA (40)</th><th style="${thStyle()}">Exam (60)</th>
+          <th style="${thStyle()}">CA (${(getScoreBreakdown?Object.entries(getScoreBreakdown()).filter(([k])=>/^ca/i.test(k)).reduce((s,[,v])=>s+v,0):40)||40})</th>
+          <th style="${thStyle()}">Exam (${getScoreBreakdown?(Object.entries(getScoreBreakdown()).find(([k])=>/exam/i.test(k))?.[1]||60):60})</th>
           <th style="${thStyle()}">Total</th><th style="${thStyle()}">Grade</th><th style="${thStyle()}">Remark</th>
         </tr></thead>
         <tbody id="result-rows">
@@ -581,8 +582,8 @@ window.loadResultEntry = function() {
             const ex = App.data.results.find(r => r.studentId===s.id && r.subject===subject && r.term===term && r.session===session);
             return `<tr style="${trStyle()}" data-sid="${s.id}">
               <td style="${tdStyle()}">${s.id}</td><td style="${tdStyle()}">${s.name}</td>
-              <td style="${tdStyle()}"><input type="number" min="0" max="40" class="ca-input" value="${ex?.ca??''}" placeholder="0-40" style="${inputStyle('sm')}" oninput="calcTotal(this)"></td>
-              <td style="${tdStyle()}"><input type="number" min="0" max="60" class="exam-input" value="${ex?.exam??''}" placeholder="0-60" style="${inputStyle('sm')}" oninput="calcTotal(this)"></td>
+              <td style="${tdStyle()}"><input type="number" min="0" max="${(getScoreBreakdown?Object.entries(getScoreBreakdown()).filter(([k])=>/^ca/i.test(k)).reduce((s,[,v])=>s+v,0):40)||40}" class="ca-input" value="${ex?.ca??''}" placeholder="0-${(getScoreBreakdown?Object.entries(getScoreBreakdown()).filter(([k])=>/^ca/i.test(k)).reduce((s,[,v])=>s+v,0):40)||40}" style="${inputStyle('sm')}" oninput="calcTotal(this)"></td>
+              <td style="${tdStyle()}"><input type="number" min="0" max="${getScoreBreakdown?(Object.entries(getScoreBreakdown()).find(([k])=>/exam/i.test(k))?.[1]||60):60}" class="exam-input" value="${ex?.exam??''}" placeholder="0-${getScoreBreakdown?(Object.entries(getScoreBreakdown()).find(([k])=>/exam/i.test(k))?.[1]||60):60}" style="${inputStyle('sm')}" oninput="calcTotal(this)"></td>
               <td style="${tdStyle()}" class="total-cell">${ex?.total??'-'}</td>
               <td style="${tdStyle()}" class="grade-cell">${ex ? grade(ex.total).letter : '-'}</td>
               <td style="${tdStyle()}" class="remark-cell">${ex ? grade(ex.total).remark : '-'}</td>

@@ -712,3 +712,123 @@ function openClassModal(cls = null) {
    ✦ View Students: quick popover listing enrolled students
    ✦ Fixtures: generateArmFixtures() seeds realistic starter data
 ─────────────────────────────────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORMER STUDENTS & FORMER STAFF  (Archive)
+═══════════════════════════════════════════════════════════════════ */
+
+async function renderFormerStudents() {
+  const section = document.getElementById('former-students');
+  if (!section) return;
+  section.innerHTML = `<h2 style="margin:0 0 1.5rem;">Former Students</h2>
+    <div id="fs-loading" style="text-align:center;padding:3rem;color:#9ca3af;">Loading…</div>`;
+  try {
+    const resp    = await Archive.getStudents();
+    const students = resp.data || [];
+    if (!students.length) {
+      document.getElementById('fs-loading').innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">🎓</div>
+          <p style="margin:0;">No former students in the archive.</p>
+        </div>`;
+      return;
+    }
+    document.getElementById('fs-loading').outerHTML = `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ID</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CLASS / ARM</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">REASON</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE</th>
+            ${priv.isAdmin() ? `<th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>` : ''}
+          </tr></thead>
+          <tbody>
+            ${students.map(s => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.65rem 1rem;font-weight:600;">${s.name}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;color:#6b7280;">${s.id}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.class_name || s.class || '—'} ${s.arm || ''}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.archive_reason || s.reason || '—'}</td>
+                <td style="padding:.65rem 1rem;font-size:.78rem;color:#9ca3af;">${s.archived_at ? new Date(s.archived_at).toLocaleDateString('en-NG') : '—'}</td>
+                ${priv.isAdmin() ? `
+                  <td style="padding:.65rem 1rem;text-align:center;">
+                    <button onclick="restoreArchivedStudent('${s.id}')" style="${btnStyle('success','sm')}">↩ Restore</button>
+                  </td>` : ''}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    section.innerHTML += `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+  }
+}
+
+window.restoreArchivedStudent = async function(id) {
+  if (!confirmDlg('Restore this student to the active list?')) return;
+  try {
+    await Archive.restoreStudent(id);
+    toast('Student restored!', 'success');
+    renderFormerStudents();
+    const fresh = await Students.getAll({ limit: 2000 });
+    App.data.students = fresh.data || App.data.students;
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+async function renderFormerStaff() {
+  const section = document.getElementById('former-staff');
+  if (!section) return;
+  section.innerHTML = `<h2 style="margin:0 0 1.5rem;">Former Staff</h2>
+    <div id="fst-loading" style="text-align:center;padding:3rem;color:#9ca3af;">Loading…</div>`;
+  try {
+    const resp  = await Archive.getStaff();
+    const staff = resp.data || [];
+    if (!staff.length) {
+      document.getElementById('fst-loading').innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">👨‍🏫</div>
+          <p style="margin:0;">No former staff in the archive.</p>
+        </div>`;
+      return;
+    }
+    document.getElementById('fst-loading').outerHTML = `
+      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#f9fafb;">
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">SUBJECT</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CLASS</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">REASON</th>
+            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE</th>
+            ${priv.isAdmin() ? `<th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>` : ''}
+          </tr></thead>
+          <tbody>
+            ${staff.map(s => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.65rem 1rem;font-weight:600;">${s.name}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.subject || '—'}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.class_name || s.class || '—'} ${s.arm || ''}</td>
+                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.archive_reason || s.reason || '—'}</td>
+                <td style="padding:.65rem 1rem;font-size:.78rem;color:#9ca3af;">${s.archived_at ? new Date(s.archived_at).toLocaleDateString('en-NG') : '—'}</td>
+                ${priv.isAdmin() ? `
+                  <td style="padding:.65rem 1rem;text-align:center;">
+                    <button onclick="restoreArchivedStaff('${s.id}')" style="${btnStyle('success','sm')}">↩ Restore</button>
+                  </td>` : ''}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    section.innerHTML += `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+  }
+}
+
+window.restoreArchivedStaff = async function(id) {
+  if (!confirmDlg('Restore this staff member to the active list?')) return;
+  try {
+    await Archive.restoreStaff(id);
+    toast('Staff member restored!', 'success');
+    renderFormerStaff();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};

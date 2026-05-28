@@ -91,6 +91,7 @@ function renderResults() {
       <button id="tab-single"   onclick="switchResultTab('single')"   class="res-tab-btn" style="${activeTabStyle(true)}">📝 Single Entry</button>
       <button id="tab-bulk"     onclick="switchResultTab('bulk')"     class="res-tab-btn" style="${activeTabStyle(false)}">📊 Bulk Excel</button>
       <button id="tab-allocate" onclick="switchResultTab('allocate')" class="res-tab-btn" style="${activeTabStyle(false)}">📋 Subject Allocation</button>
+      <button id="tab-cumulative" onclick="switchResultTab('cumulative')" class="res-tab-btn" style="${activeTabStyle(false)}">🎓 Cumulative</button>
     </div>
 
     <!-- ═══ SINGLE ENTRY TAB ═══ -->
@@ -527,12 +528,13 @@ window.confirmBulkAlloc = function(cls, arm) {
 
 /* ── TAB SWITCHING ──────────────────────────────────────────────────────── */
 window.switchResultTab = function(tab) {
-  ['single','bulk','allocate'].forEach(t => {
+  ['single','bulk','allocate','cumulative'].forEach(t => {
     const panel = document.getElementById(`result-tab-${t}`);
     const btn   = document.getElementById(`tab-${t}`);
     if (panel) panel.style.display = t === tab ? '' : 'none';
     if (btn)   btn.style.cssText   = activeTabStyle(t === tab);
   });
+  if (tab === 'cumulative') renderCumulativeTab();
 };
 
 /* ── ARM POPULATION ─────────────────────────────────────────────────────── */
@@ -821,3 +823,207 @@ let _attActiveTab  = 'attendance';
 })();
 
 /* ── Entry point ────────────────────────────────────────────────────────────── */
+
+/* ── CUMULATIVE RESULTS ─────────────────────────────────────────────────── */
+
+window.populateCumulativeArms = function() {
+  const cls = document.getElementById('cum-class')?.value;
+  const classData = App.data.classes.find(c => c.name === cls);
+  const armSel = document.getElementById('cum-arm');
+  if (armSel && classData) armSel.innerHTML = (classData.arms||[]).map(a=>`<option>${a}</option>`).join('');
+};
+
+function renderCumulativeTab() {
+  populateCumulativeArms();
+  // Inject the tab div into DOM if it doesn't exist yet
+  if (!document.getElementById('result-tab-cumulative')) {
+    const div = document.createElement('div');
+    div.id = 'result-tab-cumulative';
+    div.className = 'fade-in';
+    div.style.display = 'none';
+    const classOpts = App.data.classes.map(c=>`<option>${c.name}</option>`).join('');
+    div.innerHTML = `
+      <div class="result-card">
+        <h4 style="margin:0 0 1.25rem;color:#1e3a5f;">🎓 Cumulative Session Results & Promotion</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.25rem;">
+          <div>
+            <label style="${labelStyle()}">Class</label>
+            <select id="cum-class" style="${inputStyle()}" onchange="populateCumulativeArms()">${classOpts}</select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Arm</label>
+            <select id="cum-arm" style="${inputStyle()}"><option>A</option></select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Session</label>
+            <input id="cum-session" value="${App.data.schoolInfo?.session||'2025/2026'}" style="${inputStyle()}">
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <button onclick="loadCumulativeResults()" style="${btnStyle('primary')}">📊 Load Cumulative Results</button>
+          <button onclick="exportCumulativeCSV()" style="${btnStyle('secondary')}">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div id="cumulative-results-area"></div>`;
+
+    // Insert before the switchResultTab script area — append to the results section
+    const section = document.getElementById('results');
+    if (section) section.appendChild(div);
+  }
+  populateCumulativeArms();
+}
+
+window.loadCumulativeResults = async function() {
+  const cls     = document.getElementById('cum-class')?.value;
+  const arm     = document.getElementById('cum-arm')?.value;
+  const session = document.getElementById('cum-session')?.value;
+  const area    = document.getElementById('cumulative-results-area');
+  if (!cls || !arm || !session || !area) return;
+
+  area.innerHTML = `<div class="result-card" style="text-align:center;padding:2rem;color:#6b7280;">Loading cumulative results…</div>`;
+
+  try {
+    // Try backend API first (has server-side promotion logic)
+    const resp = await Results.getCumulative({ class: cls, arm, session });
+    const rows = resp.data || [];
+    const summary = resp.summary || {};
+    const ps = resp.promotionSettings || getPromotionSettings();
+
+    if (!rows.length) {
+      area.innerHTML = `<div class="result-card" style="text-align:center;color:#9ca3af;padding:2rem;">No results found for ${cls} ${arm} — ${session}</div>`;
+      return;
+    }
+
+    _renderCumulativeResults(rows, summary, ps, cls, arm, session);
+  } catch(e) {
+    // Fallback to client-side computation
+    console.warn('[cumulative] API failed, using local data:', e.message);
+    const ps       = getPromotionSettings();
+    const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
+    if (!students.length) { area.innerHTML = `<div class="result-card" style="text-align:center;color:#9ca3af;">No students in ${cls} ${arm}</div>`; return; }
+
+    const rows = students.map(s => ({ studentId: s.id, name: s.name, class: s.class, arm: s.arm, attendance: s.attendance, ...computeCumulative(s.id, session) }));
+    const ranked = [...rows].filter(r => r.grandAvg !== null).sort((a,b)=>(b.grandAvg||0)-(a.grandAvg||0));
+    ranked.forEach((r,i) => { r.position = i+1; });
+
+    const summary = {
+      total:      rows.length,
+      promoted:   rows.filter(r => r.promotion === ps.labelPromoted).length,
+      repeat:     rows.filter(r => r.promotion === ps.labelRepeat).length,
+      incomplete: rows.filter(r => r.promotion === ps.labelIncomplete).length,
+      classAvg:   ranked.length ? parseFloat((ranked.reduce((s,r)=>s+r.grandAvg,0)/ranked.length).toFixed(1)) : null,
+    };
+    _renderCumulativeResults([...ranked, ...rows.filter(r=>r.grandAvg===null)], summary, ps, cls, arm, session);
+  }
+};
+
+function _renderCumulativeResults(rows, summary, ps, cls, arm, session) {
+  const area = document.getElementById('cumulative-results-area');
+  if (!area) return;
+  const promoColor = { [ps.labelPromoted]:'#16a34a', [ps.labelRepeat]:'#dc2626', [ps.labelIncomplete]:'#d97706' };
+
+  area.innerHTML = `
+    <!-- Summary -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.85rem;margin-bottom:1.5rem;">
+      ${[
+        ['Total Students', summary.total || rows.length, '#1e3a5f'],
+        [ps.labelPromoted || 'PROMOTED', summary.promoted || 0,   '#16a34a'],
+        [ps.labelRepeat   || 'REPEAT',   summary.repeat   || 0,   '#dc2626'],
+        ['Incomplete',  summary.incomplete || 0, '#d97706'],
+        ['Class Average', (summary.classAvg != null ? summary.classAvg+'%' : '—'), '#7c3aed'],
+      ].map(([l,v,c])=>`
+        <div style="background:#fff;border-radius:10px;padding:1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${c};text-align:center;">
+          <div style="font-size:1.5rem;font-weight:800;color:${c};">${v}</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">${l}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Per-student table -->
+    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <h4 style="margin:0;color:#1e3a5f;">📊 ${cls} ${arm} — ${session} Cumulative Results</h4>
+        <span style="font-size:.82rem;color:#6b7280;">${students.length} students</span>
+      </div>
+      <div style="overflow-x:auto;">
+      <table style="${tableStyle()}">
+        <thead><tr style="${thRowStyle()}">
+          <th style="${thStyle('40px')}">#</th>
+          <th style="${thStyle()}">Student</th>
+          ${(rows[0]?.subjects||[]).map(s=>`<th style="${thStyle('70px')}" title="${s.name}">${s.name.length>8?s.name.substring(0,7)+'…':s.name}</th>`).join('')}
+          <th style="${thStyle('70px')}">Avg</th>
+          <th style="${thStyle('55px')}">Grade</th>
+          <th style="${thStyle('60px')}">Passed</th>
+          ${ps.showCumulativePosition?`<th style="${thStyle('45px')}">Pos</th>`:''}
+          <th style="${thStyle('100px')}">Decision</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            const pos = r.position || '—';
+            const dc  = promoColor[r.promotion] || '#6b7280';
+            const subs = r.subjects || [];
+            return `<tr style="${trStyle()}">
+              <td style="${tdStyle()};font-size:.78rem;color:#9ca3af;">${pos}</td>
+              <td style="${tdStyle()}">
+                <div style="font-weight:600;font-size:.875rem;">${r.name}</div>
+                <div style="font-size:.72rem;color:#9ca3af;">${r.studentId}</div>
+              </td>
+              ${subs.map(sub=>`
+                <td style="${tdStyle()};text-align:center;" title="${sub.name}&#10;T1:${sub.t1??'—'} T2:${sub.t2??'—'} T3:${sub.t3??'—'}">
+                  <div style="font-weight:${sub.avg!==null&&sub.avg>=getPassMark()?'600':'400'};color:${sub.avg!==null&&sub.avg<getPassMark()?'#dc2626':'#111'};">
+                    ${sub.avg !== null ? sub.avg : '—'}
+                  </div>
+                  ${sub.avg!==null?`<div style="font-size:.68rem;color:#6b7280;">${sub.grade}</div>`:''}
+                </td>`).join('')}
+              <td style="${tdStyle()};text-align:center;font-weight:700;font-size:1rem;color:#1e3a5f;">${r.grandAvg ?? '—'}</td>
+              <td style="${tdStyle()};text-align:center;">${r.grandAvg !== null ? grade(r.grandAvg).letter : '—'}</td>
+              <td style="${tdStyle()};text-align:center;">${r.passed||0}/${subs.filter(x=>x.avg!==null).length}</td>
+              ${ps.showCumulativePosition?`<td style="${tdStyle()};text-align:center;font-weight:600;">${pos}</td>`:''}
+              <td style="${tdStyle()};text-align:center;">
+                <span style="background:${dc}18;color:${dc};font-weight:800;font-size:.75rem;padding:.25rem .6rem;border-radius:5px;white-space:nowrap;">
+                  ${r.promotion}
+                </span>
+                ${r.reasons?.length && r.promotion !== ps.labelPromoted ? `
+                <div style="font-size:.65rem;color:#ef4444;margin-top:2px;" title="${r.reasons.join('; ')}">ⓘ ${r.reasons[0].substring(0,30)}${r.reasons[0].length>30?'…':''}</div>` : ''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+};
+
+window.exportCumulativeCSV = function() {
+  const cls     = document.getElementById('cum-class')?.value;
+  const arm     = document.getElementById('cum-arm')?.value;
+  const session = document.getElementById('cum-session')?.value;
+  const ps      = getPromotionSettings();
+
+  const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
+  if (!students.length) { toast('No students found', 'warning'); return; }
+
+  const rows = students.map(s => ({ student: s, cum: computeCumulative(s.id, session) }));
+  const allSubjects = rows[0]?.cum.subjects.map(s => s.name) || [];
+
+  const headers = ['Name','Student ID','Class','Arm',...allSubjects,'Average','Grade','Passed','Decision'];
+  const lines   = [headers.join(',')];
+  rows.forEach(({student:s, cum:c}) => {
+    const subScores = allSubjects.map(n => {
+      const sub = c.subjects.find(x => x.name === n);
+      return sub?.avg ?? '';
+    });
+    lines.push([
+      `"${s.name}"`, s.id, s.class, s.arm,
+      ...subScores,
+      c.grandAvg ?? '', c.grandAvg !== null ? grade(c.grandAvg).letter : '',
+      c.passed, c.promotion,
+    ].join(','));
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `cumulative_${cls}_${arm}_${session.replace('/','_')}.csv`;
+  a.click();
+  toast('CSV exported!', 'success');
+};

@@ -249,7 +249,8 @@ window.saveAppData = async function() {
       dark_mode:        gs.darkMode       ? '1' : '0',
       compact_tables:   gs.compactTables  ? '1' : '0',
       print_watermark:  gs.printWatermark ? '1' : '0',
-      /* attendance settings */
+      /* promotion settings */
+      promotion_settings: JSON.stringify(App.data.promotionSettings || {}),
       att_term_start:   (App.data.attendanceSettings?.termStart)  || '',
       att_term_end:     (App.data.attendanceSettings?.termEnd)    || '',
       att_expected_days:String(App.data.attendanceSettings?.expectedDays || ''),
@@ -321,6 +322,11 @@ window.loadSettingsFromBackend = function(settings) {
     printWatermark:    settings.print_watermark   === '1',
   };
 
+  // Parse promotion settings
+  if (settings.promotion_settings) {
+    try { App.data.promotionSettings = JSON.parse(settings.promotion_settings); } catch(e) {}
+  }
+
   // Attendance settings
   App.data.attendanceSettings = {
     ...(App.data.attendanceSettings || {}),
@@ -331,7 +337,121 @@ window.loadSettingsFromBackend = function(settings) {
   };
 };
 
-function makeId(prefix, arr) { return prefix + String(arr.length + 1).padStart(3, '0'); }
+function getPromotionSettings() {
+  return App?.data?.promotionSettings || {
+    enableCumulative:       true,
+    useAverage:             true,  minAverage:    40,
+    usePassCount:           true,  minPassCount:  5,
+    useNoFail:              false, noFailMark:    30,
+    useAttendance:          false, minAttendance: 75,
+    useCoreSubjects:        false, coreSubjects:  ['Mathematics','English Language'],
+    labelPromoted:          'PROMOTED',
+    labelRepeat:            'REPEAT',
+    labelIncomplete:        'INCOMPLETE',
+    showTermBreakdown:      true,
+    showCumulativePosition: true,
+    showPromotionBox:       true,
+    showNextClass:          false,
+  };
+}
+window.getPromotionSettings = getPromotionSettings;
+
+/* ─ computeCumulative(studentId, session) ────────────────────────────────
+   Aggregates all three terms' results for a student in a session.
+   Returns: { subjects:[{name,t1,t2,t3,total,avg,grade,remark}], grandAvg,
+              passed, failed, promotion }
+──────────────────────────────────────────────────────────────────────────*/
+window.computeCumulative = function(studentId, session) {
+  const ps       = getPromotionSettings();
+  const passMark = getPassMark();
+  const terms    = ['First Term', 'Second Term', 'Third Term'];
+  const allResults = (App?.data?.results || []).filter(
+    r => r.studentId === studentId && r.session === session
+  );
+
+  // Collect unique subjects across all terms
+  const subjectNames = [...new Set(allResults.map(r => r.subject))];
+
+  const subjects = subjectNames.map(name => {
+    const byTerm = {};
+    terms.forEach(t => {
+      const r = allResults.find(x => x.subject === name && x.term === t);
+      byTerm[t] = r ? r.total : null;
+    });
+    const scores  = Object.values(byTerm).filter(v => v !== null);
+    const total   = scores.reduce((s, v) => s + v, 0);
+    const avg     = scores.length ? total / scores.length : null;
+    const g       = avg !== null ? grade(avg) : { letter: '—', remark: '—' };
+    return {
+      name,
+      t1:    byTerm['First Term'],
+      t2:    byTerm['Second Term'],
+      t3:    byTerm['Third Term'],
+      total: scores.length === 3 ? total : null,
+      avg:   avg !== null ? parseFloat(avg.toFixed(getDecimalPlaces())) : null,
+      grade: g.letter,
+      remark:g.remark,
+      passed: avg !== null && avg >= passMark,
+    };
+  });
+
+  const scoredSubjects = subjects.filter(s => s.avg !== null);
+  const grandAvg = scoredSubjects.length
+    ? parseFloat((scoredSubjects.reduce((s, x) => s + x.avg, 0) / scoredSubjects.length).toFixed(getDecimalPlaces()))
+    : null;
+
+  const passed  = subjects.filter(s => s.passed).length;
+  const failed  = subjects.filter(s => s.avg !== null && !s.passed).length;
+  const complete = subjects.every(s => s.total !== null);
+
+  // ── Promotion decision ──────────────────────────────────────────────
+  let promotion = ps.labelIncomplete;
+  if (complete || scoredSubjects.length >= 3) {
+    let canPromote = true;
+    const reasons = [];
+
+    if (ps.useAverage && grandAvg !== null && grandAvg < ps.minAverage) {
+      canPromote = false;
+      reasons.push(`Average ${grandAvg}% < required ${ps.minAverage}%`);
+    }
+    if (ps.usePassCount && passed < ps.minPassCount) {
+      canPromote = false;
+      reasons.push(`Only ${passed} subject(s) passed — need ${ps.minPassCount}`);
+    }
+    if (ps.useNoFail) {
+      const belowMin = subjects.filter(s => s.avg !== null && s.avg < ps.noFailMark);
+      if (belowMin.length) {
+        canPromote = false;
+        reasons.push(`${belowMin.length} subject(s) below ${ps.noFailMark}%: ${belowMin.map(s=>s.name).join(', ')}`);
+      }
+    }
+    if (ps.useCoreSubjects && ps.coreSubjects?.length) {
+      const student = App?.data?.students?.find(s => s.id === studentId);
+      // Check attendance from student record
+      if (ps.useAttendance && student) {
+        const att = parseFloat(student.attendance) || 100;
+        if (att < ps.minAttendance) {
+          canPromote = false;
+          reasons.push(`Attendance ${att}% < required ${ps.minAttendance}%`);
+        }
+      }
+      const coreFailures = ps.coreSubjects.filter(cn => {
+        const s = subjects.find(x => x.name.toLowerCase() === cn.toLowerCase());
+        return s && s.avg !== null && !s.passed;
+      });
+      if (coreFailures.length) {
+        canPromote = false;
+        reasons.push(`Failed core subject(s): ${coreFailures.join(', ')}`);
+      }
+    }
+
+    promotion = canPromote ? ps.labelPromoted : ps.labelRepeat;
+    return { subjects, grandAvg, passed, failed, complete, promotion, reasons };
+  }
+
+  return { subjects, grandAvg, passed, failed, complete: false, promotion, reasons: ['Not all three terms recorded'] };
+};
+window.getPromotionSettings = getPromotionSettings;
 function ordinal(n) {
   const s = ['th','st','nd','rd'], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);

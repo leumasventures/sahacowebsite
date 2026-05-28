@@ -31,6 +31,7 @@ function renderSettings() {
         { id: 'classes',    icon: '🏛️', label: 'Classes & Arms' },
         { id: 'attendance', icon: '📅', label: 'Attendance & Calendar' },
         { id: 'general',    icon: '🔧', label: 'General Settings' },
+        { id: 'promotion',  icon: '🎓', label: 'Promotion & Cumulative' },
         ...(isSuperAdmin ? [{ id: 'roles', icon: '🔐', label: 'Roles & Privileges' }] : []),
         { id: 'data',       icon: '💾', label: 'Data Management' },
       ].map(t => `
@@ -645,6 +646,144 @@ function renderSettings() {
       </div>
 
       <!-- ══════════════════════════════════
+           TAB: PROMOTION & CUMULATIVE
+      ══════════════════════════════════ -->
+      <div id="tab-promotion" class="settings-tab" style="display:none;">
+        <h3 style="margin:0 0 1.5rem; color:#1e40af;">🎓 Promotion Criteria & Cumulative Results</h3>
+
+        <!-- Cumulative Toggle -->
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1.75rem;">
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div style="flex:1;">
+              <div style="font-weight:700;color:#1e3a5f;margin-bottom:.3rem;">📊 Cumulative Results</div>
+              <div style="font-size:.85rem;color:#4b5563;">When enabled, Third Term report cards will show a cumulative summary of all three terms and a promotion decision for each student.</div>
+            </div>
+            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+              <input type="checkbox" id="promo-enable-cumulative" ${App.data.promotionSettings?.enableCumulative !== false ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+              <span style="font-size:.9rem;font-weight:600;color:#1d4ed8;">Enable Cumulative</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Promotion Criteria -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.75rem;">
+          <h4 style="margin:0 0 1.25rem;color:#1e3a5f;">📋 Promotion Criteria</h4>
+          <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.25rem;">
+            A student is <strong>Promoted</strong> if they meet ALL enabled criteria. Failing any enabled criterion results in <strong>Repeat</strong>.
+          </p>
+
+          <div style="display:grid;gap:1rem;">
+
+            <!-- Min Average -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;">
+              <input type="checkbox" id="promo-use-avg" ${App.data.promotionSettings?.useAverage !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+              <div>
+                <div style="font-weight:600;font-size:.9rem;color:#374151;">Minimum Cumulative Average</div>
+                <div style="font-size:.78rem;color:#6b7280;">Student's average across all subjects across all three terms</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <input type="number" id="promo-min-avg" value="${App.data.promotionSettings?.minAverage ?? 40}" min="0" max="100" style="${inputStyle()};width:80px;text-align:center;">
+                <span style="font-size:.85rem;color:#6b7280;">%</span>
+              </div>
+            </div>
+
+            <!-- Min subjects passed -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;">
+              <input type="checkbox" id="promo-use-pass-count" ${App.data.promotionSettings?.usePassCount !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+              <div>
+                <div style="font-weight:600;font-size:.9rem;color:#374151;">Minimum Subjects Passed</div>
+                <div style="font-size:.78rem;color:#6b7280;">Number of subjects where cumulative average ≥ pass mark</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <input type="number" id="promo-min-pass-count" value="${App.data.promotionSettings?.minPassCount ?? 5}" min="1" max="20" style="${inputStyle()};width:80px;text-align:center;">
+                <span style="font-size:.85rem;color:#6b7280;">subjects</span>
+              </div>
+            </div>
+
+            <!-- No subject below threshold -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;">
+              <input type="checkbox" id="promo-use-no-fail" ${App.data.promotionSettings?.useNoFail ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+              <div>
+                <div style="font-weight:600;font-size:.9rem;color:#374151;">No Subject Below Minimum</div>
+                <div style="font-size:.78rem;color:#6b7280;">Fail any subject with cumulative average below this score → Repeat</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <input type="number" id="promo-no-fail-mark" value="${App.data.promotionSettings?.noFailMark ?? 30}" min="0" max="100" style="${inputStyle()};width:80px;text-align:center;">
+                <span style="font-size:.85rem;color:#6b7280;">%</span>
+              </div>
+            </div>
+
+            <!-- Minimum attendance -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;">
+              <input type="checkbox" id="promo-use-attendance" ${App.data.promotionSettings?.useAttendance ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+              <div>
+                <div style="font-weight:600;font-size:.9rem;color:#374151;">Minimum Attendance</div>
+                <div style="font-size:.78rem;color:#6b7280;">Student must meet this attendance threshold to be promoted</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <input type="number" id="promo-min-attendance" value="${App.data.promotionSettings?.minAttendance ?? 75}" min="0" max="100" style="${inputStyle()};width:80px;text-align:center;">
+                <span style="font-size:.85rem;color:#6b7280;">%</span>
+              </div>
+            </div>
+
+            <!-- Core subjects (must pass all) -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.25rem;">
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;margin-bottom:.75rem;">
+                <input type="checkbox" id="promo-use-core" ${App.data.promotionSettings?.useCoreSubjects ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;margin-top:2px;">
+                <div>
+                  <div style="font-weight:600;font-size:.9rem;color:#374151;">Must Pass Core Subjects</div>
+                  <div style="font-size:.78rem;color:#6b7280;">Student must pass all listed subjects to be promoted</div>
+                </div>
+              </div>
+              <div style="margin-left:2rem;">
+                <label style="${labelStyle()}">Core Subjects (comma separated)</label>
+                <input id="promo-core-subjects" value="${(App.data.promotionSettings?.coreSubjects||['Mathematics','English Language']).join(', ')}" placeholder="e.g. Mathematics, English Language" style="${inputStyle()}">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Promotion Decision Labels -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.75rem;">
+          <h4 style="margin:0 0 1rem;color:#1e3a5f;">🏷 Decision Labels</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+            <div>
+              <label style="${labelStyle()}">Promoted Label</label>
+              <input id="promo-label-promoted" value="${App.data.promotionSettings?.labelPromoted || 'PROMOTED'}" style="${inputStyle()}">
+            </div>
+            <div>
+              <label style="${labelStyle()}">Repeat Label</label>
+              <input id="promo-label-repeat" value="${App.data.promotionSettings?.labelRepeat || 'REPEAT'}" style="${inputStyle()}">
+            </div>
+            <div>
+              <label style="${labelStyle()}">Incomplete Label</label>
+              <input id="promo-label-incomplete" value="${App.data.promotionSettings?.labelIncomplete || 'INCOMPLETE'}" style="${inputStyle()}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Cumulative Display Options -->
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.75rem;">
+          <h4 style="margin:0 0 1rem;color:#1e3a5f;">📄 Cumulative Report Card Options</h4>
+          <div style="display:flex;flex-direction:column;gap:.75rem;">
+            ${[
+              ['promo-show-term-breakdown', 'Show each term\'s score beside cumulative total', App.data.promotionSettings?.showTermBreakdown !== false],
+              ['promo-show-position',       'Show cumulative position in class',              App.data.promotionSettings?.showCumulativePosition !== false],
+              ['promo-show-promotion-box',  'Show Promotion Decision box on Third Term card', App.data.promotionSettings?.showPromotionBox !== false],
+              ['promo-show-next-class',     'Show "Promoted to Class" on report card',        App.data.promotionSettings?.showNextClass],
+            ].map(([id, label, checked]) => `
+              <label style="display:flex;align-items:center;gap:.65rem;cursor:pointer;padding:.5rem .75rem;background:#f8fafc;border-radius:7px;border:1px solid #e2e8f0;">
+                <input type="checkbox" id="${id}" ${checked ? 'checked' : ''} style="width:15px;height:15px;cursor:pointer;">
+                <span style="font-size:.875rem;color:#374151;">${label}</span>
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <button onclick="savePromotionSettings()" style="${btnStyle('primary')};min-width:220px;">💾 Save Promotion Settings</button>
+      </div>
+
+      <!-- ══════════════════════════════════
            TAB: DATA MANAGEMENT
       ══════════════════════════════════ -->
       <div id="tab-data" class="settings-tab" style="display:none;">
@@ -980,6 +1119,44 @@ window.saveGeneralSettings = function() {
 
   saveAppData?.();
   toast('General settings saved', 'success');
+};
+
+/* ═══════════════════════════════════════════════════
+   PROMOTION SETTINGS
+═══════════════════════════════════════════════════ */
+window.savePromotionSettings = function() {
+  const getBool = id => document.getElementById(id)?.checked ?? false;
+  const getVal  = id => document.getElementById(id)?.value;
+
+  const coreRaw = getVal('promo-core-subjects') || '';
+  const coreSubjects = coreRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  App.data.promotionSettings = {
+    enableCumulative:        getBool('promo-enable-cumulative'),
+    // Criteria
+    useAverage:              getBool('promo-use-avg'),
+    minAverage:              parseFloat(getVal('promo-min-avg'))          || 40,
+    usePassCount:            getBool('promo-use-pass-count'),
+    minPassCount:            parseInt(getVal('promo-min-pass-count'))     || 5,
+    useNoFail:               getBool('promo-use-no-fail'),
+    noFailMark:              parseFloat(getVal('promo-no-fail-mark'))     || 30,
+    useAttendance:           getBool('promo-use-attendance'),
+    minAttendance:           parseFloat(getVal('promo-min-attendance'))   || 75,
+    useCoreSubjects:         getBool('promo-use-core'),
+    coreSubjects,
+    // Labels
+    labelPromoted:           getVal('promo-label-promoted')              || 'PROMOTED',
+    labelRepeat:             getVal('promo-label-repeat')                || 'REPEAT',
+    labelIncomplete:         getVal('promo-label-incomplete')            || 'INCOMPLETE',
+    // Display
+    showTermBreakdown:       getBool('promo-show-term-breakdown'),
+    showCumulativePosition:  getBool('promo-show-position'),
+    showPromotionBox:        getBool('promo-show-promotion-box'),
+    showNextClass:           getBool('promo-show-next-class'),
+  };
+
+  saveAppData?.();
+  toast('Promotion & cumulative settings saved!', 'success');
 };
 
 /* ═══════════════════════════════════════════════════

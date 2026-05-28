@@ -153,6 +153,8 @@
     bulkCreate:              function (d) { return post('/results/bulk', d); },
     getStats:                function (p) { return get('/results/stats' + buildQuery(p)); },
     getReportCard:           function (id, t, s) { return get('/results/report-card/' + id + buildQuery({ term: t, session: s })); },
+    getCumulative:           function (p) { return get('/results/cumulative' + buildQuery(p)); },
+    getStudentCumulative:    function (id, session) { return get('/results/cumulative/student/' + id + buildQuery({ session: session })); },
     getClassAllocation:      function (c, a) { return get('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a)); },
     setClassAllocation:      function (c, a, subs) { return put('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a), { subjects: subs }); },
     clearClassAllocation:    function (c, a) { return del('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a)); },
@@ -316,6 +318,7 @@
         if (d._gradingScale   && Array.isArray(d._gradingScale))   App.data.gradingScale   = d._gradingScale;
         if (d._scoreBreakdown && typeof d._scoreBreakdown==='object') App.data.scoreBreakdown = d._scoreBreakdown;
         if (d._domainLabels   && typeof d._domainLabels==='object')   App.data.domainLabels   = d._domainLabels;
+        if (d._promotionSettings && typeof d._promotionSettings==='object') App.data.promotionSettings = d._promotionSettings;
       }).catch(function () {}).then(function () {
         console.info('[api] loadAppData done — classes:' + (App.data.classes||[]).length +
           ' students:' + (App.data.students||[]).length +

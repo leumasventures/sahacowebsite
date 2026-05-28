@@ -501,7 +501,134 @@ function buildReportCard(student, cls, arm, term, session, school) {
     </div>
   </div>`;
 
-  return page1 + '\n' + page2;
+  // ── PAGE 3 — Cumulative (Third Term only) ──────────────────────────────
+  let page3 = '';
+  const ps  = typeof getPromotionSettings === 'function' ? getPromotionSettings() : {};
+  if (term === 'Third Term' && ps.enableCumulative !== false) {
+    const cum = typeof computeCumulative === 'function'
+      ? computeCumulative(student.id, session)
+      : null;
+    if (cum) {
+      const dc = cum.promotion === ps.labelPromoted  ? '#16a34a'
+               : cum.promotion === ps.labelRepeat    ? '#dc2626' : '#d97706';
+      const dpx = typeof getDecimalPlaces === 'function' ? getDecimalPlaces() : 1;
+      page3 = `
+  <div class="report-card rc-page3" data-sid="${student.id}" style="${PAGE_STYLE}page-break-before:always;">
+    ${HEADER}
+    ${STUDENT_BAND}
+
+    <!-- Cumulative Header -->
+    <div style="background:#1e3a8a;color:#fff;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:0 14px;">
+      📊 Cumulative Session Results — ${session}
+    </div>
+
+    <!-- Subject breakdown table -->
+    <div style="margin:0 14px;overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead>
+        <tr style="background:#dbeafe;">
+          <th style="${TH('left','150px')}">Subject</th>
+          ${ps.showTermBreakdown !== false ? `
+          <th style="${TH()}">1st Term</th>
+          <th style="${TH()}">2nd Term</th>
+          <th style="${TH()}">3rd Term</th>` : ''}
+          <th style="${TH()}">Cumulative Avg</th>
+          <th style="${TH()}">Grade</th>
+          <th style="${TH()}">Remark</th>
+          <th style="${TH()}">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${cum.subjects.map((s, i) => {
+          const passed = s.avg !== null && s.avg >= (typeof getPassMark==='function'?getPassMark():40);
+          return `<tr style="background:${i%2===0?'#f9fafb':'#fff'};">
+            <td style="${TD('left')};font-weight:600;">${s.name}</td>
+            ${ps.showTermBreakdown !== false ? `
+            <td style="${TD()};color:${s.t1!==null&&s.t1<(typeof getPassMark==='function'?getPassMark():40)?'#dc2626':'#111'};">${s.t1 ?? '—'}</td>
+            <td style="${TD()};color:${s.t2!==null&&s.t2<(typeof getPassMark==='function'?getPassMark():40)?'#dc2626':'#111'};">${s.t2 ?? '—'}</td>
+            <td style="${TD()};color:${s.t3!==null&&s.t3<(typeof getPassMark==='function'?getPassMark():40)?'#dc2626':'#111'};">${s.t3 ?? '—'}</td>` : ''}
+            <td style="${TD()};font-weight:700;font-size:12px;color:${passed?'#1e3a8a':'#dc2626'};">${s.avg ?? '—'}</td>
+            <td style="${TD()};">${s.grade}</td>
+            <td style="${TD()};color:#6b7280;">${s.remark}</td>
+            <td style="${TD()};">
+              <span style="background:${passed?'#dcfce7':'#fee2e2'};color:${passed?'#166534':'#991b1b'};padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;">
+                ${passed ? 'Pass' : 'Fail'}
+              </span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:#eff6ff;font-weight:700;">
+          <td style="${TD('left')};font-weight:800;" ${ps.showTermBreakdown!==false?'colspan="4"':'colspan="1"'}>CUMULATIVE SUMMARY</td>
+          <td style="${TD()};font-size:13px;font-weight:800;color:#1e3a8a;">${cum.grandAvg ?? '—'}</td>
+          <td style="${TD()}">${cum.grandAvg !== null ? grade(cum.grandAvg).letter : '—'}</td>
+          <td style="${TD()}">${cum.grandAvg !== null ? grade(cum.grandAvg).remark : '—'}</td>
+          <td style="${TD()}"></td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 14px;">
+      ${[
+        ['Total Subjects', cum.subjects.filter(s=>s.avg!==null).length, '#1e3a8a'],
+        ['Subjects Passed', cum.passed, '#16a34a'],
+        ['Subjects Failed', cum.failed, '#dc2626'],
+        ['Class Position',  ps.showCumulativePosition !== false
+          ? computePosition(student.id, cls, arm, 'Third Term', session)
+          : '—', '#7c3aed'],
+      ].map(([l,v,c])=>`
+        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:7px;padding:8px;text-align:center;">
+          <div style="font-size:15px;font-weight:800;color:${c};">${v}</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">${l}</div>
+        </div>`).join('')}
+    </div>
+
+    ${ps.showPromotionBox !== false ? `
+    <!-- Promotion Decision Box -->
+    <div style="margin:10px 14px;padding:14px 18px;background:${dc}11;border:2px solid ${dc};border-radius:10px;display:flex;align-items:center;gap:16px;">
+      <div style="font-size:36px;">${cum.promotion===ps.labelPromoted?'🎓':cum.promotion===ps.labelRepeat?'🔁':'📋'}</div>
+      <div style="flex:1;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:${dc};font-weight:700;margin-bottom:3px;">Promotion Decision</div>
+        <div style="font-size:22px;font-weight:900;color:${dc};letter-spacing:.04em;">${cum.promotion}</div>
+        ${cum.reasons?.length && cum.promotion !== ps.labelPromoted ? `
+        <div style="font-size:9px;color:#6b7280;margin-top:4px;">Reason: ${cum.reasons.join(' | ')}</div>` : ''}
+        ${ps.showNextClass && cum.promotion === ps.labelPromoted ? `
+        <div style="font-size:10px;color:#166534;font-weight:600;margin-top:4px;">Next Class: ${getNextClass(cls)}</div>` : ''}
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:28px;font-weight:900;color:${dc};">${cum.grandAvg ?? '—'}</div>
+        <div style="font-size:9px;color:#6b7280;">Overall Avg</div>
+        <div style="font-size:13px;font-weight:700;color:${dc};">${cum.grandAvg !== null ? grade(cum.grandAvg).letter : '—'}</div>
+      </div>
+    </div>` : ''}
+
+    <!-- Signatures -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:16px 14px 14px;padding-top:10px;border-top:1px solid #e5e7eb;">
+      ${['Form Teacher', 'Vice Principal', school.principal||'Principal'].map(role=>`
+        <div style="text-align:center;">
+          <div style="border-bottom:1px solid #9ca3af;height:30px;margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:#6b7280;text-transform:uppercase;">${role}</div>
+        </div>`).join('')}
+    </div>
+    <div style="text-align:right;font-size:8px;color:#9ca3af;padding:4px 14px;">
+      Cumulative — Page 3 of 3 &nbsp;|&nbsp; Generated: ${new Date().toLocaleDateString()}
+    </div>
+  </div>`;
+    }
+  }
+
+  return page1 + '\n' + page2 + (page3 ? '\n' + page3 : '');
+}
+
+/* ── Next class helper ── */
+function getNextClass(cls) {
+  const order = ['JS 1','JS 2','JS 3','SS 1','SS 2','SS 3',
+                 'JSS 1','JSS 2','JSS 3','SSS 1','SSS 2','SSS 3'];
+  const idx = order.findIndex(c => c.toLowerCase() === cls.toLowerCase());
+  return idx >= 0 && idx < order.length - 1 ? order[idx + 1] : '(Final Year)';
 }
 
 /* ── Table helpers ── */

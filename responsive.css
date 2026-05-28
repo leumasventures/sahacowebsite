@@ -1,0 +1,425 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   responsive.css  —  Sacred Heart College Portal
+   Global responsive layout system — loaded by ALL portal pages
+   Prevents layout overflow on every device from 320px → 4K
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. BOX-MODEL RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;   /* prevent iOS font scaling */
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  min-width: 320px;                  /* never go below iPhone SE width */
+  word-break: break-word;
+}
+
+/* ── 2. IMAGES & MEDIA — never overflow ─────────────────────────────────── */
+img, video, iframe, svg, canvas, embed, object {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── 3. TABLES — scroll horizontally instead of breaking layout ─────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-scroll,
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Thin scrollbar on table wrappers */
+.table-scroll::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar { height: 4px; }
+.table-scroll::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track { background: #f1f5f9; }
+.table-scroll::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+
+/* ── 4. INPUTS & BUTTONS — full-width on mobile ─────────────────────────── */
+input, select, textarea, button {
+  max-width: 100%;
+}
+
+/* ── 5. MODAL — responsive ──────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background: var(--modal-bg, #fff);
+  border-radius: 14px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 620px;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  position: relative;
+}
+
+/* ── 6. CONTENT SECTION OVERFLOW ───────────────────────────────────────── */
+.content-section,
+.page-content > section {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Result/allocation tables need scroll containers */
+#allocation-output,
+#result-output,
+#verify-results-area,
+#cumulative-results-area,
+.result-card {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ── 7. DASHBOARD GRID ──────────────────────────────────────────────────── */
+#dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: .85rem;
+}
+
+.dash-widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+/* ── 8. RESULTS TABS — scroll on mobile ────────────────────────────────── */
+.res-tabs {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.res-tabs::-webkit-scrollbar { display: none; }
+
+/* ── 9. STUDENT / STAFF CARDS ───────────────────────────────────────────── */
+.sm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+/* ── 10. SETTINGS GRID ──────────────────────────────────────────────────── */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+/* ── 11. REPORT CARD PRINT ──────────────────────────────────────────────── */
+.report-card {
+  width: 100%;
+  max-width: 780px;
+  overflow: hidden;
+}
+
+#report-cards-output {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ── 12. STUDENT FINANCE ─────────────────────────────────────────────────── */
+.sfp-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: .25rem;
+}
+.sfp-nav::-webkit-scrollbar { display: none; }
+
+/* ── 13. TOPBAR ─────────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  width: 100%;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   BREAKPOINTS
+────────────────────────────────────────────────────────────────────────────── */
+
+/* ── TABLET (768px and below) ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar: off-canvas drawer */
+  #sidebar {
+    position: fixed !important;
+    left: 0; top: 0; height: 100dvh;
+    transform: translateX(-100%);
+    width: 260px !important;
+    min-width: 260px !important;
+    z-index: 300;
+    transition: transform .25s ease;
+  }
+  #sidebar:not(.collapsed) { transform: translateX(0); }
+  .main-container { margin-left: 0 !important; }
+  #sidebar-backdrop.show { display: block !important; }
+
+  /* Page padding */
+  .page-content {
+    padding: 1rem .875rem .75rem;
+  }
+
+  /* Hide verbose topbar elements */
+  .session-chip,
+  #current-user-name-role,
+  .topbar-crumb .crumb-sep,
+  .topbar-crumb .crumb-parent { display: none; }
+
+  /* Dashboard stats: 2 columns on tablet */
+  #dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: .65rem;
+  }
+
+  /* Dash widgets: stack */
+  .dash-widgets { grid-template-columns: 1fr; }
+
+  /* Result cards full width */
+  .result-card { padding: 1rem; border-radius: 10px; }
+
+  /* Settings tabs: scroll */
+  .settings-nav,
+  .settings-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: .35rem;
+    padding-bottom: 4px;
+  }
+  .settings-nav::-webkit-scrollbar,
+  .settings-tabs::-webkit-scrollbar { display: none; }
+
+  /* Modal full-width on mobile */
+  .modal-content {
+    padding: 1.25rem 1rem;
+    border-radius: 12px 12px 0 0;
+    max-width: 100%;
+  }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+
+  /* Staff/student form */
+  .sm-form-grid,
+  .sm-span2 { grid-column: 1 / -1; }
+
+  /* Multi-assignment builder */
+  #sm-assignments-list > div,
+  #sm-tasks-list > div { font-size: .8rem; }
+
+  /* Tables in sections */
+  .section-table-wrap,
+  .table-scroll { overflow-x: auto; }
+
+  /* Finance nav */
+  .sfp-nav-item {
+    font-size: .72rem;
+    padding: .45rem .6rem;
+    white-space: nowrap;
+  }
+
+  /* Stat cards smaller text */
+  #dashboard-stats .stat-card {
+    padding: 1rem .875rem;
+  }
+  #dashboard-stats .stat-card h4 {
+    font-size: .68rem;
+  }
+  #dashboard-stats .stat-card > div:nth-child(2) {
+    font-size: 1.5rem;
+  }
+
+  /* Report card scale */
+  .report-card {
+    transform-origin: top left;
+    overflow-x: auto;
+  }
+
+  /* Allocation chips wrap */
+  .alloc-chip, .subject-tag {
+    font-size: .7rem;
+    padding: .15rem .45rem;
+  }
+
+  /* Quick action buttons */
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: .65rem;
+  }
+}
+
+/* ── MOBILE (480px and below) ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* Single column stats */
+  #dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: .5rem;
+  }
+
+  /* Topbar: compact */
+  .topbar { padding: 0 .75rem; }
+  .topbar-brand h1 { font-size: .9rem; }
+  .topbar-brand p  { font-size: .68rem; }
+
+  /* Hamburger always visible */
+  #sidebar-toggle { display: flex !important; }
+
+  /* Page padding tighter */
+  .page-content { padding: .875rem .75rem .5rem; }
+
+  /* Tables: compact cells */
+  table th, table td { padding: .35rem .45rem; font-size: .75rem; }
+  table th { font-size: .65rem; }
+
+  /* Forms: full-width fields */
+  .sm-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Multi-assignment grid → stack */
+  #sf-new-subject,
+  #sf-new-class,
+  #sf-new-arm {
+    width: 100% !important;
+  }
+  div:has(#sf-new-subject) {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Settings input groups */
+  .settings-input-row {
+    flex-direction: column;
+    gap: .5rem;
+  }
+  .settings-input-row input,
+  .settings-input-row select { width: 100% !important; }
+
+  /* Result entry: compact */
+  .res-tab-btn {
+    font-size: .72rem;
+    padding: .4rem .6rem;
+    white-space: nowrap;
+  }
+
+  /* Buttons in action bars */
+  .action-bar {
+    flex-direction: column;
+    gap: .5rem;
+  }
+  .action-bar button { width: 100%; }
+
+  /* Modal full-screen */
+  .modal-content {
+    min-height: 40dvh;
+    padding: 1rem .875rem;
+  }
+
+  /* Score verification table: smaller */
+  #vfy-table th, #vfy-table td {
+    padding: .25rem .3rem;
+    font-size: .68rem;
+  }
+
+  /* Promotion decision box */
+  .promotion-box { flex-direction: column; text-align: center; }
+
+  /* Cumulative table */
+  #cumulative-results-area table th,
+  #cumulative-results-area table td { font-size: .68rem; padding: .25rem .3rem; }
+
+  /* Finance cards */
+  .finance-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Staff profile view */
+  .sm-profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── SMALL MOBILE (360px and below) ────────────────────────────────────── */
+@media (max-width: 360px) {
+  #dashboard-stats { grid-template-columns: 1fr 1fr; gap: .4rem; }
+  .page-content { padding: .75rem .625rem .5rem; }
+  table th, table td { padding: .25rem .35rem; font-size: .7rem; }
+  .res-tab-btn { font-size: .68rem; padding: .35rem .5rem; }
+}
+
+/* ── LARGE DESKTOP (1400px+) ─────────────────────────────────────────────── */
+@media (min-width: 1400px) {
+  .page-content { max-width: 1480px; margin: 0 auto; }
+  #dashboard-stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── ULTRA-WIDE (1920px+) ────────────────────────────────────────────────── */
+@media (min-width: 1920px) {
+  .page-content { max-width: 1720px; }
+}
+
+/* ── PRINT ───────────────────────────────────────────────────────────────── */
+@media print {
+  #sidebar, .topbar, #sidebar-backdrop, .main-footer,
+  .quick-actions, .dash-widgets,
+  .res-tabs, .action-bar, button:not(.print-show) { display: none !important; }
+  .main-container { margin-left: 0 !important; }
+  .page-content { padding: 0 !important; max-width: 100% !important; }
+  #report-cards { display: block !important; width: 100%; }
+  .report-card, [class*="report-card"] { page-break-after: always; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #report-cards button { display: none !important; }
+}
+
+/* ── UTILITY CLASSES ─────────────────────────────────────────────────────── */
+.w-full     { width: 100%; }
+.max-w-full { max-width: 100%; }
+.overflow-x-auto { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.overflow-hidden  { overflow: hidden; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+}
+.mobile-hide { }
+.mobile-show { display: none; }
+
+@media (max-width: 768px) {
+  .mobile-hide { display: none !important; }
+  .mobile-show { display: block !important; }
+  .mobile-flex  { display: flex !important; }
+  .mobile-stack { flex-direction: column !important; }
+  .mobile-full  { width: 100% !important; }
+  .mobile-text-sm { font-size: .8rem !important; }
+  .mobile-p-sm  { padding: .75rem !important; }
+}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Student Finance Portal — Sacred Heart College</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏫</text></svg>">
   <style>
@@ -211,6 +211,7 @@
       .layout { display: block; }
     }
   </style>
+  <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
 
@@ -1181,7 +1182,8 @@ function _generateReceipt(p, isLevy) {
   .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:1rem 1.75rem;font-size:.72rem;color:#9ca3af;text-align:center;}
   .no-print{text-align:center;margin-bottom:1rem;display:flex;gap:.5rem;justify-content:center;}
   @media print{body{background:#fff;padding:0;}.receipt{box-shadow:none;max-width:100%;border-radius:0;}.no-print{display:none;}}
-</style></head><body>
+</style>  <link rel="stylesheet" href="responsive.css">
+</head><body>
 <div class="no-print">
   <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.55rem 1.3rem;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:700;">🖨 Print</button>
   <button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;padding:.55rem 1.3rem;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:700;">✕ Close</button>

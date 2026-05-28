@@ -1233,6 +1233,7 @@ function tableStyle(opts = {}) {
     'border-collapse:collapse;',
     `font-size:${TOKENS.fontSize.md};`,
     'border-spacing:0;',
+    'min-width:480px;',           /* ensures horizontal scroll on mobile */
     opts.bordered ? `border:1px solid ${TOKENS.color.neutralBorder};border-radius:${TOKENS.radius.lg};overflow:hidden;` : '',
   ].join('');
 }

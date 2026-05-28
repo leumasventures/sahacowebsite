@@ -359,7 +359,22 @@
   global.loadAppData     = loadAppData;
 
   /* ── EXPORTS ── */
-  var API = { Auth:Auth, Classes:Classes, Students:Students, Staff:Staff, Teachers:Teachers, Subjects:Subjects, Results:Results, Attendance:Attendance, Fixtures:Fixtures, Notices:Notices, Admin:Admin, loadAppData:loadAppData, _get:get, _post:post, _put:put, _patch:patch, _del:del, _upload:upload, _query:buildQuery };
+  var Admissions = {
+    getAll:    function(p)   { return get('/admissions' + buildQuery(p)); },
+    getStats:  function(p)   { return get('/admissions/stats' + buildQuery(p)); },
+    getOne:    function(id)  { return get('/admissions/' + id); },
+    create:    function(d)   { return post('/admissions', d); },
+    update:    function(id,d){ return put('/admissions/' + id, d); },
+    approve:   function(id,d){ return patch('/admissions/' + id + '/approve', d); },
+    reject:    function(id,d){ return patch('/admissions/' + id + '/reject', d); },
+    enroll:    function(id,d){ return post('/admissions/' + id + '/enroll', d); },
+    bulkEnroll:function(d)   { return post('/admissions/bulk-enroll', d); },
+    remove:    function(id)  { return del('/admissions/' + id); },
+    export:    function(p)   { return get('/admissions/export' + buildQuery(p)); },
+  };
+  global.Admissions = Admissions;
+
+  var API = { Auth:Auth, Classes:Classes, Students:Students, Staff:Staff, Teachers:Teachers, Subjects:Subjects, Results:Results, Attendance:Attendance, Fixtures:Fixtures, Notices:Notices, Admin:Admin, Admissions:Admissions, loadAppData:loadAppData, _get:get, _post:post, _put:put, _patch:patch, _del:del, _upload:upload, _query:buildQuery };
 
   global.API          = API;
   global.Auth         = Auth;

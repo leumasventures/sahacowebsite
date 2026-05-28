@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="auth.js"></script>
+  <script src="api.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -604,6 +606,24 @@
 <script>
 'use strict';
 
+/* ── Admin-only gate — redirect non-admins immediately ── */
+(function() {
+  try {
+    var session = JSON.parse(sessionStorage.getItem('shc_session') || 'null');
+    if (!session) { window.location.href = 'login.html'; return; }
+    if (session.role !== 'Admin') {
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#f8fafc;padding:2rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+          <h2 style="color:#1e3a5f;margin:0 0 .5rem;">Access Restricted</h2>
+          <p style="color:#6b7280;margin:0 0 1.5rem;">The Admission List is only accessible to Administrators.</p>
+          <a href="dashboard.html" style="background:#1e3a5f;color:#fff;padding:.65rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:600;">← Back to Dashboard</a>
+        </div>`;
+      return;
+    }
+  } catch(e) {}
+})();
+
 /* ── Sidebar ── */
 var backdrop = document.getElementById('sidebar-backdrop');
 var sidebar  = document.getElementById('sidebar');
@@ -616,11 +636,28 @@ function toggleSidebar(){ sidebar.classList.contains('collapsed') ? openSidebar(
 document.getElementById('sidebar-toggle-mobile').addEventListener('click', toggleSidebar);
 backdrop.addEventListener('click', closeSidebar);
 
-/* ── Data helpers ── */
-function getAdmissions() {
-  try { return JSON.parse(localStorage.getItem('shc_admissions') || '[]'); } catch(e) { return []; }
+/* ── API helpers — delegates to api.js (auth handled there) ── */
+async function apiCall(method, path, body) {
+  // Use the shared api.js helpers which include the auth token automatically
+  var base = '/admissions';
+  var rel  = path.replace('/admissions', '');
+  method   = method.toUpperCase();
+  if (method === 'GET') {
+    return window.Admissions
+      ? (rel === '' || rel.startsWith('?')
+          ? window.Admissions.getAll(rel.replace('?','').split('&').reduce(function(o,p){ var kv=p.split('='); if(kv[0]) o[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]||''); return o; }, {}))
+          : window.API._get('/admissions' + rel))
+      : Promise.reject(new Error('API not loaded'));
+  }
+  if (method === 'DELETE') return window.API._del('/admissions' + rel);
+  if (method === 'PATCH')  return window.API._patch('/admissions' + rel, body);
+  if (method === 'POST')   return window.API._post('/admissions' + rel, body);
+  if (method === 'PUT')    return window.API._put('/admissions' + rel, body);
+  return Promise.reject(new Error('Unknown method: ' + method));
 }
-function saveAdmissions(list) { localStorage.setItem('shc_admissions', JSON.stringify(list)); }
+
+/* ── State ── */
+var _allRecords = [];   /* full list from server */
 
 /* ── Filters ── */
 var currentStatusFilter = 'All';
@@ -654,7 +691,7 @@ function badgeHtml(status) {
 
 /* ── Render table ── */
 function renderTable() {
-  var list   = getAdmissions();
+  var list   = _allRecords;
   var search = document.getElementById('search-input').value.trim().toLowerCase();
   var cls    = document.getElementById('class-filter').value;
   var sess   = document.getElementById('session-filter').value;
@@ -668,12 +705,7 @@ function renderTable() {
     return matchSearch && matchCls && matchSess && matchStatus;
   });
 
-  /* Stats */
-  document.getElementById('stat-total').textContent    = list.length;
-  document.getElementById('stat-pending').textContent  = list.filter(function(r){ return r.status==='Pending'; }).length;
-  document.getElementById('stat-approved').textContent = list.filter(function(r){ return r.status==='Approved'; }).length;
-  document.getElementById('stat-enrolled').textContent = list.filter(function(r){ return r.status==='Enrolled'; }).length;
-  document.getElementById('stat-rejected').textContent = list.filter(function(r){ return r.status==='Rejected'; }).length;
+  /* Stats are loaded by loadAdmissions() from API */
 
   /* Pagination */
   var totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -740,28 +772,56 @@ function renderPagination(totalPages) {
 function goPage(n) { currentPage = n; renderTable(); window.scrollTo({top:0,behavior:'smooth'}); }
 
 /* ── Status update ── */
-function setStatus(idx, status) {
-  var list = getAdmissions();
-  if (!list[idx]) return;
-  list[idx].status = status;
-  if (status === 'Enrolled') {
-    list[idx].enrollDate = new Date().toISOString().split('T')[0];
+async function setStatus(idx, status) {
+  var record = _allRecords[idx];
+  if (!record) return;
+  try {
+    if (status === 'Approved') {
+      // Ask for class/arm assignment
+      var cls = record.applyingForClass || record.class_apply || '';
+      var arm = record.preferred_arm || 'A';
+      var assignedClass = prompt('Assign class:', cls);
+      if (!assignedClass) return;
+      var assignedArm = prompt('Assign arm:', arm);
+      if (!assignedArm) return;
+      await Admissions.approve(record.id, { assignedClass, assignedArm });
+    } else if (status === 'Rejected') {
+      var reason = prompt('Reason for rejection (optional):') || '';
+      await Admissions.reject(record.id, { notes: reason });
+    } else if (status === 'Enrolled') {
+      var cls2 = record.applyingForClass || record.class_apply || '';
+      var arm2 = record.preferred_arm || 'A';
+      var ec   = prompt('Enroll into class (will create student record):', cls2);
+      if (!ec) return;
+      var ea   = prompt('Arm:', arm2);
+      if (!ea) return;
+      var result = await Admissions.enroll(record.id, { assignedClass: ec, arm: ea });
+      showToast('🎒 ' + (result.message || 'Student enrolled!'), 'emerald');
+      await loadAdmissions();
+      closeModal();
+      return;
+    }
+    await loadAdmissions();
+    showToast('✅ Status updated to ' + status, 'emerald');
+    closeModal();
+  } catch(e) {
+    showToast('❌ ' + e.message, 'rose');
   }
-  saveAdmissions(list);
-  renderTable();
-  showToast('✅ Status updated to ' + status, 'emerald');
-  closeModal();
 }
 
 /* ── Delete ── */
-function deleteRecord(idx) {
+async function deleteRecord(idx) {
   if (!confirm('Delete this admission record? This cannot be undone.')) return;
-  var list = getAdmissions();
-  list.splice(idx, 1);
-  saveAdmissions(list);
-  renderTable();
-  showToast('🗑️ Record deleted', 'rose');
-  closeModal();
+  var record = _allRecords[idx];
+  if (!record) return;
+  try {
+    await Admissions.remove(record.id);
+    await loadAdmissions();
+    showToast('🗑️ Record deleted', 'rose');
+    closeModal();
+  } catch(e) {
+    showToast('❌ ' + e.message, 'rose');
+  }
 }
 
 /* ── Detail modal ── */
@@ -800,10 +860,14 @@ function openDetail(idx) {
   var btns = '<button class="btn btn-ghost" onclick="closeModal()">Close</button>';
   if (r.status === 'Pending' || r.status === 'Draft') {
     btns += '<button class="btn btn-danger"  onclick="setStatus('+idx+',\'Rejected\')">❌ Reject</button>';
-    btns += '<button class="btn btn-success" onclick="setStatus('+idx+',\'Approved\')">✅ Approve</button>';
+    btns += '<button class="btn btn-success" onclick="setStatus('+idx+',\'Approved\')">✅ Approve &amp; Assign Class</button>';
   }
   if (r.status === 'Approved') {
-    btns += '<button class="btn btn-info"    onclick="setStatus('+idx+',\'Enrolled\')">🎒 Enroll Student</button>';
+    btns += '<button class="btn btn-danger"  onclick="setStatus('+idx+',\'Rejected\')">❌ Reject</button>';
+    btns += '<button class="btn btn-info"    onclick="enrollStudent('+idx+')" style="background:#1e3a5f;color:#fff;">🎒 Enroll → Create Student</button>';
+  }
+  if (r.status === 'Enrolled') {
+    btns += '<span style="background:#dcfce7;color:#166534;padding:.4rem .8rem;border-radius:6px;font-size:.82rem;font-weight:600;">🎒 Already Enrolled</span>';
   }
   btns += '<button class="btn btn-ghost" onclick="window.print()">🖨️ Print</button>';
   footer.innerHTML = btns;
@@ -858,9 +922,108 @@ function showToast(msg, type) {
 /* ── Init ── */
 var style = document.createElement('style');
 style.textContent = '@keyframes slideInRight{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}';
-document.head.appendChild(style);
+/* ── Enroll student — proper modal ── */
+window.enrollStudent = function(idx) {
+  var r = _allRecords[idx];
+  if (!r) return;
+  var modalEl = document.getElementById('detail-modal');
 
-renderTable();
+  // Build class options from classes in the school (hardcoded fallback)
+  var classes = ['JS 1','JS 2','JS 3','SS 1','SS 2','SS 3'];
+  var arms    = ['A','B','C','D','E'];
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:1.5rem;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <h3 style="margin:0 0 .25rem;color:#1e3a5f;">🎒 Enroll Student</h3>
+      <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.25rem;">This will create a student record and mark the application as Enrolled.</p>
+      <div style="background:#f8fafc;border-radius:8px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.875rem;">
+        <strong>${[r.first_name,r.middle_name,r.last_name].filter(Boolean).join(' ')}</strong><br>
+        <span style="color:#6b7280;">Applied for: ${r.applyingForClass||r.class_apply||'—'} · ${r.acad_session||''}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+        <div>
+          <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:.35rem;">Assign to Class *</label>
+          <select id="enroll-class" style="width:100%;padding:.5rem .75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;">
+            ${classes.map(c=>`<option ${c===(r.applyingForClass||r.class_apply)?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.78rem;font-weight:600;color:#374151;display:block;margin-bottom:.35rem;">Arm *</label>
+          <select id="enroll-arm" style="width:100%;padding:.5rem .75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.875rem;">
+            ${arms.map(a=>`<option ${a===(r.preferred_arm)?'selected':''}>${a}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div id="enroll-error" style="color:#dc2626;font-size:.82rem;min-height:1.25rem;margin-bottom:.75rem;"></div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:.55rem 1.25rem;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-weight:500;">Cancel</button>
+        <button id="enroll-confirm-btn" onclick="confirmEnroll(${idx},this)" style="padding:.55rem 1.25rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🎒 Enroll Student</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+};
+
+window.confirmEnroll = async function(idx, btn) {
+  var r   = _allRecords[idx];
+  var cls = document.getElementById('enroll-class')?.value;
+  var arm = document.getElementById('enroll-arm')?.value;
+  var errEl = document.getElementById('enroll-error');
+  if (!cls || !arm) { errEl.textContent = 'Please select class and arm.'; return; }
+  btn.disabled = true; btn.textContent = 'Enrolling…';
+  try {
+    var result = await Admissions.enroll(r.id, { assignedClass: cls, arm: arm });
+    btn.closest('div[style*="fixed"]').remove();
+    closeModal();
+    showToast('🎒 ' + (result.message || 'Student enrolled successfully!'), 'emerald');
+    await loadAdmissions();
+  } catch(e) {
+    errEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = '🎒 Enroll Student';
+  }
+};
+
+/* ── Load admissions from API ── */
+async function loadAdmissions() {
+  try {
+    document.getElementById('adm-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#6b7280;">Loading…</td></tr>';
+
+    // Wait for api.js to be ready
+    if (!window.Admissions) {
+      await new Promise(function(resolve) { setTimeout(resolve, 800); });
+    }
+
+    var json  = await Admissions.getAll({ limit: 200 });
+    _allRecords = json.data || [];
+
+    var stats = await Admissions.getStats().catch(function(){ return null; });
+    if (stats?.data) {
+      document.getElementById('stat-total').textContent    = stats.data.total    || 0;
+      document.getElementById('stat-pending').textContent  = stats.data.pending  || 0;
+      document.getElementById('stat-approved').textContent = stats.data.approved || 0;
+      document.getElementById('stat-enrolled').textContent = stats.data.enrolled || 0;
+      document.getElementById('stat-rejected').textContent = stats.data.rejected || 0;
+    }
+    renderTable();
+  } catch(e) {
+    document.getElementById('adm-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#dc2626;">Failed to load: ' + e.message + '</td></tr>';
+  }
+}
+
+/* Wait for auth + api.js to be ready, then load */
+(function() {
+  function tryLoad() {
+    if (window.SHC_Auth && window.SHC_Auth.ready && window.Admissions) {
+      SHC_Auth.ready.then(function() { loadAdmissions(); });
+    } else {
+      setTimeout(tryLoad, 100);
+    }
+  }
+  tryLoad();
+})();
 </script>
 
 </body>

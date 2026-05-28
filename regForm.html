@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✝</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sacred Heart College – Student Registration</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -952,7 +953,7 @@
       <div class="success-actions">
         <button class="btn btn-ghost" onclick="window.print()">🖨️ Print Form</button>
         <button class="btn btn-outline" onclick="registerAnother()">➕ Register Another</button>
-        <button class="btn btn-navy" onclick="window.location.href='admissionList.html'">📋 View Admission List</button>
+        <span id="admin-list-btn"></span>
       </div>
     </div>
   </div>
@@ -960,8 +961,19 @@
 </div><!-- /page-wrapper -->
 
 <script>
-'use strict';
+/* Show "View Admission List" only for Admin role */
+(function() {
+  try {
+    var session = JSON.parse(sessionStorage.getItem('shc_session') || 'null');
+    if (session && session.role === 'Admin') {
+      var btn = document.getElementById('admin-list-btn');
+      if (btn) btn.innerHTML = '<button class="btn btn-navy" onclick="window.location.href=\'admissionList.html\'">📋 View Admission List</button>';
+    }
+  } catch(e) {}
+})();
+</script>
 
+<script>
 /* ── Today's date ── */
 var today = new Date().toISOString().split('T')[0];
 document.getElementById('decl-date').value = today;
@@ -1099,27 +1111,36 @@ function buildRecord(admNo) {
   };
 }
 
-/* ── Save to localStorage ── */
-function getAdmissions() {
-  try { return JSON.parse(localStorage.getItem('shc_admissions') || '[]'); } catch(e) { return []; }
-}
-function saveAdmissions(list) {
-  localStorage.setItem('shc_admissions', JSON.stringify(list));
+/* ── Save draft (sends to API as Draft status) ── */
+async function saveDraft() {
+  var payload = { status: 'Draft' };
+  try {
+    ['first-name','last-name','gender','dob','class-apply','acad-session'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && el.value) payload[id.replace('-','_')] = el.value;
+    });
+    payload.first_name = document.getElementById('first-name')?.value || 'Draft';
+    payload.last_name  = document.getElementById('last-name')?.value  || 'Draft';
+    payload.gender     = document.getElementById('gender')?.value || 'Male';
+    payload.dob        = document.getElementById('dob')?.value || '2000-01-01';
+    payload.class_apply   = document.getElementById('class-apply')?.value || 'JS 1';
+    payload.acad_session  = document.getElementById('acad-session')?.value || '2025/2026';
+    payload.guardian_name  = (document.getElementById('g-first')?.value || '') + ' ' + (document.getElementById('g-last')?.value || '');
+    payload.guardian_phone = document.getElementById('g-phone')?.value || '0000000000';
+
+    var resp = await fetch('https://rms-bckend.onrender.com/api/admissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    showToast('💾 Draft saved', 'emerald');
+  } catch(e) {
+    showToast('Draft save failed: ' + e.message, 'amber');
+  }
 }
 
-/* ── Save draft ── */
-function saveDraft() {
-  var admNo  = 'DRAFT-' + Date.now();
-  var record = buildRecord(admNo);
-  record.status = 'Draft';
-  var list = getAdmissions();
-  list.push(record);
-  saveAdmissions(list);
-  showToast('💾 Draft saved successfully', 'emerald');
-}
-
-/* ── Form submit ── */
-document.getElementById('reg-form').addEventListener('submit', function(e) {
+/* ── Form submit — sends to backend API ── */
+document.getElementById('reg-form').addEventListener('submit', async function(e) {
   e.preventDefault();
 
   if (!validatePage(4)) return;
@@ -1131,25 +1152,69 @@ document.getElementById('reg-form').addEventListener('submit', function(e) {
     return;
   }
 
-  var admNo  = genAdmNo();
-  var record = buildRecord(admNo);
+  var submitBtn = document.querySelector('#page-4 button[type="submit"], button.btn-submit');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting…'; }
 
-  var list = getAdmissions();
-  list.push(record);
-  saveAdmissions(list);
+  // Build payload matching backend field names
+  var talents = [];
+  document.querySelectorAll('input[name="talent"]:checked').forEach(function(c){ talents.push(c.value); });
 
-  /* Show success */
-  document.getElementById('reg-form').style.display = 'none';
-  document.getElementById('success-card').style.display = 'block';
-  document.getElementById('reg-number').textContent = admNo;
-  document.getElementById('success-screen').style.display = 'block';
+  var payload = {
+    first_name:     document.getElementById('first-name').value.trim(),
+    last_name:      document.getElementById('last-name').value.trim(),
+    middle_name:    document.getElementById('middle-name').value.trim() || null,
+    gender:         document.getElementById('gender').value,
+    dob:            document.getElementById('dob').value,
+    blood_group:    document.getElementById('blood-group').value || null,
+    genotype:       document.getElementById('genotype').value || null,
+    state_origin:   document.getElementById('state-origin').value || null,
+    lga:            document.getElementById('lga').value || null,
+    address:        document.getElementById('address').value || null,
+    class_apply:    document.getElementById('class-apply').value,
+    preferred_arm:  document.getElementById('preferred-arm').value || null,
+    acad_session:   document.getElementById('acad-session').value,
+    entry_term:     document.getElementById('entry-term').value || null,
+    prev_school:    document.getElementById('prev-school').value || null,
+    last_class:     document.getElementById('last-class').value || null,
+    guardian_first: document.getElementById('g-first').value.trim(),
+    guardian_last:  document.getElementById('g-last').value.trim(),
+    guardian_name:  (document.getElementById('g-first').value + ' ' + document.getElementById('g-last').value).trim(),
+    relation:       document.getElementById('g-relation').value || null,
+    guardian_phone: document.getElementById('g-phone').value.trim(),
+    guardian_email: document.getElementById('g-email').value.trim() || null,
+    guardian_addr:  document.getElementById('g-address').value.trim() || null,
+    notes:          talents.length ? 'Talents: ' + talents.join(', ') : null,
+  };
 
-  /* Update step 5 */
-  updateStep(4, 'done');
-  updateStep(5, 'active');
-  document.getElementById('step-5').querySelector('.step-dot').textContent = '✓';
+  try {
+    var resp = await fetch('https://rms-bckend.onrender.com/api/admissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var json = await resp.json();
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!resp.ok || !json.success) {
+      throw new Error(json.message || 'Submission failed. Please try again.');
+    }
+
+    var admNo = json.data?.applicationNo || json.data?.id || 'ADM-' + Date.now();
+
+    /* Show success */
+    document.getElementById('reg-form').style.display = 'none';
+    document.getElementById('success-card').style.display = 'block';
+    document.getElementById('reg-number').textContent = admNo;
+    document.getElementById('success-screen').style.display = 'block';
+
+    updateStep(4, 'done');
+    updateStep(5, 'active');
+    document.getElementById('step-5').querySelector('.step-dot').textContent = '✓';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  } catch(err) {
+    showToast('❌ ' + err.message, 'rose');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Application'; }
+  }
 });
 
 /* ── Register another ── */

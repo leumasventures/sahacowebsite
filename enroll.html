@@ -204,7 +204,7 @@
       <li><a href="dashboard.html#teachers"><span class="ni">👩‍🏫</span> Staff</a></li>
       <li><a href="dashboard.html#subjects"><span class="ni">📚</span> Subjects</a></li>
       <li class="nav-section">Admissions</li>
-      <li><a href="admissionList.html"><span class="ni">📋</span> Admission List</a></li>
+      
       <li><a href="regForm.html"><span class="ni">📝</span> New Registration</a></li>
       <li class="active"><a href="enroll.html"><span class="ni">🎓</span> Enroll Students</a></li>
       <li class="nav-section">Performance</li>
@@ -316,13 +316,13 @@
         <div class="ei">🎓</div>
         <h3>No Approved Students Found</h3>
         <p style="font-size:.875rem;margin-top:.35rem;">All approved students have been enrolled, or no approvals exist yet.</p>
-        <a href="admissionList.html" class="btn btn-navy" style="margin-top:1.25rem;">← Back to Admission List</a>
+        
       </div>
       <div class="tbl-footer">
         <span id="tbl-count">Loading…</span>
         <div style="display:flex;gap:.5rem;">
           <button class="btn btn-ghost" onclick="window.__refresh()">🔄 Refresh</button>
-          <a href="admissionList.html" class="btn btn-ghost">📋 Admission List</a>
+          
           <a href="dashboard.html#students" class="btn btn-ghost">🎒 View Students</a>
         </div>
       </div>
@@ -378,10 +378,14 @@
 
 <div id="toast-container" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;"></div>
 
-<script type="module">
+<script src="auth.js"></script>
+<script src="api.js"></script>
+<script>
 'use strict';
 
-import { Auth, Admissions, Classes, Sessions } from './api.js';
+/* Use globals from api.js (already loaded above) */
+// Auth, Admissions, Classes are window globals set by api.js
+// Sessions doesn't exist — use Admin.getSettings for current session
 
 /* ── STATE ───────────────────────────────────────────────── */
 let _approved  = [];   // approved admissions from DB
@@ -391,20 +395,33 @@ let _selected  = new Set();      // Set of admission DB ids
 let _overrides = {};  // { admId: { className, arm } }
 
 /* ── BOOT ────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', function() {
   initSidebar();
-  await loadUser();
-  await loadData();
+  // Wait for auth.js to verify session before loading data
+  var poll = setInterval(function() {
+    if (window.SHC_Auth && window.SHC_Auth.ready) {
+      clearInterval(poll);
+      SHC_Auth.ready.then(async function() {
+        await loadUser();
+        await loadData();
+      });
+    }
+  }, 50);
 });
 
 async function loadUser() {
   try {
-    const { user } = await Auth.me();
-    document.getElementById('sidebar-username').textContent = user.name ?? 'Admin';
-    document.getElementById('sidebar-role').textContent     = user.role ?? '';
+    var session = JSON.parse(sessionStorage.getItem('shc_session') || 'null');
+    if (!session) { window.location.replace('login.html'); return; }
+    if (session.role !== 'Admin') {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;"><div style="text-align:center;"><div style="font-size:3rem;">🔒</div><h2 style="color:#1e3a5f;">Access Restricted</h2><p style="color:#6b7280;">Admin only.</p><a href="dashboard.html" style="color:#2563eb;">← Dashboard</a></div></div>';
+      return;
+    }
+    document.getElementById('sidebar-username').textContent = session.name ?? 'Admin';
+    document.getElementById('sidebar-role').textContent     = session.role ?? '';
     document.getElementById('sidebar-avatar').textContent   =
-      (user.name ?? 'SA').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
-  } catch {
+      (session.name ?? 'SA').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+  } catch(e) {
     window.location.replace('login.html');
   }
 }
@@ -415,10 +432,9 @@ async function loadData() {
   showSkeleton();
 
   try {
-    const [admRes, clsRes, sessRes] = await Promise.all([
+    const [admRes, clsRes] = await Promise.all([
       Admissions.getAll({ status: 'Approved' }),
       Classes.getAll(),
-      Sessions.getAll(),
     ]);
 
     _classes  = clsRes.data  ?? clsRes  ?? [];
@@ -427,10 +443,10 @@ async function loadData() {
       _conflict: !hasArm(a.class_apply, a.preferred_arm),
     }));
 
-    // Session chip
-    const active = (sessRes.data ?? sessRes ?? []).find(s => s.is_active);
-    document.getElementById('session-chip').textContent =
-      active ? `${active.name} · ${active.active_term ?? ''}` : '2025/2026';
+    // Session chip from App.data or settings
+    var si = window.App?.data?.schoolInfo;
+    var sessionText = si ? (si.session + (si.term ? ' · ' + si.term : '')) : '2025/2026';
+    document.getElementById('session-chip').textContent = sessionText;
 
     // Stats
     const stats = admRes.stats ?? {};

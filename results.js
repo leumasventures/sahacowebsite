@@ -88,10 +88,11 @@ function renderResults() {
 
     <!-- Tab Bar -->
     <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;flex-wrap:wrap;background:#f1f5f9;border-radius:12px;padding:.4rem;">
-      <button id="tab-single"   onclick="switchResultTab('single')"   class="res-tab-btn" style="${activeTabStyle(true)}">📝 Single Entry</button>
-      <button id="tab-bulk"     onclick="switchResultTab('bulk')"     class="res-tab-btn" style="${activeTabStyle(false)}">📊 Bulk Excel</button>
-      <button id="tab-allocate" onclick="switchResultTab('allocate')" class="res-tab-btn" style="${activeTabStyle(false)}">📋 Subject Allocation</button>
-      <button id="tab-cumulative" onclick="switchResultTab('cumulative')" class="res-tab-btn" style="${activeTabStyle(false)}">🎓 Cumulative</button>
+      <button id="tab-single"      onclick="switchResultTab('single')"   class="res-tab-btn" style="${activeTabStyle(true)}">📝 Single Entry</button>
+      <button id="tab-bulk"        onclick="switchResultTab('bulk')"     class="res-tab-btn" style="${activeTabStyle(false)}">📊 Bulk Excel</button>
+      <button id="tab-allocate"    onclick="switchResultTab('allocate')" class="res-tab-btn" style="${activeTabStyle(false)}">📋 Subject Allocation</button>
+      <button id="tab-verify"      onclick="switchResultTab('verify')"   class="res-tab-btn" style="${activeTabStyle(false)}">🔍 Score Verification</button>
+      <button id="tab-cumulative"  onclick="switchResultTab('cumulative')" class="res-tab-btn" style="${activeTabStyle(false)}">🎓 Cumulative</button>
     </div>
 
     <!-- ═══ SINGLE ENTRY TAB ═══ -->
@@ -110,8 +111,14 @@ function renderResults() {
           </div>
           <div>
             <label style="${labelStyle()}">Arm</label>
-            <select id="res-arm" style="${inputStyle()}" onchange="populateResultStudents()" ${isTeacher?'disabled':''}>
-              <option>${preArm||'A'}</option>
+            <select id="res-arm" style="${inputStyle()}" ${isTeacher?'disabled':''}>
+              ${(() => {
+                const firstCls = isTeacher
+                  ? App.data.classes.find(c => c.name === preClass)
+                  : App.data.classes[0];
+                const arms = firstCls?.arms || ['A'];
+                return arms.map(a => `<option ${a === (preArm||arms[0]) ? 'selected' : ''}>${a}</option>`).join('');
+              })()}
             </select>
           </div>
           <div>
@@ -155,7 +162,15 @@ function renderResults() {
             <select id="bulk-res-class" style="${inputStyle()}" onchange="populateBulkArms()" ${isTeacher?'disabled':''}>${classOptions}</select>
           </div>
           <div><label style="${labelStyle()}">Arm</label>
-            <select id="bulk-res-arm" style="${inputStyle()}" ${isTeacher?'disabled':''}><option>${preArm||'A'}</option></select>
+            <select id="bulk-res-arm" style="${inputStyle()}" ${isTeacher?'disabled':''}>
+              ${(() => {
+                const firstCls = isTeacher
+                  ? App.data.classes.find(c => c.name === preClass)
+                  : App.data.classes[0];
+                const arms = firstCls?.arms || ['A'];
+                return arms.map(a => `<option ${a === (preArm||arms[0]) ? 'selected' : ''}>${a}</option>`).join('');
+              })()}
+            </select>
           </div>
         </div>
       </div>
@@ -239,10 +254,23 @@ window.updateAllocArms = function() {
 };
 
 /* ── Subject Allocation Loader ── */
-window.loadSubjectAllocation = function() {
+/* ── Subject limit helper — reads from settings ──────────────── */
+function getMaxStudentSubjects() {
+  return parseInt(App?.data?.generalSettings?.maxSubjectsPerStudent) || 9;
+}
+
+window.loadSubjectAllocation = async function() {
   const cls = document.getElementById('alloc-class')?.value;
   const arm = document.getElementById('alloc-arm')?.value;
   if (!cls || !arm) return toast('Select class and arm.', 'warning');
+
+  // Always fetch latest allocation from API
+  try {
+    const resp  = await Results.getClassAllocation(cls, arm);
+    const raw   = resp.subjects || resp.data || [];
+    const names = raw.map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+    if (names.length) App.data.subjectAllocations[`${cls}_${arm}`] = names;
+  } catch(e) { console.warn('[loadSubjectAllocation] API fetch failed:', e.message); }
 
   const SS_INDIVIDUAL = ['SS 2', 'SS 3'];
   const output = document.getElementById('allocation-output');
@@ -261,7 +289,7 @@ window.loadSubjectAllocation = function() {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
           <div>
             <h4 style="margin:0;color:#1e3a5f;">${cls} ${arm} — Individual Subject Allocation</h4>
-            <p style="margin:.25rem 0 0;font-size:.82rem;color:#6b7280;">SS2 &amp; SS3: Each student can have a personalised subject list (max 9)</p>
+            <p style="margin:.25rem 0 0;font-size:.82rem;color:#6b7280;">SS2 &amp; SS3: Each student picks their own subjects (max ${getMaxStudentSubjects()})</p>
           </div>
           <button onclick="openBulkAllocModal('${cls}','${arm}')" style="${btnStyle('primary')}">⚡ Bulk Allocate All Students</button>
         </div>
@@ -289,7 +317,7 @@ window.loadSubjectAllocation = function() {
                   </div>
                 </td>
                 <td style="${tdStyle()};text-align:center;">
-                  <span style="${badgeStyle(allocated.length>9?'danger':allocated.length>=7?'success':'info')}">${allocated.length}/9</span>
+                  <span style="${badgeStyle(allocated.length>getMaxStudentSubjects()?'danger':allocated.length>=Math.max(5,getMaxStudentSubjects()-2)?'success':'info')}">${allocated.length}/9</span>
                 </td>
                 <td style="${tdStyle()}">
                   <button onclick="openStudentAllocModal('${s.id}','${cls}','${arm}')" style="${btnStyle('primary','sm')}">✏ Edit</button>
@@ -360,15 +388,33 @@ window.removeClassSubject = function(cls, arm, subject) {
   }
 };
 
-window.saveClassAllocation = function(cls, arm) {
-  toast(`Subject allocation saved for ${cls} ${arm}!`, 'success');
+window.saveClassAllocation = async function(cls, arm) {
+  const key      = `${cls}_${arm}`;
+  const subNames = App.data.subjectAllocations[key] || [];
+  if (!subNames.length) { toast('No subjects selected to save.', 'warning'); return; }
+
+  // Map names → IDs
+  const subjectIds = subNames.map(name => {
+    const sub = App.data.subjects.find(s => s.name === name || s.code === name);
+    return sub?.id;
+  }).filter(Boolean);
+
+  if (!subjectIds.length) { toast('Could not match subjects to IDs — check subjects list.', 'error'); return; }
+
+  try {
+    await Results.setClassAllocation(cls, arm, subjectIds);
+    toast(`✅ Allocation saved for ${cls} ${arm} (${subjectIds.length} subjects)`, 'success');
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
 };
 
-window.clearClassAllocation = function(cls, arm) {
-  if (!confirm('Clear all subjects for this class/arm?')) return;
-  App.data.subjectAllocations[`${cls}_${arm}`] = [];
-  loadSubjectAllocation();
-  toast('Allocation cleared.', 'warning');
+window.clearClassAllocation = async function(cls, arm) {
+  if (!confirm(`Clear all subject allocations for ${cls} ${arm}?`)) return;
+  try {
+    await Results.clearClassAllocation(cls, arm);
+    App.data.subjectAllocations[`${cls}_${arm}`] = [];
+    loadSubjectAllocation();
+    toast('Allocation cleared.', 'warning');
+  } catch(e) { toast('Clear failed: ' + e.message, 'error'); }
 };
 
 /* ── Individual student allocation modal (SS2/SS3) ── */
@@ -376,9 +422,9 @@ window.openStudentAllocModal = function(studentId, cls, arm) {
   const student  = App.data.students.find(s => s.id === studentId);
   const classKey = `${cls}_${arm}`;
   const base     = App.data.subjectAllocations[classKey] || App.data.subjects.filter(s=>s.level==='All'||s.level==='Senior').map(s=>s.name);
-  let allocated  = [...(App.data.subjectAllocations[studentId] || base.slice(0,9))];
+  let allocated  = [...(App.data.subjectAllocations[studentId] || [])];
 
-  const allSubjects = App.data.subjects.filter(s => s.level==='All'||s.level==='Senior');
+  const allSubjects = App.data.subjects; // All subjects available — student picks their choice
 
   const render = () => {
     const chipsEl = document.getElementById('modal-student-chips');
@@ -390,8 +436,8 @@ window.openStudentAllocModal = function(studentId, cls, arm) {
         <button onclick="modalRemoveSubject('${subj}')" title="Remove">✕</button>
       </span>`).join('') || '<span style="color:#9ca3af;font-size:.82rem;">No subjects yet</span>';
     if (countEl) {
-      countEl.textContent = `${allocated.length}/9`;
-      countEl.style.cssText = badgeStyle(allocated.length>9?'danger':allocated.length>=7?'success':'info');
+      countEl.textContent = `${allocated.length}/${getMaxStudentSubjects()}`;
+      countEl.style.cssText = badgeStyle(allocated.length>getMaxStudentSubjects()?'danger':allocated.length>=Math.max(5,getMaxStudentSubjects()-2)?'success':'info');
     }
     if (poolEl) poolEl.innerHTML = allSubjects.filter(s=>!allocated.includes(s.name)).map(s=>`
       <button onclick="modalAddSubject('${s.name}')"
@@ -402,7 +448,7 @@ window.openStudentAllocModal = function(studentId, cls, arm) {
   };
 
   window.modalAddSubject = (subj) => {
-    if (allocated.length >= 9) { toast('Maximum 9 subjects for SS2/SS3.', 'warning'); return; }
+    const _max = getMaxStudentSubjects(); if (allocated.length >= _max) { toast(`Maximum ${_max} subjects allowed. Change limit in Settings → General.`, 'warning'); return; }
     if (!allocated.includes(subj)) { allocated.push(subj); render(); }
   };
   window.modalRemoveSubject = (subj) => {
@@ -446,17 +492,21 @@ window.openStudentAllocModal = function(studentId, cls, arm) {
 window.saveStudentAllocation = function(studentId, cls, arm) {
   const allocated = window._currentModalAllocation?.() || [];
   if (allocated.length === 0) { toast('Please allocate at least one subject.', 'warning'); return; }
-  if (allocated.length > 9)  { toast('Maximum 9 subjects allowed for SS2/SS3.', 'error'); return; }
+  const _maxS = getMaxStudentSubjects(); if (allocated.length > _maxS) { toast(`Maximum ${_maxS} subjects allowed.`, 'error'); return; }
   App.data.subjectAllocations[studentId] = allocated;
+  // Save to backend
+  const _subIds = allocated.map(n => App.data.subjects.find(s=>s.name===n)?.id).filter(Boolean);
+  Results.setStudentAllocation(studentId, _subIds)
+    .then(() => toast(`✅ Subjects saved for ${App.data.students.find(s=>s.id===studentId)?.name}!`, 'success'))
+    .catch(e => toast('Backend save failed: ' + e.message, 'warning'));
   closeModal();
-  toast(`Subjects saved for ${App.data.students.find(s=>s.id===studentId)?.name}!`, 'success');
   loadSubjectAllocation();
 };
 
 /* ── Bulk Allocate Modal (SS2/SS3) ── */
 window.openBulkAllocModal = function(cls, arm) {
   const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
-  const allSubjects = App.data.subjects.filter(s => s.level==='All'||s.level==='Senior');
+  const allSubjects = App.data.subjects; // All subjects available — student picks their choice
   let selected = [];
 
   const render = () => {
@@ -477,7 +527,7 @@ window.openBulkAllocModal = function(cls, arm) {
   };
 
   window.bulkAddSubj = (subj) => {
-    if (selected.length >= 9) { toast('Max 9 subjects.', 'warning'); return; }
+    const _maxB = getMaxStudentSubjects(); if (selected.length >= _maxB) { toast(`Max ${_maxB} subjects.`, 'warning'); return; }
     if (!selected.includes(subj)) { selected.push(subj); render(); }
   };
   window.bulkRemoveSubj = (subj) => { selected = selected.filter(s => s !== subj); render(); };
@@ -489,7 +539,7 @@ window.openBulkAllocModal = function(cls, arm) {
     </p>
 
     <div style="background:#fef3c7;border-radius:8px;padding:.65rem .9rem;font-size:.85rem;color:#92400e;margin-bottom:1.25rem;">
-      ⚠ This will overwrite existing individual allocations. Max 9 subjects per student.
+      ⚠ This will overwrite existing individual allocations. Max ${getMaxStudentSubjects()} subjects per student.
     </div>
 
     <div style="margin-bottom:1rem;">
@@ -514,27 +564,38 @@ window.openBulkAllocModal = function(cls, arm) {
   render();
 };
 
-window.confirmBulkAlloc = function(cls, arm) {
+window.confirmBulkAlloc = async function(cls, arm) {
   const selected = window._bulkAllocSelected?.() || [];
   if (!selected.length) { toast('Select at least one subject.', 'warning'); return; }
-  if (selected.length > 9) { toast('Max 9 subjects.', 'error'); return; }
+  if (selected.length > getMaxStudentSubjects()) { toast(`Max ${getMaxStudentSubjects()} subjects.`, 'error'); return; }
   const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
   students.forEach(s => { App.data.subjectAllocations[s.id] = [...selected]; });
+  // Save to backend
+  const subIds = selected.map(name => {
+    const sub = App.data.subjects.find(s => s.name === name);
+    return sub?.id;
+  }).filter(Boolean);
+  try {
+    await Results.bulkSetStudentAllocations({ class: cls, arm, subjects: subIds });
+    toast(`✅ ${selected.length} subjects saved for ${students.length} students!`, 'success');
+  } catch(e) {
+    toast('Backend save failed: ' + e.message + ' (saved locally)', 'warning');
+  }
   closeModal();
-  toast(`${selected.length} subjects allocated to ${students.length} students!`, 'success');
   loadSubjectAllocation();
 };
 
 
 /* ── TAB SWITCHING ──────────────────────────────────────────────────────── */
 window.switchResultTab = function(tab) {
-  ['single','bulk','allocate','cumulative'].forEach(t => {
+  ['single','bulk','allocate','verify','cumulative'].forEach(t => {
     const panel = document.getElementById(`result-tab-${t}`);
     const btn   = document.getElementById(`tab-${t}`);
     if (panel) panel.style.display = t === tab ? '' : 'none';
     if (btn)   btn.style.cssText   = activeTabStyle(t === tab);
   });
   if (tab === 'cumulative') renderCumulativeTab();
+  if (tab === 'verify')     renderVerifyTab();
 };
 
 /* ── ARM POPULATION ─────────────────────────────────────────────────────── */
@@ -542,16 +603,29 @@ window.populateResultStudents = function() {
   const cls = document.getElementById('res-class')?.value;
   if (!cls) return;
   const classData = App.data.classes.find(c => c.name === cls);
-  const armSel = document.getElementById('res-arm');
-  if (armSel && classData) armSel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+  const armSel    = document.getElementById('res-arm');
+  if (armSel && classData?.arms?.length) {
+    const current = armSel.value; // preserve selection if possible
+    armSel.innerHTML = classData.arms.map(a =>
+      `<option ${a === current ? 'selected' : ''}>${a}</option>`
+    ).join('');
+    // If current arm no longer valid, default to first
+    if (!classData.arms.includes(current)) armSel.value = classData.arms[0];
+  }
 };
 
 window.populateBulkArms = function() {
   const cls = document.getElementById('bulk-res-class')?.value;
   if (!cls) return;
   const classData = App.data.classes.find(c => c.name === cls);
-  const armSel = document.getElementById('bulk-res-arm');
-  if (armSel && classData) armSel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+  const armSel    = document.getElementById('bulk-res-arm');
+  if (armSel && classData?.arms?.length) {
+    const current = armSel.value;
+    armSel.innerHTML = classData.arms.map(a =>
+      `<option ${a === current ? 'selected' : ''}>${a}</option>`
+    ).join('');
+    if (!classData.arms.includes(current)) armSel.value = classData.arms[0];
+  }
 };
 
 /* ── SINGLE ENTRY ───────────────────────────────────────────────────────── */
@@ -610,24 +684,50 @@ window.calcTotal = function(input) {
   row.querySelector('.remark-cell').textContent = g.remark;
 };
 
-window.saveAllResults = function(cls, arm, subject, term, session) {
+window.saveAllResults = async function(cls, arm, subject, term, session) {
   if (!priv.canEnterResults())       { denyAccess('You do not have permission to save results.'); return; }
   if (!priv.canActOnClass(cls, arm)) { denyAccess('You can only save results for your assigned class.'); return; }
 
-  let saved = 0;
+  const btn = document.querySelector('[onclick*="saveAllResults"]');
+  const origText = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  const rows = [];
   $$('#result-rows tr').forEach(row => {
     const sid  = row.dataset.sid;
-    const ca   = parseFloat(row.querySelector('.ca-input').value);
-    const exam = parseFloat(row.querySelector('.exam-input').value);
-    if (isNaN(ca) || isNaN(exam)) return;
-    const total = Math.min(ca + exam, 100);
-    const entry = { studentId: sid, class: cls, arm, subject, term, session, ca, exam, total };
-    const idx = App.data.results.findIndex(r => r.studentId===sid && r.subject===subject && r.term===term && r.session===session);
-    if (idx >= 0) App.data.results[idx] = entry;
-    else App.data.results.push(entry);
-    saved++;
+    const ca   = parseFloat(row.querySelector('.ca-input')?.value);
+    const exam = parseFloat(row.querySelector('.exam-input')?.value);
+    if (!sid || isNaN(ca) || isNaN(exam)) return;
+    rows.push({ student_id: sid, studentId: sid, ca, exam });
   });
-  toast(`${saved} result(s) saved!`, 'success');
+
+  if (!rows.length) { toast('No scores to save.', 'warning'); if (btn) { btn.disabled=false; btn.textContent=origText; } return; }
+
+  let saved = 0, failed = 0;
+  try {
+    // Use bulk endpoint for efficiency
+    const resp = await Results.bulkCreate({
+      results: rows.map(r => ({ student_id: r.studentId, subject, term, session, ca: r.ca, exam: r.exam }))
+    });
+    saved = resp.saved || resp.data?.saved || rows.length;
+    failed = resp.skipped || 0;
+
+    // Update local cache
+    rows.forEach(r => {
+      const total = Math.min(r.ca + r.exam, getMaxScore ? getMaxScore() : 100);
+      const entry = { studentId: r.studentId, class: cls, arm, subject, term, session, ca: r.ca, exam: r.exam, total };
+      const idx = App.data.results.findIndex(x => x.studentId===r.studentId && x.subject===subject && x.term===term && x.session===session);
+      if (idx >= 0) App.data.results[idx] = { ...App.data.results[idx], ...entry };
+      else App.data.results.push(entry);
+    });
+
+    toast(`✅ ${saved} result(s) saved to database!${failed > 0 ? ` (${failed} skipped)` : ''}`, 'success');
+  } catch(e) {
+    console.error('[saveAllResults]', e);
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText || '💾 Save All Results'; }
+  }
 };
 
 /* ── EXCEL BULK IMPORT ──────────────────────────────────────────────────── */
@@ -715,7 +815,7 @@ window.clearExcelImport = function() {
   document.getElementById('bulk-result-preview').innerHTML = '';
 };
 
-window.saveBulkExcelResults = function() {
+window.saveBulkExcelResults = async function() {
   const cls = document.getElementById('bulk-res-class').value;
   const arm = document.getElementById('bulk-res-arm').value;
   if (!priv.canEnterResults())       { denyAccess('You do not have permission to enter results.'); return; }
@@ -724,24 +824,40 @@ window.saveBulkExcelResults = function() {
   const rows = (window._parsedExcelRows || []).filter(r => r.ok);
   if (!rows.length) { toast('No valid rows to import.', 'warning'); return; }
 
-  const defaultSession = App.data.schoolInfo.session;
-  let saved = 0, skipped = 0;
+  const btn = document.getElementById('btn-import-excel');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
-  rows.forEach(r => {
-    const student = App.data.students.find(s => s.id === r.sid);
-    if (!student) { skipped++; return; }
-    const session = r.session || defaultSession;
-    const total   = Math.min(r.ca + r.exam, 100);
-    const entry   = { studentId: r.sid, class: cls, arm, subject: r.subject, term: r.term, session, ca: r.ca, exam: r.exam, total };
-    const idx     = App.data.results.findIndex(res =>
-      res.studentId===r.sid && res.subject===r.subject && res.term===r.term && res.session===session);
-    if (idx >= 0) App.data.results[idx] = entry;
-    else App.data.results.push(entry);
-    saved++;
-  });
+  const defaultSession = App.data.schoolInfo?.session || '';
+  const payload = rows.map(r => ({
+    student_id: r.sid, studentId: r.sid,
+    subject: r.subject, term: r.term,
+    session: r.session || defaultSession,
+    ca: r.ca, exam: r.exam,
+  }));
 
-  toast(`${saved} result(s) imported!${skipped ? ` ${skipped} skipped (student not found).` : ''}`, saved > 0 ? 'success' : 'warning');
-  if (saved > 0) clearExcelImport();
+  try {
+    const resp   = await Results.bulkCreate({ results: payload });
+    const saved  = resp.saved || resp.data?.saved || rows.length;
+    const skipped= resp.skipped || 0;
+
+    // Update local cache
+    rows.forEach(r => {
+      const session = r.session || defaultSession;
+      const total   = Math.min(r.ca + r.exam, getMaxScore ? getMaxScore() : 100);
+      const entry   = { studentId: r.sid, class: cls, arm, subject: r.subject, term: r.term, session, ca: r.ca, exam: r.exam, total };
+      const idx     = App.data.results.findIndex(res =>
+        res.studentId===r.sid && res.subject===r.subject && res.term===r.term && res.session===session);
+      if (idx >= 0) App.data.results[idx] = entry;
+      else App.data.results.push(entry);
+    });
+
+    toast(`✅ ${saved} result(s) saved to database!${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+    if (saved > 0) clearExcelImport();
+  } catch(e) {
+    toast('Import failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Import Valid Results'; }
+  }
 };
 /* ─────────────────────────────────────────
    13. REPORT CARDS
@@ -1024,6 +1140,314 @@ window.exportCumulativeCSV = function() {
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
   a.download = `cumulative_${cls}_${arm}_${session.replace('/','_')}.csv`;
+  a.click();
+  toast('CSV exported!', 'success');
+};
+
+/* ── SCORE VERIFICATION TAB ─────────────────────────────────────────────── */
+
+function renderVerifyTab() {
+  if (!document.getElementById('result-tab-verify')) {
+    const div = document.createElement('div');
+    div.id = 'result-tab-verify';
+    div.className = 'fade-in';
+    div.style.display = 'none';
+    const classOpts  = App.data.classes.map(c=>`<option>${c.name}</option>`).join('');
+    const termOpts   = ['First Term','Second Term','Third Term'].map(t=>`<option ${t===App.data.schoolInfo?.term?'selected':''}>${t}</option>`).join('');
+    div.innerHTML = `
+      <div class="result-card">
+        <h4 style="margin:0 0 1.25rem;color:#1e3a5f;">🔍 Score Verification — Entered & Missing</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1rem;">
+          <div>
+            <label style="${labelStyle()}">Class</label>
+            <select id="vfy-class" style="${inputStyle()}" onchange="populateVerifyArms()">${classOpts}</select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Arm</label>
+            <select id="vfy-arm" style="${inputStyle()}">
+              ${(App.data.classes[0]?.arms||['A']).map(a=>`<option>${a}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Term</label>
+            <select id="vfy-term" style="${inputStyle()}">${termOpts}</select>
+          </div>
+          <div>
+            <label style="${labelStyle()}">Session</label>
+            <input id="vfy-session" value="${App.data.schoolInfo?.session||'2025/2026'}" style="${inputStyle()}">
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <button onclick="loadVerifyResults()" style="${btnStyle('primary')}">🔍 Verify Scores</button>
+          <button onclick="exportVerifyCSV()" style="${btnStyle('secondary')}">⬇ Export Missing</button>
+        </div>
+      </div>
+      <div id="verify-results-area"></div>`;
+    const section = document.getElementById('results');
+    if (section) section.appendChild(div);
+  }
+  populateVerifyArms();
+}
+
+window.populateVerifyArms = function() {
+  const cls = document.getElementById('vfy-class')?.value;
+  const classData = App.data.classes.find(c => c.name === cls);
+  const sel = document.getElementById('vfy-arm');
+  if (sel && classData?.arms?.length)
+    sel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+};
+
+window.loadVerifyResults = async function() {
+  const cls     = document.getElementById('vfy-class')?.value;
+  const arm     = document.getElementById('vfy-arm')?.value;
+  const term    = document.getElementById('vfy-term')?.value;
+  const session = document.getElementById('vfy-session')?.value;
+  const area    = document.getElementById('verify-results-area');
+  if (!cls || !arm || !term || !session || !area) return;
+
+  area.innerHTML = `<div class="result-card" style="text-align:center;padding:2rem;color:#6b7280;">Loading…</div>`;
+
+  // Fetch fresh results from API
+  let apiResults = [];
+  try {
+    const resp = await Results.getAll({ class: cls, arm, term, session });
+    apiResults = resp.data || [];
+    // Merge into App.data so grade calculations work
+    apiResults.forEach(r => {
+      const idx = App.data.results.findIndex(x => x.id === r.id);
+      if (idx >= 0) App.data.results[idx] = r;
+      else App.data.results.push(r);
+    });
+  } catch(e) {
+    apiResults = App.data.results.filter(r => r.term === term && r.session === session);
+  }
+
+  const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
+  if (!students.length) {
+    area.innerHTML = `<div class="result-card" style="text-align:center;color:#9ca3af;padding:2rem;">No students in ${cls} ${arm}</div>`;
+    return;
+  }
+
+  // Get allocated subjects from API — returns [{id, name, code}]
+  let allocSubs = [];
+  try {
+    const resp = await Results.getClassAllocation(cls, arm);
+    const raw  = resp.subjects || resp.data || [];
+    // API returns objects with name field; extract names for string comparison
+    allocSubs = raw.map(s => (typeof s === 'string' ? s : s.name)).filter(Boolean);
+    // Also update local cache
+    if (allocSubs.length) App.data.subjectAllocations[`${cls}_${arm}`] = allocSubs;
+  } catch(e) { console.warn('[loadVerify] allocation fetch failed:', e.message); }
+  if (!allocSubs.length) allocSubs = App.data.subjectAllocations[`${cls}_${arm}`] || App.data.subjects.map(s => s.name);
+  if (!allocSubs.length) { area.innerHTML = `<div class="result-card" style="text-align:center;color:#d97706;padding:2rem;">⚠ No subjects allocated to ${cls} ${arm}. Go to Subject Allocation tab first.</div>`; return; }
+
+  const maxCA   = getScoreBreakdown ? Object.entries(getScoreBreakdown()).filter(([k])=>/^ca/i.test(k)).reduce((s,[,v])=>s+v,0)||40 : 40;
+  const maxExam = getScoreBreakdown ? (Object.entries(getScoreBreakdown()).find(([k])=>/exam/i.test(k))?.[1]||60) : 60;
+  const passMark= typeof getPassMark === 'function' ? getPassMark() : 40;
+
+  // Count stats
+  const totalCells   = students.length * allocSubs.length;
+  let   enteredCells = 0;
+
+  // Build the verification matrix
+  const matrix = students.map(s => {
+    const row = { student: s, subjects: {} };
+    allocSubs.forEach(sub => {
+      const r = apiResults.find(x => x.studentId === s.id && x.subject === sub)
+             || App.data.results.find(x => x.studentId === s.id && x.subject === sub && x.term === term && x.session === session);
+      if (r) { enteredCells++; row.subjects[sub] = r; }
+      else    { row.subjects[sub] = null; }
+    });
+    return row;
+  });
+
+  const pct = totalCells > 0 ? Math.round(enteredCells/totalCells*100) : 0;
+  const barColor = pct === 100 ? '#16a34a' : pct > 60 ? '#2563eb' : pct > 0 ? '#d97706' : '#dc2626';
+
+  area.innerHTML = `
+    <!-- Summary bar -->
+    <div style="background:#fff;border-radius:12px;padding:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;">
+        <span style="font-weight:700;color:#1e3a5f;">${cls} ${arm} · ${term} · ${session}</span>
+        <span style="font-size:.85rem;color:#6b7280;">${enteredCells} / ${totalCells} scores entered (${pct}%)</span>
+      </div>
+      <div style="height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:5px;transition:width .5s;"></div>
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:.75rem;flex-wrap:wrap;font-size:.8rem;">
+        <span style="color:#16a34a;">✓ Entered: ${enteredCells}</span>
+        <span style="color:#dc2626;">✕ Missing: ${totalCells - enteredCells}</span>
+        <span style="color:#6b7280;">${students.length} students · ${allocSubs.length} subjects</span>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap;align-items:center;">
+      <label style="font-size:.8rem;font-weight:600;color:#374151;">Show:</label>
+      <button onclick="vfyFilter('all')"     id="vfy-btn-all"     style="padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#1e3a5f;color:#fff;border:none;font-weight:600;">All</button>
+      <button onclick="vfyFilter('missing')" id="vfy-btn-missing" style="padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">Missing Only</button>
+      <button onclick="vfyFilter('entered')" id="vfy-btn-entered" style="padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">Entered Only</button>
+      <button onclick="vfyFilter('failing')" id="vfy-btn-failing" style="padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">Failing (< Pass Mark)</button>
+    </div>
+
+    <!-- Matrix table -->
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+      <div style="overflow-x:auto;">
+      <table style="${tableStyle()}" id="vfy-table">
+        <thead>
+          <tr style="${thRowStyle()}">
+            <th style="${thStyle('180px')}">Student</th>
+            ${allocSubs.map(sub=>`
+              <th style="${thStyle('80px')};text-align:center;" title="${sub}">
+                <div style="max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.68rem;">${sub}</div>
+                <div style="font-size:.62rem;color:#9ca3af;font-weight:400;">${maxCA}+${maxExam}</div>
+              </th>`).join('')}
+            <th style="${thStyle('70px')}">Total</th>
+            <th style="${thStyle('60px')}">Avg</th>
+            <th style="${thStyle('55px')}">Grade</th>
+            <th style="${thStyle('80px')}">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${matrix.map(row => {
+            const scores  = allocSubs.map(sub => row.subjects[sub]).filter(Boolean);
+            const total   = scores.reduce((s,r) => s+(r.total||0), 0);
+            const avg     = scores.length ? parseFloat((total/scores.length).toFixed(1)) : null;
+            const g       = avg !== null ? grade(avg) : { letter:'—', remark:'—' };
+            const missing = allocSubs.filter(sub => !row.subjects[sub]).length;
+            const failing = allocSubs.filter(sub => row.subjects[sub] && (row.subjects[sub].total||0) < passMark).length;
+            const rowStatus = missing > 0 ? 'missing' : failing > 0 ? 'failing' : 'complete';
+            const rowBg = missing > 0 ? '' : failing > 0 ? '#fff9f0' : '#f0fdf4';
+
+            return `<tr class="vfy-row vfy-${rowStatus}" style="${trStyle()};background:${rowBg};" data-sid="${row.student.id}">
+              <td style="${tdStyle()};font-weight:600;">
+                <div style="font-size:.875rem;">${row.student.name}</div>
+                <div style="font-size:.7rem;color:#9ca3af;">${row.student.id}</div>
+              </td>
+              ${allocSubs.map(sub => {
+                const r = row.subjects[sub];
+                if (!r) return `
+                  <td style="${tdStyle()};text-align:center;background:#fff5f5;">
+                    <button onclick="quickEnterScore('${row.student.id}','${row.student.name}','${sub}','${cls}','${arm}','${term}','${session}')"
+                      style="font-size:.68rem;color:#dc2626;background:#fee2e2;border:1px dashed #dc2626;border-radius:4px;padding:.2rem .4rem;cursor:pointer;white-space:nowrap;">
+                      ✕ Enter
+                    </button>
+                  </td>`;
+                const isLow = (r.total||0) < passMark;
+                return `
+                  <td style="${tdStyle()};text-align:center;background:${isLow?'#fff9f0':''};" title="CA:${r.ca??'—'} Exam:${r.exam??'—'} Total:${r.total??'—'}">
+                    <div style="font-weight:600;font-size:.82rem;color:${isLow?'#dc2626':'#111'};">${r.total??'—'}</div>
+                    <div style="font-size:.62rem;color:#9ca3af;">${r.ca??'—'}+${r.exam??'—'}</div>
+                  </td>`;
+              }).join('')}
+              <td style="${tdStyle()};text-align:center;font-weight:700;">${scores.length > 0 ? total : '—'}</td>
+              <td style="${tdStyle()};text-align:center;font-weight:700;color:${avg!==null&&avg<passMark?'#dc2626':'#1e3a5f'};">${avg??'—'}</td>
+              <td style="${tdStyle()};text-align:center;">${g.letter}</td>
+              <td style="${tdStyle()};text-align:center;">
+                ${rowStatus === 'complete' ? `<span style="background:#dcfce7;color:#166534;padding:.15rem .5rem;border-radius:4px;font-size:.72rem;font-weight:600;">✓ Complete</span>`
+                : rowStatus === 'failing'  ? `<span style="background:#fef3c7;color:#92400e;padding:.15rem .5rem;border-radius:4px;font-size:.72rem;font-weight:600;">⚠ ${failing} failing</span>`
+                                            : `<span style="background:#fee2e2;color:#991b1b;padding:.15rem .5rem;border-radius:4px;font-size:.72rem;font-weight:600;">✕ ${missing} missing</span>`}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>`;
+
+  // Store data for export
+  window._vfyData = { matrix, allocSubs, cls, arm, term, session, maxCA, maxExam, passMark };
+};
+
+window.vfyFilter = function(type) {
+  ['all','missing','entered','failing'].forEach(t => {
+    const btn = document.getElementById(`vfy-btn-${t}`);
+    if (btn) btn.style.cssText = t===type
+      ? 'padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#1e3a5f;color:#fff;border:none;font-weight:600;'
+      : 'padding:.3rem .8rem;border-radius:6px;font-size:.78rem;cursor:pointer;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;';
+  });
+  document.querySelectorAll('.vfy-row').forEach(row => {
+    const cls = row.className;
+    if (type === 'all')     row.style.display = '';
+    else if (type === 'missing') row.style.display = cls.includes('vfy-missing') ? '' : 'none';
+    else if (type === 'entered') row.style.display = !cls.includes('vfy-missing') ? '' : 'none';
+    else if (type === 'failing') row.style.display = cls.includes('vfy-failing') ? '' : 'none';
+  });
+};
+
+window.quickEnterScore = function(studentId, studentName, subject, cls, arm, term, session) {
+  const maxCA   = getScoreBreakdown ? Object.entries(getScoreBreakdown()).filter(([k])=>/^ca/i.test(k)).reduce((s,[,v])=>s+v,0)||40 : 40;
+  const maxExam = getScoreBreakdown ? (Object.entries(getScoreBreakdown()).find(([k])=>/exam/i.test(k))?.[1]||60) : 60;
+  showModal(`
+    <h3 style="margin:0 0 .25rem;">✏️ Enter Score</h3>
+    <div style="font-size:.85rem;color:#6b7280;margin-bottom:1.25rem;">${studentName} · ${subject} · ${term} ${session}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div>
+        <label style="${labelStyle()}">CA (max ${maxCA})</label>
+        <input id="qs-ca" type="number" min="0" max="${maxCA}" style="${inputStyle()}" placeholder="0–${maxCA}" autofocus>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Exam (max ${maxExam})</label>
+        <input id="qs-exam" type="number" min="0" max="${maxExam}" style="${inputStyle()}" placeholder="0–${maxExam}">
+      </div>
+    </div>
+    <div id="qs-preview" style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:8px;margin-bottom:1rem;font-size:.9rem;color:#6b7280;">
+      Total: — · Grade: —
+    </div>
+    <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+      <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+      <button onclick="submitQuickScore('${studentId}','${subject}','${cls}','${arm}','${term}','${session}')" style="${btnStyle('primary')}">💾 Save Score</button>
+    </div>`);
+
+  // Live preview
+  ['qs-ca','qs-exam'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      const ca   = parseInt(document.getElementById('qs-ca')?.value) || 0;
+      const exam = parseInt(document.getElementById('qs-exam')?.value) || 0;
+      const tot  = ca + exam;
+      const g    = grade(tot);
+      const prev = document.getElementById('qs-preview');
+      if (prev) prev.innerHTML = `<strong>Total: ${tot}</strong> · Grade: <strong>${g.letter}</strong> · ${g.remark}`;
+    });
+  });
+};
+
+window.submitQuickScore = async function(studentId, subject, cls, arm, term, session) {
+  const ca   = parseInt(document.getElementById('qs-ca')?.value) || 0;
+  const exam = parseInt(document.getElementById('qs-exam')?.value) || 0;
+  if (ca === 0 && exam === 0) { toast('Enter at least one score', 'warning'); return; }
+  try {
+    const resp = await Results.create({ studentId, subject, term, session, ca, exam });
+    const saved = resp.data || resp;
+    App.data.results.push(saved);
+    closeModal();
+    toast(`✓ Score saved for ${subject}`, 'success');
+    // Refresh the verify table
+    loadVerifyResults();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+};
+
+window.exportVerifyCSV = function() {
+  const d = window._vfyData;
+  if (!d) { toast('Load verification first', 'warning'); return; }
+  const headers = ['Name','Student ID', ...d.allocSubs,'Total','Average','Grade','Missing Count'];
+  const lines   = [headers.join(',')];
+  d.matrix.forEach(row => {
+    const scores = d.allocSubs.map(sub => row.subjects[sub]);
+    const total  = scores.filter(Boolean).reduce((s,r)=>s+(r?.total||0),0);
+    const avg    = scores.filter(Boolean).length ? parseFloat((total/scores.filter(Boolean).length).toFixed(1)) : '';
+    const g      = avg !== '' ? grade(avg).letter : '';
+    const missing= scores.filter(s=>!s).length;
+    lines.push([
+      `"${row.student.name}"`, row.student.id,
+      ...scores.map(r => r ? r.total : 'MISSING'),
+      total || '', avg || '', g,
+      missing
+    ].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `verify_${d.cls}_${d.arm}_${d.term.replace(' ','_')}_${d.session.replace('/','_')}.csv`;
   a.click();
   toast('CSV exported!', 'success');
 };

@@ -480,6 +480,13 @@ function renderSettings() {
                   value="${App.data.generalSettings?.passMark ?? 40}"
                   style="${inputStyle()}; max-width:120px;">
               </div>
+              <div>
+                <label style="${labelStyle()}">Max Subjects per Student (SS2/SS3)</label>
+                <input type="number" id="gen-max-subjects" min="1" max="20"
+                  value="${App.data.generalSettings?.maxSubjectsPerStudent ?? 9}"
+                  style="${inputStyle()}; max-width:120px;">
+                <div style="font-size:.72rem;color:#6b7280;margin-top:.25rem;">Default: 9 — raise to allow SS2/SS3 students to pick more subjects</div>
+              </div>
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:1.25rem; margin-top:1rem;">
               ${[
@@ -1083,7 +1090,8 @@ window.saveGeneralSettings = function() {
     // Score entry
     scoreEntryMode:   getVal('gen-entry-mode'),
     maxScore:         parseInt(getVal('gen-max-score')) || 100,
-    passMark:         parseInt(getVal('gen-pass-mark')) || 40,
+    passMark:              parseInt(getVal('gen-pass-mark'))    || 40,
+    maxSubjectsPerStudent: parseInt(getVal('gen-max-subjects')) || 9,
     allowScoreEdit:   getBool('gen-allow-score-edit'),
     lockPublished:    getBool('gen-lock-published'),
     autoGrade:        getBool('gen-auto-grade'),

@@ -99,13 +99,14 @@ window.generateReportCards = function() {
 /* ── Core card builder ─────────────────────────────────────────────────────── */
 function buildReportCard(student, cls, arm, term, session, school) {
   /* ── data ── */
-  // Only subjects allocated to this class
-  const allocated  = (App.data.subjectAllocations || [])
-    .filter(a => a.class === cls || a.class_name === cls)
-    .map(a => a.subject);
-  // Fall back to all subjects if no allocations defined
-  const subjectNames = allocated.length
-    ? allocated
+  // subjectAllocations is a key-value object: { "ClassName_Arm": [subjectNames] }
+  const allocKey     = `${cls}_${arm}`;
+  const allocByClass = App.data.subjectAllocations?.[allocKey]
+                    || App.data.subjectAllocations?.[`${cls}`]
+                    || [];
+  // Fall back to all subjects if no allocations defined for this class/arm
+  const subjectNames = allocByClass.length
+    ? allocByClass
     : (App.data.subjects || []).map(s => s.name);
 
   const results      = (App.data.results || []).filter(r =>

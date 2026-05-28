@@ -235,6 +235,7 @@ window.saveAppData = async function() {
       score_entry_mode: gs.scoreEntryMode  || 'split',
       max_score:        String(gs.maxScore    ?? 100),
       pass_mark:        String(gs.passMark    ?? 40),
+      max_subjects:     String(gs.maxSubjectsPerStudent ?? 9),
       allow_score_edit: gs.allowScoreEdit ? '1' : '0',
       lock_published:   gs.lockPublished  ? '1' : '0',
       auto_grade:       gs.autoGrade      ? '1' : '0',
@@ -306,6 +307,7 @@ window.loadSettingsFromBackend = function(settings) {
     scoreEntryMode:    settings.score_entry_mode  || 'split',
     maxScore:          parseInt(settings.max_score)         || 100,
     passMark:          parseInt(settings.pass_mark)         || 40,
+    maxSubjectsPerStudent: parseInt(settings.max_subjects)  || 9,
     allowScoreEdit:    settings.allow_score_edit  === '1',
     lockPublished:     settings.lock_published    === '1',
     autoGrade:         settings.auto_grade        === '1',
@@ -585,7 +587,6 @@ function collapseSidebar(collapsed) {
    Parents → redirect to results immediately
 ───────────────────────────────────────── */
 function renderDashboard() {
-  /* Parents should never land on the dashboard */
   if (priv.isParent()) { navigate('results'); return; }
 
   const s = App.data;
@@ -593,39 +594,195 @@ function renderDashboard() {
   const avgAtt = s.students.length
     ? (s.students.reduce((a, b) => a + b.attendance, 0) / s.students.length).toFixed(1) : 0;
 
+  const term    = s.schoolInfo?.term    || '';
+  const session = s.schoolInfo?.session || '';
+  const studentsWithResults = new Set(
+    s.results.filter(r => r.term === term && r.session === session).map(r => r.studentId)
+  );
+  const pending = Math.max(0, s.students.length - studentsWithResults.size);
+
   const statsMap = {
-    'Total Students':        { val: s.students.length,     trend: `${s.classes.length} `, cls: '' },
-    'Pending Results':       { val: 0,                    trend: '',           cls: 'warning' },
-    'Average Attendance':    { val: avgAtt + '%',          trend: '',            cls: 'success' },
-    'Active Staff':          { val: s.teachers.length,     trend: `${s.teachers.length} `, cls: '' },
-    'Subjects Offered':      { val: s.subjects.length,     trend: '',                             cls: 'info' },
-    'Low Attendance Alerts': { val: lowAttendance,         trend: '',              cls: 'alert' },
+    'Total Students':     { val: s.students.length,  trend: `${s.classes.length} class(es)`, cls: '' },
+    'Pending Results':    { val: pending,             trend: term || '—',                     cls: pending > 0 ? 'warning' : 'success' },
+    'Average Attendance': { val: avgAtt + '%',        trend: lowAttendance > 0 ? `⚠ ${lowAttendance} low` : '✓ All good', cls: lowAttendance > 0 ? 'warning' : 'success' },
+    'Active Staff':       { val: s.teachers.length,  trend: `${s.subjects.length} subjects`,  cls: '' },
   };
 
   const grid = document.getElementById('dashboard-stats');
   if (!grid) return;
   grid.innerHTML = Object.entries(statsMap).map(([label, d]) => `
     <div class="stat-card ${d.cls}" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${statColor(d.cls)};">
-      <h4 style="margin:0 0 .5rem;font-size:.85rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${label}</h4>
-      <div class="number" style="font-size:2rem;font-weight:700;color:#111827;">${d.val}</div>
-      ${d.trend ? `<span style="font-size:.8rem;color:#6b7280;">${d.trend}</span>` : ''}
+      <h4 style="margin:0 0 .5rem;font-size:.78rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${label}</h4>
+      <div style="font-size:2rem;font-weight:700;color:#111827;">${d.val}</div>
+      ${d.trend ? `<span style="font-size:.75rem;color:#9ca3af;">${d.trend}</span>` : ''}
     </div>
   `).join('');
 
-  /* Only show buttons relevant to the role */
+  /* Subject allocation panel */
+  const allocPanel = document.getElementById('dashboard-allocations');
+  if (allocPanel) renderDashboardAllocations(allocPanel);
+
+  /* Results completion panel */
+  const compPanel = document.getElementById('dashboard-completion');
+  if (compPanel) renderDashboardCompletion(compPanel, term, session);
+
+  /* Wire nav buttons */
   const btnPrimary   = $('.btn-primary');
   const btnSecondary = $('.btn-secondary');
   const btnOutline   = $('.btn-outline');
   if (btnPrimary)   btnPrimary.onclick   = () => navigate('results');
   if (btnSecondary) btnSecondary.onclick = () => navigate('report-cards');
   if (btnOutline) {
-    if (priv.canTakeAttendance()) {
-      btnOutline.onclick = () => navigate('attendance');
-    } else {
-      btnOutline.style.display = 'none';
-    }
+    if (priv.canTakeAttendance()) { btnOutline.onclick = () => navigate('attendance'); }
+    else { btnOutline.style.display = 'none'; }
   }
 }
+
+/* ── Dashboard: Subject Allocation per Class ──────────────────── */
+async function renderDashboardAllocations(el) {
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:1.5rem;">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+        <div>
+          <h3 style="margin:0;font-size:1rem;font-weight:700;color:#1e3a5f;">📚 Subject Allocations by Class</h3>
+          <p style="margin:.25rem 0 0;font-size:.78rem;color:#6b7280;">Subjects assigned to each class and arm</p>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <select id="dash-alloc-filter" onchange="loadDashboardAllocations()" style="padding:.35rem .7rem;border:1px solid #e5e7eb;border-radius:7px;font-size:.8rem;color:#374151;">
+            <option value="">All Classes</option>
+            ${App.data.classes.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+          </select>
+          <button onclick="navigate('results');setTimeout(()=>switchResultTab('allocate'),200)" style="padding:.35rem .9rem;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;">Manage →</button>
+        </div>
+      </div>
+      <div id="dash-alloc-body" style="padding:.75rem 1.25rem 1.25rem;">
+        <div style="text-align:center;padding:1.5rem;color:#9ca3af;">Loading…</div>
+      </div>
+    </div>`;
+  await loadDashboardAllocations();
+}
+
+window.loadDashboardAllocations = async function() {
+  const body   = document.getElementById('dash-alloc-body');
+  if (!body) return;
+  const filter = document.getElementById('dash-alloc-filter')?.value || '';
+  const classes = App.data.classes.filter(c => !filter || c.name === filter);
+  if (!classes.length) { body.innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af;">No classes.</div>'; return; }
+
+  const rows = [];
+  for (const cls of classes) {
+    for (const arm of (cls.arms || [])) {
+      try {
+        const resp = await Results.getClassAllocation(cls.name, arm);
+        rows.push({ cls: cls.name, arm, subjects: resp.subjects || resp.data || [] });
+      } catch(e) {
+        rows.push({ cls: cls.name, arm, subjects: [] });
+      }
+    }
+  }
+
+  if (!rows.length) { body.innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af;">No arms found.</div>'; return; }
+  const totalSubs = App.data.subjects.length;
+
+  body.innerHTML = rows.map((r, i) => {
+    const subs = r.subjects;
+    const statusColor = subs.length === 0 ? '#dc2626' : subs.length < totalSubs ? '#d97706' : '#16a34a';
+    const statusLabel = subs.length === 0 ? '⚠ None assigned' : subs.length < totalSubs ? `${subs.length}/${totalSubs} assigned` : `✓ All ${subs.length} assigned`;
+    return `
+      <div style="margin-bottom:.85rem;">
+        <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.35rem;flex-wrap:wrap;">
+          <span style="font-weight:700;font-size:.88rem;color:#1e3a5f;min-width:80px;">${r.cls} ${r.arm}</span>
+          <span style="font-size:.72rem;font-weight:600;color:${statusColor};background:${statusColor}18;padding:.15rem .55rem;border-radius:4px;">${statusLabel}</span>
+        </div>
+        ${subs.length
+          ? `<div style="display:flex;flex-wrap:wrap;gap:.3rem;">
+              ${subs.map(sub=>`<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:.15rem .55rem;border-radius:4px;font-size:.72rem;">${sub}</span>`).join('')}
+             </div>`
+          : `<div style="font-size:.75rem;color:#9ca3af;font-style:italic;">No subjects assigned — <button onclick="navigate('results');setTimeout(()=>switchResultTab('allocate'),200)" style="background:none;border:none;color:#2563eb;cursor:pointer;font-size:.75rem;text-decoration:underline;">configure allocation</button></div>`}
+      </div>${i < rows.length-1 ? '<hr style="border:none;border-top:1px solid #f3f4f6;margin:.5rem 0;">' : ''}`;
+  }).join('');
+};
+
+/* ── Dashboard: Results Completion ──────────────────────────────── */
+async function renderDashboardCompletion(el, term, session) {
+  if (!term || !session) {
+    el.innerHTML = `<div style="background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:1.5rem;margin-bottom:1.5rem;">
+      <p style="color:#9ca3af;font-size:.85rem;text-align:center;">Set current term and session in Settings to see result completion.</p></div>`;
+    return;
+  }
+
+  const allResults = App.data.results.filter(r => r.term === term && r.session === session);
+  const matrix = [];
+
+  for (const cls of App.data.classes) {
+    for (const arm of (cls.arms || [])) {
+      const students = App.data.students.filter(s => s.class === cls.name && s.arm === arm);
+      if (!students.length) continue;
+      let allocSubs = [];
+      try {
+        const resp = await Results.getClassAllocation(cls.name, arm);
+        allocSubs = resp.subjects || resp.data || [];
+      } catch(e) {}
+      if (!allocSubs.length) allocSubs = App.data.subjects.map(s => s.name);
+      if (!allocSubs.length) continue;
+
+      const subStatus = allocSubs.map(sub => {
+        const entered = students.filter(st => allResults.some(r => r.studentId === st.id && r.subject === sub)).length;
+        return { sub, entered, total: students.length, pct: students.length ? Math.round(entered/students.length*100) : 0 };
+      });
+
+      const doneCount    = subStatus.filter(s => s.pct === 100).length;
+      const partialCount = subStatus.filter(s => s.pct > 0 && s.pct < 100).length;
+      const pendingCount = subStatus.filter(s => s.pct === 0).length;
+      matrix.push({ cls: cls.name, arm, students: students.length, subStatus, doneCount, partialCount, pendingCount, totalSubs: allocSubs.length });
+    }
+  }
+
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:1.5rem;">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+        <div>
+          <h3 style="margin:0;font-size:1rem;font-weight:700;color:#1e3a5f;">📊 Results Completion — ${term}, ${session}</h3>
+          <p style="margin:.25rem 0 0;font-size:.78rem;color:#6b7280;">Scores entered vs pending per class</p>
+        </div>
+        <button onclick="navigate('results')" style="padding:.35rem .9rem;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;">Enter Results →</button>
+      </div>
+      <div style="padding:1.25rem;">
+        ${!matrix.length ? '<div style="text-align:center;padding:2rem;color:#9ca3af;">No class data available.</div>' :
+          matrix.map((m, i) => {
+            const overallPct = m.totalSubs ? Math.round((m.doneCount / m.totalSubs) * 100) : 0;
+            const barColor   = overallPct === 100 ? '#16a34a' : overallPct > 60 ? '#2563eb' : overallPct > 0 ? '#d97706' : '#dc2626';
+            const pendingSubs = m.subStatus.filter(s => s.pct < 100);
+            return `
+            <div style="margin-bottom:1rem;">
+              <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.3rem;flex-wrap:wrap;">
+                <span style="font-weight:700;font-size:.9rem;color:#1e3a5f;min-width:80px;">${m.cls} ${m.arm}</span>
+                <span style="font-size:.75rem;color:#6b7280;">${m.students} students · ${m.totalSubs} subjects</span>
+                <div style="margin-left:auto;display:flex;gap:.3rem;font-size:.7rem;flex-wrap:wrap;">
+                  ${m.doneCount > 0    ? `<span style="background:#dcfce7;color:#166534;padding:.1rem .5rem;border-radius:3px;">✓ ${m.doneCount} complete</span>` : ''}
+                  ${m.partialCount > 0 ? `<span style="background:#fef3c7;color:#92400e;padding:.1rem .5rem;border-radius:3px;">◑ ${m.partialCount} partial</span>` : ''}
+                  ${m.pendingCount > 0 ? `<span style="background:#fee2e2;color:#991b1b;padding:.1rem .5rem;border-radius:3px;">✕ ${m.pendingCount} pending</span>` : ''}
+                </div>
+              </div>
+              <div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden;margin-bottom:.35rem;">
+                <div style="height:100%;width:${overallPct}%;background:${barColor};border-radius:4px;"></div>
+              </div>
+              ${pendingSubs.length ? `
+              <div style="display:flex;flex-wrap:wrap;gap:.25rem;">
+                ${pendingSubs.slice(0,7).map(s => {
+                  const c = s.pct === 0 ? '#dc2626' : '#d97706';
+                  return `<span style="font-size:.68rem;color:${c};background:${c}11;border:1px solid ${c}22;padding:.1rem .4rem;border-radius:3px;cursor:pointer;"
+                    onclick="navigate('results');setTimeout(()=>{document.getElementById('res-class').value='${m.cls}';populateResultStudents();setTimeout(()=>{document.getElementById('res-arm').value='${m.arm}';document.getElementById('res-subject').value='${s.sub}';document.getElementById('res-term').value=document.getElementById('res-term')?.value||'First Term';loadResultEntry();},100);},200)"
+                    title="${s.entered}/${s.total} entered — click to enter">${s.sub} (${s.entered}/${s.total})</span>`;
+                }).join('')}
+                ${pendingSubs.length > 7 ? `<span style="font-size:.68rem;color:#6b7280;">+${pendingSubs.length-7} more</span>` : ''}
+              </div>` : `<div style="font-size:.72rem;color:#16a34a;font-weight:600;">✓ All results entered for this class</div>`}
+            </div>${i < matrix.length-1 ? '<hr style="border:none;border-top:1px solid #f3f4f6;margin:.75rem 0;">' : ''}`;
+          }).join('')}
+      </div>
+    </div>`;
+}
+
 
 function statColor(cls) {
   const map = { warning: '#f59e0b', success: '#22c55e', info: '#3b82f6', alert: '#ef4444', '': '#6366f1' };

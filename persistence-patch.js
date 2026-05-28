@@ -208,26 +208,9 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   /* ── Patch 7: Subject allocation saves ─────────────────────────────────── */
-  var _origSaveStudentAllocation = window.saveStudentAllocation;
-  window.saveStudentAllocation = function (studentId, cls, arm) {
-    if (typeof _origSaveStudentAllocation === 'function') _origSaveStudentAllocation(studentId, cls, arm);
-    var allocated = typeof window._currentModalAllocation === 'function'
-      ? window._currentModalAllocation()
-      : [];
-    if (typeof window.apiSaveSubjectAllocation === 'function') {
-      window.apiSaveSubjectAllocation(studentId, allocated);
-    }
-  };
-
-  var _origSaveClassAllocation = window.saveClassAllocation;
-  window.saveClassAllocation = function (cls, arm) {
-    if (typeof _origSaveClassAllocation === 'function') _origSaveClassAllocation(cls, arm);
-    var key      = cls + '_' + arm;
-    var subjects = (App.data.subjectAllocations && App.data.subjectAllocations[key]) || [];
-    if (typeof window.apiSaveSubjectAllocation === 'function') {
-      window.apiSaveSubjectAllocation(key, subjects);
-    }
-  };
+  /* Allocation saves are now handled directly in results.js (saveClassAllocation,
+     saveStudentAllocation, confirmBulkAlloc all call the API directly).
+     Keeping patches here would cause double API calls — removed. */
 
   /* ── Patch 8: Arms CRUD ─────────────────────────────────────────────────── */
   /* script.js addArm and confirmDeleteArm now call Classes.addArm /

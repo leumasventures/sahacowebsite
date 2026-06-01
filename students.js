@@ -55,7 +55,9 @@ window.seedDemoArmsData = function () {
 /* ── HELPERS ──────────────────────────────────────────────────────────────── */
 
 function armStudents(className, arm) {
-  return (App.data.students || []).filter(s => s.class === className && s.arm === arm);
+  return (App.data.students || [])
+    .filter(s => s.class === className && s.arm === arm)
+    .sort((a, b) => String(a.name||'').localeCompare(String(b.name||'')));
 }
 
 function armTeachers(className, arm) {
@@ -126,6 +128,10 @@ function armCard(cls, arm) {
           style="${btnStyle('secondary','sm')};font-size:.75rem;">✏ Rename</button>
         <button onclick="openMoveStudents(${cls.id},'${arm}')"
           style="${btnStyle('secondary','sm')};font-size:.75rem;">🔀 Move</button>
+        <button onclick="printClassList('${cls.name}','${arm}')"
+          style="${btnStyle('primary','sm')};font-size:.75rem;">🖨 List</button>
+        <button onclick="printScoresheet('${cls.name}','${arm}')"
+          style="${btnStyle('secondary','sm')};font-size:.75rem;">📋 Scoresheet</button>
         <button onclick="deleteArm(${cls.id},'${arm}')"
           style="${btnStyle('danger','sm')};font-size:.75rem;">🗑</button>
       </div>
@@ -598,7 +604,7 @@ const NIGERIAN_DOBS = (minAge = 10, maxAge = 18) => {
 };
 
 /** Generate a collision-free student ID */
-function genStudentId(prefix = 'SHC') {
+function genStudentId(prefix = 'SAHARCO') {
   const existing = new Set((App.data.students||[]).map(s => s.id));
   let n = (App.data.students||[]).length + 1;
   let id;
@@ -756,6 +762,7 @@ function renderStudents(filter = '', filters = {}) {
         ${canManage ? `
           <button onclick="openStudentModal()" style="${btnStyle('primary')}">+ Add Student</button>
           <button onclick="openBulkStudentModal()" style="${btnStyle('info')}">⬆ Bulk Add</button>
+          <button onclick="openParentEmailManager()" style="${btnStyle('secondary')}">📧 Parent Emails</button>
           <button onclick="printStudentList()" style="${btnStyle('secondary')}">🖨 Print</button>
           <button onclick="seedStudentFixtures({count:40,force:false})" style="${btnStyle('secondary')}">🌱 Seed Fixtures</button>
         ` : ''}
@@ -1036,6 +1043,16 @@ function openStudentModal(s = null) {
           <input id="st-phone" value="${s?.phone||''}" placeholder="080xxxxxxxx" style="${inputStyle()}">
         </div>
 
+        <div style="grid-column:1/-1;">
+          <label style="${labelStyle()}">
+            Parent / Guardian Email
+            <span style="font-size:.73rem;color:#6b7280;font-weight:400;"> — used for report card delivery &amp; notifications</span>
+          </label>
+          <input type="email" id="st-parent-email" value="${s?.parent_email||''}"
+            placeholder="parent@example.com" style="${inputStyle()}">
+          ${s?.parent_email ? '<div style="font-size:.73rem;color:#16a34a;margin-top:.2rem;">✓ Email on file</div>' : '<div style="font-size:.73rem;color:#f59e0b;margin-top:.2rem;">⚠ No email — add one to enable notifications</div>'}
+        </div>
+
         ${isEdit ? `
         <div>
           <label style="${labelStyle()}">Attendance (%)</label>
@@ -1074,7 +1091,8 @@ function openStudentModal(s = null) {
       gender:     document.getElementById('st-gender').value,
       dob:        document.getElementById('st-dob').value    || null,
       parent:     document.getElementById('st-parent').value.trim()  || null,
-      phone:      document.getElementById('st-phone').value.trim()   || null,
+      phone:        document.getElementById('st-phone').value.trim()        || null,
+      parent_email: document.getElementById('st-parent-email')?.value.trim() || null,
     };
 
     if (!data.class) return toast('Class is required.', 'error');
@@ -1673,3 +1691,504 @@ function smFormatSize(bytes) {
 }
 
 // ── Render Entry Point ─────────────────────────────────────────────────────────
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT — CLASS LIST
+   Purpose options: Register / Attendance / Payment / Exam
+════════════════════════════════════════════════════════════════ */
+window.printClassList = function(className, arm) {
+  const students = armStudents(className, arm);
+  if (!students.length) { alert('No students in this class/arm.'); return; }
+
+  const school = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+  const principal  = school.principal || '';
+
+  // Prompt for purpose — shown as modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:grid;place-items:center;padding:1rem';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:1.75rem;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22)">
+      <h3 style="margin:0 0 1rem;color:#1e3a5f;font-size:1rem;font-weight:700">🖨 Print Class List — ${className} ${arm}</h3>
+      <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.1rem">Select the purpose for this list:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.1rem">
+        ${[
+          ['📋','Register / Roll Call', 'register'],
+          ['✅','Daily Attendance',     'attendance'],
+          ['💰','Fee Payment List',     'payment'],
+          ['📝','Exam / Score Entry',   'exam'],
+          ['📞','Contact / Phone List', 'contact'],
+          ['🏆','Results / Awards',     'results'],
+        ].map(([ico, label, type]) => `
+          <button onclick="window._doPrintList('${className}','${arm}','${type}');this.closest('div').parentElement.remove()"
+            style="padding:.65rem .75rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                   background:#f8fafc;font-size:.82rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.5rem;
+                   transition:all .15s"
+            onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+            onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+            <span>${ico}</span><span>${label}</span>
+          </button>`).join('')}
+      </div>
+      <button onclick="this.closest('div').parentElement.remove()"
+        style="width:100%;padding:.5rem;border:1.5px solid #e5e7eb;border-radius:8px;
+               background:#fff;color:#6b7280;font-size:.85rem;font-weight:600;cursor:pointer">
+        Cancel
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+};
+
+window._doPrintList = function(className, arm, purpose) {
+  const students = armStudents(className, arm);
+  const school   = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  const purposes = {
+    register:   { title:'Class Register',          cols:['S/N','Student Name','Student ID','Signature'] },
+    attendance: { title:'Attendance Sheet',         cols:['S/N','Student Name','Student ID','Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'] },
+    payment:    { title:'Fee Payment Register',     cols:['S/N','Student Name','Student ID','Fee Type','Amount','Payment Date','Status','Collector\'s Initials'] },
+    exam:       { title:'Examination Score Sheet',  cols:['S/N','Student Name','Student ID','CA (___/20)','Exam (___/80)','Total','Grade','Remark'] },
+    contact:    { title:'Parent / Guardian Contact',cols:['S/N','Student Name','Student ID','Parent Name','Phone','Email','Address'] },
+    results:    { title:'Academic Results Sheet',   cols:['S/N','Student Name','Student ID','1st Term','2nd Term','3rd Term','Avg','Pos','Remark'] },
+  };
+  const cfg = purposes[purpose] || purposes.register;
+
+  const rows = students.map((s, i) => {
+    const cells = cfg.cols.map((col, ci) => {
+      if (ci === 0) return `<td style="text-align:center">${i+1}</td>`;
+      if (ci === 1) return `<td style="font-weight:600">${s.name}</td>`;
+      if (ci === 2) return `<td style="font-family:monospace;font-size:.78rem">${s.id}</td>`;
+      return `<td></td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const colW = Math.floor(100 / cfg.cols.length);
+  const headerRow = cfg.cols.map(h => `<th style="width:${colW}%">${h}</th>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${cfg.title} — ${className} ${arm}</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; }
+    .header { text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a5f; padding-bottom: 6px; }
+    .header h1 { font-size: 14px; font-weight: 800; color: #1e3a5f; }
+    .header h2 { font-size: 12px; font-weight: 700; margin: 3px 0; }
+    .header .meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; color: #374151; }
+    .logo { width: 50px; height: 50px; object-fit: contain; float: left; margin-right: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th { background: #1e3a5f; color: #fff; padding: 4px 5px; font-size: 9px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border: 1px solid #1e3a5f; }
+    td { padding: 5px 5px; border: 1px solid #d1d5db; height: 22px; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    tr:first-child td { font-weight: 700; }
+    .sign-row { display: flex; justify-content: space-between; margin-top: 18px; font-size: 10px; }
+    .sign-box { text-align: center; }
+    .sign-line { border-top: 1px solid #111; width: 160px; margin: 18px auto 2px; }
+    @media print { .no-print { display: none; } }
+    .no-print { text-align: center; margin-bottom: 10px; }
+    .no-print button { background: #1e3a5f; color: #fff; border: none; padding: 6px 18px; border-radius: 6px; cursor: pointer; font-weight: 700; margin-right: 8px; }
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#6b7280!important">✕ Close</button>
+  </div>
+  <div class="header">
+    <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+    <h1>${schoolName}</h1>
+    <h2>${cfg.title} — ${className} ${arm}</h2>
+    <div class="meta">
+      <span><strong>Class:</strong> ${className} ${arm} &nbsp;&nbsp; <strong>No. of Students:</strong> ${students.length}</span>
+      <span><strong>Session:</strong> ${session} &nbsp;&nbsp; <strong>Term:</strong> ${term}</span>
+      <span><strong>Date Printed:</strong> ${new Date().toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr>${headerRow}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="sign-row">
+    <div class="sign-box"><div class="sign-line"></div><span>Class Teacher's Signature</span></div>
+    <div class="sign-box"><div class="sign-line"></div><span>Form Master's Signature</span></div>
+    <div class="sign-box"><div class="sign-line"></div><span>Principal's Signature</span></div>
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=1100,height=750,scrollbars=yes');
+  if (w) { w.document.write(html); w.document.close(); }
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT — EMPTY SCORESHEET
+   Prints a subject × student grid for manual score entry
+════════════════════════════════════════════════════════════════ */
+window.printScoresheet = function(className, arm) {
+  const students = armStudents(className, arm);
+  if (!students.length) { alert('No students in this class/arm.'); return; }
+
+  const school   = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  // Get allocated subjects for this class/arm
+  const allocKey   = `${className}_${arm}`;
+  const rawAlloc   = App.data.subjectAllocations?.[allocKey]
+                  || App.data.subjectAllocations?.[className]
+                  || [];
+  const subjects   = rawAlloc.length
+    ? rawAlloc.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean)
+    : (App.data.subjects || []).map(s => s.name || s.subject_name || '').filter(Boolean);
+
+  const maxCA   = typeof getMaxCA   === 'function' ? getMaxCA()   : 20;
+  const maxExam = typeof getMaxExam === 'function' ? getMaxExam() : 80;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:grid;place-items:center;padding:1rem';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:1.75rem;max-width:460px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22)">
+      <h3 style="margin:0 0 .75rem;color:#1e3a5f;font-size:1rem;font-weight:700">📋 Print Scoresheet — ${className} ${arm}</h3>
+      <p style="font-size:.84rem;color:#6b7280;margin-bottom:1rem">Select scoresheet type:</p>
+      <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem">
+        <button onclick="window._doPrintScoresheet('${className}','${arm}','single');this.closest('div').parentElement.remove()"
+          style="padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                 background:#f8fafc;font-size:.84rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.6rem"
+          onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+          onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+          <span>📄</span>
+          <div><strong>Single Subject Sheet</strong>
+            <div style="font-size:.75rem;color:#6b7280">One sheet per subject — CA + Exam columns</div>
+          </div>
+        </button>
+        <button onclick="window._doPrintScoresheet('${className}','${arm}','all');this.closest('div').parentElement.remove()"
+          style="padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                 background:#f8fafc;font-size:.84rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.6rem"
+          onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+          onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+          <span>📊</span>
+          <div><strong>All Subjects Grid</strong>
+            <div style="font-size:.75rem;color:#6b7280">All subjects across top — students down the side</div>
+          </div>
+        </button>
+      </div>
+      <button onclick="this.closest('div').parentElement.remove()"
+        style="width:100%;padding:.5rem;border:1.5px solid #e5e7eb;border-radius:8px;
+               background:#fff;color:#6b7280;font-size:.85rem;font-weight:600;cursor:pointer">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+};
+
+window._doPrintScoresheet = function(className, arm, type) {
+  const students   = armStudents(className, arm);
+  const school     = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  const allocKey = `${className}_${arm}`;
+  const rawAlloc = App.data.subjectAllocations?.[allocKey] || App.data.subjectAllocations?.[className] || [];
+  const subjects = rawAlloc.length
+    ? rawAlloc.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean)
+    : (App.data.subjects || []).map(s => s.name || s.subject_name || '').filter(Boolean);
+
+  const maxCA   = typeof getMaxCA   === 'function' ? getMaxCA()   : 20;
+  const maxExam = typeof getMaxExam === 'function' ? getMaxExam() : 80;
+
+  const baseStyle = `
+    @page { size: A4 landscape; margin: 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #111; }
+    .hdr { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px; margin-bottom: 6px; }
+    .hdr h1 { font-size: 13px; font-weight: 800; color: #1e3a5f; }
+    .hdr h2 { font-size: 11px; font-weight: 700; margin: 2px 0; }
+    .meta { display: flex; justify-content: space-between; font-size: 9px; margin-top: 3px; }
+    .logo { width: 44px; height: 44px; object-fit: contain; float: left; margin-right: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1e3a5f; color: #fff; padding: 3px 4px; font-size: 8.5px; text-align: center; border: 1px solid #1e3a5f; font-weight: 700; text-transform: uppercase; }
+    th.subj { background: #2563eb; }
+    td { padding: 4px 4px; border: 1px solid #d1d5db; height: 20px; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    .sn { text-align: center; width: 28px; }
+    .name { font-weight: 600; min-width: 140px; }
+    .sid { font-family: monospace; font-size: 8.5px; min-width: 110px; }
+    .score { text-align: center; min-width: 36px; }
+    .total { text-align: center; min-width: 36px; font-weight: 700; background: #f0fdf4 !important; }
+    .sign { display: flex; justify-content: space-between; margin-top: 14px; font-size: 9px; }
+    .sbox { text-align: center; }
+    .sline { border-top: 1px solid #111; width: 140px; margin: 14px auto 2px; }
+    .no-print { text-align: center; margin-bottom: 8px; }
+    .no-print button { background: #1e3a5f; color: #fff; border: none; padding: 5px 16px; border-radius: 5px; cursor: pointer; font-weight: 700; margin-right: 6px; }
+    @media print { .no-print { display: none; } .page-break { page-break-after: always; } }`;
+
+  let body = '';
+
+  if (type === 'single') {
+    // One scoresheet per subject
+    subjects.forEach((subj, si) => {
+      const rows = students.map((s, i) => `
+        <tr>
+          <td class="sn">${i+1}</td>
+          <td class="name">${s.name}</td>
+          <td class="sid">${s.id}</td>
+          <td class="score"></td>
+          <td class="score"></td>
+          <td class="total"></td>
+          <td class="score"></td>
+          <td class="score"></td>
+        </tr>`).join('');
+      body += `
+        <div class="${si < subjects.length-1 ? 'page-break' : ''}">
+          <div class="hdr">
+            <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+            <h1>${schoolName}</h1>
+            <h2>Score Sheet — ${subj} — ${className} ${arm}</h2>
+            <div class="meta">
+              <span><strong>Class:</strong> ${className} ${arm}</span>
+              <span><strong>Subject:</strong> ${subj} &nbsp; <strong>Max CA:</strong> ${maxCA} &nbsp; <strong>Max Exam:</strong> ${maxExam}</span>
+              <span><strong>${session} — ${term}</strong></span>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th class="sn">S/N</th>
+              <th style="min-width:140px">Student Name</th>
+              <th style="min-width:110px">Student ID</th>
+              <th class="score">CA 1<br>(${Math.round(maxCA/2)})</th>
+              <th class="score">CA 2<br>(${maxCA - Math.round(maxCA/2)})</th>
+              <th class="total">CA Total<br>(${maxCA})</th>
+              <th class="score">Exam<br>(${maxExam})</th>
+              <th class="score">Total<br>(100)</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="sign">
+            <div class="sbox"><div class="sline"></div><span>Subject Teacher</span></div>
+            <div class="sbox"><div class="sline"></div><span>HOD / Coordinator</span></div>
+            <div class="sbox"><div class="sline"></div><span>Principal</span></div>
+          </div>
+        </div>`;
+    });
+  } else {
+    // All-subjects grid
+    const subjectCols = subjects.map(s => `<th class="subj score" title="${s}">${s.length > 12 ? s.slice(0,11)+'…' : s}<br>(100)</th>`).join('');
+    const rows = students.map((s, i) => {
+      const scoreCells = subjects.map(() => `<td class="score"></td>`).join('');
+      return `<tr>
+        <td class="sn">${i+1}</td>
+        <td class="name">${s.name}</td>
+        <td class="sid">${s.id}</td>
+        ${scoreCells}
+        <td class="total"></td>
+        <td class="score"></td>
+        <td class="score"></td>
+      </tr>`;
+    }).join('');
+    body = `
+      <div class="hdr">
+        <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+        <h1>${schoolName}</h1>
+        <h2>Class Score Sheet — ${className} ${arm} — All Subjects</h2>
+        <div class="meta">
+          <span><strong>Class:</strong> ${className} ${arm} &nbsp; <strong>Students:</strong> ${students.length}</span>
+          <span><strong>Session:</strong> ${session} &nbsp; <strong>Term:</strong> ${term}</span>
+          <span><strong>Date:</strong> ${new Date().toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th class="sn">S/N</th>
+          <th style="min-width:150px">Student Name</th>
+          <th style="min-width:100px">Student ID</th>
+          ${subjectCols}
+          <th class="total">Total<br>Score</th>
+          <th class="score">Avg</th>
+          <th class="score">Pos</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <div class="sign">
+        <div class="sbox"><div class="sline"></div><span>Class Teacher</span></div>
+        <div class="sbox"><div class="sline"></div><span>Form Master</span></div>
+        <div class="sbox"><div class="sline"></div><span>Principal</span></div>
+      </div>`;
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Scoresheet — ${className} ${arm}</title>
+    <style>${baseStyle}</style></head><body>
+    <div class="no-print">
+      <button onclick="window.print()">🖨 Print</button>
+      <button onclick="window.close()" style="background:#6b7280!important">✕ Close</button>
+    </div>
+    ${body}
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=1150,height=780,scrollbars=yes');
+  if (w) { w.document.write(html); w.document.close(); }
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   PARENT EMAIL MANAGER
+   Bulk tool to add / update parent email addresses
+════════════════════════════════════════════════════════════════ */
+window.openParentEmailManager = function(filterClass, filterArm) {
+  const classes = App.data.classes || [];
+  const classOpts = `<option value="">All Classes</option>` +
+    classes.map(c => `<option value="${c.name}" ${filterClass===c.name?'selected':''}>${c.name}</option>`).join('');
+
+  const allStudents = App.data.students || [];
+  let list = [...allStudents].sort((a,b)=>a.name.localeCompare(b.name));
+  if (filterClass) list = list.filter(s => s.class === filterClass);
+  if (filterArm)   list = list.filter(s => s.arm   === filterArm);
+
+  const missing   = list.filter(s => !s.parent_email);
+  const hasEmail  = list.filter(s =>  s.parent_email);
+
+  const rows = list.map(s => {
+    const hasMail = !!s.parent_email;
+    return `<tr id="per-row-${s.id.replace(/[^a-z0-9]/gi,'-')}">
+      <td style="font-weight:600">${s.name}</td>
+      <td style="font-size:.78rem;color:#6b7280">${s.class||''} ${s.arm||''}</td>
+      <td style="font-size:.75rem;font-family:monospace">${s.id}</td>
+      <td style="font-size:.8rem;color:#6b7280">${s.parent||'—'}</td>
+      <td>
+        <div style="display:flex;gap:.4rem;align-items:center;">
+          <input type="email" id="pem-${s.id.replace(/[^a-z0-9]/gi,'-')}"
+            value="${s.parent_email||''}" placeholder="email@example.com"
+            style="flex:1;min-width:180px;padding:.38rem .65rem;border:1.5px solid ${hasMail?'#86efac':'#fca5a5'};
+                   border-radius:7px;font-size:.82rem;outline:none;"
+            onfocus="this.style.borderColor='#93c5fd'"
+            onblur="this.style.borderColor=this.value?'#86efac':'#fca5a5'">
+          <button onclick="saveSingleParentEmail('${s.id}')"
+            style="padding:.38rem .75rem;background:#1e3a5f;color:#fff;border:none;border-radius:7px;
+                   font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+            💾 Save
+          </button>
+        </div>
+        ${hasMail?`<div style="font-size:.7rem;color:#16a34a;margin-top:.2rem;">✓ ${s.parent_email}</div>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  showModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+      <h3 style="margin:0;color:#1e3a5f;font-size:1rem;font-weight:800;">📧 Parent Email Manager</h3>
+      <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:.78rem;color:#16a34a;font-weight:600;">✓ ${hasEmail.length} have email</span>
+        <span style="font-size:.78rem;color:#dc2626;font-weight:600;">⚠ ${missing.length} missing</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <select id="pem-filter-class" onchange="openParentEmailManager(this.value,document.getElementById('pem-filter-arm')?.value)"
+        style="padding:.42rem .7rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.83rem;outline:none">
+        ${classOpts}
+      </select>
+      <select id="pem-filter-arm" onchange="openParentEmailManager(document.getElementById('pem-filter-class')?.value,this.value)"
+        style="padding:.42rem .7rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.83rem;outline:none">
+        <option value="">All Arms</option>
+        ${filterClass ? (classes.find(c=>c.name===filterClass)?.arms||[]).map(a=>`<option value="${a}" ${filterArm===a?'selected':''}>${a}</option>`).join('') : ''}
+      </select>
+      <label style="display:flex;align-items:center;gap:.3rem;font-size:.82rem;color:#374151;cursor:pointer;">
+        <input type="checkbox" id="pem-show-missing" ${!filterClass?'checked':''} onchange="
+          const rows = document.querySelectorAll('#pem-table tr[id]');
+          rows.forEach(r=>{ if(this.checked){ r.style.display=r.dataset.hasMail==='0'?'':'none'; }else{r.style.display='';} })
+        ">
+        Show only missing
+      </label>
+    </div>
+
+    <div style="max-height:480px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
+      <table id="pem-table" style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead style="position:sticky;top:0;z-index:1;">
+          <tr>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Student</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Class</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">ID</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Parent</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Email Address</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-top:.85rem;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div style="font-size:.78rem;color:#6b7280;">
+        Tip: Press <kbd style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:.1rem .4rem;font-size:.73rem;">Tab</kbd>
+        to move between fields, then click 💾 Save.
+      </div>
+      <div style="display:flex;gap:.5rem;">
+        <button onclick="saveAllParentEmails()" style="padding:.48rem 1.1rem;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;">
+          💾 Save All
+        </button>
+        <button onclick="closeModal()" style="padding:.48rem 1rem;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;">
+          Close
+        </button>
+      </div>
+    </div>`);
+
+  // Mark rows with data attr for "show missing" filter
+  requestAnimationFrame(() => {
+    list.forEach(s => {
+      const row = document.getElementById(`per-row-${s.id.replace(/[^a-z0-9]/gi,'-')}`);
+      if (row) row.dataset.hasMail = s.parent_email ? '1' : '0';
+    });
+  });
+};
+
+window.saveSingleParentEmail = async function(studentId) {
+  const safeId  = studentId.replace(/[^a-z0-9]/gi,'-');
+  const input   = document.getElementById(`pem-${safeId}`);
+  const email   = input?.value?.trim() || null;
+  const row     = document.getElementById(`per-row-${safeId}`);
+
+  // Basic validation
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    input.style.borderColor = '#dc2626';
+    toast('Please enter a valid email address.', 'error');
+    return;
+  }
+
+  try {
+    await Students.update(studentId, { parent_email: email });
+    // Update local cache
+    const s = (App.data.students||[]).find(x=>x.id===studentId);
+    if (s) s.parent_email = email;
+    if (input) { input.style.borderColor = email ? '#86efac' : '#fca5a5'; }
+    if (row)   { row.dataset.hasMail = email ? '1' : '0'; }
+    toast(`✅ Email ${email ? 'saved' : 'removed'} for ${s?.name||studentId}`, 'success');
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  }
+};
+
+window.saveAllParentEmails = async function() {
+  const inputs = document.querySelectorAll('#pem-table input[type="email"]');
+  let saved = 0, errors = 0;
+  for (const input of inputs) {
+    const email = input.value.trim() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errors++; continue; }
+    // Extract student ID from input id: pem-SAHARCO-20250115-0001 -> SAHARCO/20250115/0001
+    const rawId = input.id.replace(/^pem-/, '');
+    // Find matching student by safe ID
+    const s = (App.data.students||[]).find(st => st.id.replace(/[^a-z0-9]/gi,'-') === rawId);
+    if (!s) continue;
+    if (s.parent_email === email) continue; // no change
+    try {
+      await Students.update(s.id, { parent_email: email });
+      s.parent_email = email;
+      saved++;
+    } catch(e) { errors++; }
+  }
+  if (errors) toast(`${saved} saved, ${errors} failed (check email formats)`, 'warning');
+  else toast(`✅ ${saved} email(s) saved successfully`, 'success');
+  if (saved > 0) closeModal();
+};

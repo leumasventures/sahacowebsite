@@ -26,7 +26,7 @@ function renderResults() {
         ? `<div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">No results recorded yet.</div>`
         : terms.map(term => {
             const tr = results.filter(r => r.term === term);
-            const avg = (tr.reduce((a,b)=>a+b.total,0)/tr.length).toFixed(1);
+            const avg = (tr.reduce((a,b)=>a+(Number(b.ca??0)+Number(b.exam??0)),0)/tr.length).toFixed(1);
             return `<div style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.5rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
                 <h3 style="margin:0;">${term}</h3>
@@ -671,17 +671,37 @@ window.loadResultEntry = function() {
         <button onclick="saveAllResults('${cls}','${arm}','${subject}','${term}','${session}')" style="${btnStyle('primary')}">💾 Save All Results</button>
       </div>
     </div>`;
+  // Recalculate totals for pre-loaded rows (existing results)
+  requestAnimationFrame(() => {
+    $$('#result-rows tr').forEach(row => {
+      const caEl = row.querySelector('.ca-input');
+      if (caEl && caEl.value !== '') calcTotal(caEl);
+    });
+  });
 };
 
 window.calcTotal = function(input) {
   const row  = input.closest('tr');
-  const ca   = parseFloat(row.querySelector('.ca-input').value)   || 0;
-  const exam = parseFloat(row.querySelector('.exam-input').value) || 0;
-  const total = Math.min(ca + exam, 100);
-  const g = grade(total);
-  row.querySelector('.total-cell').textContent  = total;
-  row.querySelector('.grade-cell').textContent  = g.letter;
-  row.querySelector('.remark-cell').textContent = g.remark;
+  const caEl   = row.querySelector('.ca-input');
+  const examEl = row.querySelector('.exam-input');
+  const ca   = parseFloat(caEl?.value)   || 0;
+  const exam = parseFloat(examEl?.value) || 0;
+  // Only show total if at least one value is entered
+  const hasValue = (caEl?.value !== '' && caEl?.value != null) || (examEl?.value !== '' && examEl?.value != null);
+  const total = hasValue ? (ca + exam) : null;
+  const g = total !== null ? grade(total) : null;
+  const totalCell  = row.querySelector('.total-cell');
+  const gradeCell  = row.querySelector('.grade-cell');
+  const remarkCell = row.querySelector('.remark-cell');
+  if (totalCell)  totalCell.textContent  = total !== null ? total : '-';
+  if (gradeCell)  gradeCell.textContent  = g ? g.letter : '-';
+  if (remarkCell) remarkCell.textContent = g ? g.remark : '-';
+  // Colour feedback
+  if (totalCell && total !== null) {
+    const pass = typeof getPassMark === 'function' ? getPassMark() : 40;
+    totalCell.style.color      = total >= pass ? '#16a34a' : '#dc2626';
+    totalCell.style.fontWeight = '700';
+  }
 };
 
 window.saveAllResults = async function(cls, arm, subject, term, session) {
@@ -694,11 +714,17 @@ window.saveAllResults = async function(cls, arm, subject, term, session) {
 
   const rows = [];
   $$('#result-rows tr').forEach(row => {
-    const sid  = row.dataset.sid;
-    const ca   = parseFloat(row.querySelector('.ca-input')?.value);
-    const exam = parseFloat(row.querySelector('.exam-input')?.value);
-    if (!sid || isNaN(ca) || isNaN(exam)) return;
-    rows.push({ student_id: sid, studentId: sid, ca, exam });
+    const sid      = row.dataset.sid;
+    const caVal    = row.querySelector('.ca-input')?.value;
+    const examVal  = row.querySelector('.exam-input')?.value;
+    const ca       = caVal   !== '' && caVal   != null ? parseFloat(caVal)   : null;
+    const exam     = examVal !== '' && examVal != null ? parseFloat(examVal) : null;
+    // Skip completely empty rows
+    if (!sid || (ca === null && exam === null)) return;
+    // Skip invalid values
+    if ((ca   !== null && isNaN(ca))   ) return;
+    if ((exam !== null && isNaN(exam)) ) return;
+    rows.push({ student_id: sid, studentId: sid, ca: ca ?? 0, exam: exam ?? 0 });
   });
 
   if (!rows.length) { toast('No scores to save.', 'warning'); if (btn) { btn.disabled=false; btn.textContent=origText; } return; }
@@ -1311,11 +1337,15 @@ window.loadVerifyResults = async function() {
         <tbody>
           ${matrix.map(row => {
             const scores  = allocSubs.map(sub => row.subjects[sub]).filter(Boolean);
-            const total   = scores.reduce((s,r) => s+(r.total||0), 0);
+            // Always recompute total from ca+exam
+            const total   = scores.reduce((s,r) => s + (Number(r.ca??0) + Number(r.exam??0)), 0);
             const avg     = scores.length ? parseFloat((total/scores.length).toFixed(1)) : null;
             const g       = avg !== null ? grade(avg) : { letter:'—', remark:'—' };
             const missing = allocSubs.filter(sub => !row.subjects[sub]).length;
-            const failing = allocSubs.filter(sub => row.subjects[sub] && (row.subjects[sub].total||0) < passMark).length;
+            const failing = allocSubs.filter(sub => {
+              const rs = row.subjects[sub];
+              return rs && (Number(rs.ca??0) + Number(rs.exam??0)) < passMark;
+            }).length;
             const rowStatus = missing > 0 ? 'missing' : failing > 0 ? 'failing' : 'complete';
             const rowBg = missing > 0 ? '' : failing > 0 ? '#fff9f0' : '#f0fdf4';
 
@@ -1333,11 +1363,12 @@ window.loadVerifyResults = async function() {
                       ✕ Enter
                     </button>
                   </td>`;
-                const isLow = (r.total||0) < passMark;
+                const rTotal = Number(r.ca??0) + Number(r.exam??0);
+                const isLow  = rTotal < passMark;
                 return `
-                  <td style="${tdStyle()};text-align:center;background:${isLow?'#fff9f0':''};" title="CA:${r.ca??'—'} Exam:${r.exam??'—'} Total:${r.total??'—'}">
-                    <div style="font-weight:600;font-size:.82rem;color:${isLow?'#dc2626':'#111'};">${r.total??'—'}</div>
-                    <div style="font-size:.62rem;color:#9ca3af;">${r.ca??'—'}+${r.exam??'—'}</div>
+                  <td style="${tdStyle()};text-align:center;background:${isLow?'#fff9f0':''}" title="CA:${r.ca??'—'} Exam:${r.exam??'—'} Total:${rTotal}">
+                    <div style="font-weight:700;font-size:.82rem;color:${isLow?'#dc2626':'#1e3a5f'}">${rTotal}</div>
+                    <div style="font-size:.62rem;color:#9ca3af">${r.ca??'—'}+${r.exam??'—'}</div>
                   </td>`;
               }).join('')}
               <td style="${tdStyle()};text-align:center;font-weight:700;">${scores.length > 0 ? total : '—'}</td>
@@ -1434,13 +1465,13 @@ window.exportVerifyCSV = function() {
   const lines   = [headers.join(',')];
   d.matrix.forEach(row => {
     const scores = d.allocSubs.map(sub => row.subjects[sub]);
-    const total  = scores.filter(Boolean).reduce((s,r)=>s+(r?.total||0),0);
+    const total  = scores.filter(Boolean).reduce((s,r)=>s+(Number(r?.ca??0)+Number(r?.exam??0)),0);
     const avg    = scores.filter(Boolean).length ? parseFloat((total/scores.filter(Boolean).length).toFixed(1)) : '';
     const g      = avg !== '' ? grade(avg).letter : '';
     const missing= scores.filter(s=>!s).length;
     lines.push([
       `"${row.student.name}"`, row.student.id,
-      ...scores.map(r => r ? r.total : 'MISSING'),
+      ...scores.map(r => r ? Number(r.ca??0)+Number(r.exam??0) : 'MISSING'),
       total || '', avg || '', g,
       missing
     ].join(','));

@@ -33,7 +33,7 @@
 
   var SESSION_KEY = 'shc_session';
   var TOKEN_KEY   = 'shc_token';    // stores the JWT returned in the login response body
-  var PRIV_VER    = 'v5';           // bump this whenever PRIVILEGES changes to clear stale cache
+  var PRIV_VER    = 'v7';           // bump this whenever PRIVILEGES changes to clear stale cache
   var SIGNUP_KEY  = 'shc_signup_requests';
 
   // All portal pages live at the root.
@@ -58,10 +58,11 @@
 
   var PRIVILEGES = {
     Admin: {
-      allowedSections:     ['dashboard','classes','arms','students','teachers','subjects','results','report-cards','attendance','fixtures','parent-portal','settings','timetable','fees','access-tokens','users','former-students','former-staff'],
+      allowedSections:     ['dashboard','classes','arms','students','teachers','subjects','results','report-cards','attendance','fixtures','parent-portal','settings','timetable','fees','access-tokens','users','former-students','former-staff','messaging','transcript'],
       canEnterResults:     true,  canTakeAttendance:   true,  canViewResults:  true,
       canAddRemarks:       true,  canViewReports:      true,  canManageStaff:  true,
       canManageStudents:   true,  canViewParentPortal: true,  canAccessSettings: true,
+      canManageFinance:    true,
     },
     Teacher: {
       allowedSections:     ['dashboard','students','results','report-cards','attendance','fixtures','timetable'],

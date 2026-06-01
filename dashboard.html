@@ -473,6 +473,7 @@
 
   <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
     <ul>
+      <!-- ── OVERVIEW ──────────────────────────── -->
       <li class="nav-section">Overview</li>
       <li id="nav-li-dashboard">
         <a href="#dashboard" data-section="dashboard">
@@ -480,6 +481,7 @@
         </a>
       </li>
 
+      <!-- ── ACADEMIC ───────────────────────────── -->
       <li class="nav-section">Academic</li>
       <li id="nav-li-classes">
         <a href="#classes" data-section="classes">
@@ -512,23 +514,25 @@
         </a>
       </li>
 
-      <li class="nav-section">Admissions</li>
-      <li id="nav-li-admissions">
+      <!-- ── ADMISSIONS ──────────────────────────── -->
+      <li class="nav-section admin-only-nav">Admissions</li>
+      <li id="nav-li-admissions" class="admin-only-nav">
         <a href="admissionList.html">
           <span class="ni">📋</span> Admission List
         </a>
       </li>
-      <li id="nav-li-regform">
+      <li id="nav-li-regform" class="admin-only-nav">
         <a href="regForm.html">
           <span class="ni">📝</span> New Registration
         </a>
       </li>
-      <li id="nav-li-enroll">
+      <li id="nav-li-enroll" class="admin-only-nav">
         <a href="enroll.html">
           <span class="ni">🎓</span> Enroll Students
         </a>
       </li>
 
+      <!-- ── PERFORMANCE ────────────────────────── -->
       <li class="nav-section">Performance</li>
       <li id="nav-li-results">
         <a href="#results" data-section="results">
@@ -546,7 +550,13 @@
           <span class="ni">✅</span> Attendance
         </a>
       </li>
+      <li id="nav-li-transcript" class="admin-only-nav">
+        <a href="#transcript" data-section="transcript">
+          <span class="ni">📋</span> Transcripts &amp; Profiles
+        </a>
+      </li>
 
+      <!-- ── ACTIVITIES ─────────────────────────── -->
       <li class="nav-section">Activities</li>
       <li id="nav-li-fixtures">
         <a href="#fixtures" data-section="fixtures">
@@ -554,15 +564,38 @@
         </a>
       </li>
 
-      <li class="nav-section">System</li>
+      <!-- ── FINANCE ────────────────────────────── -->
+      <li class="nav-section admin-only-nav">Finance</li>
+      <li id="nav-li-fees" class="admin-only-nav">
+        <a href="student-finance.html">
+          <span class="ni">💰</span> Finance Portal
+        </a>
+      </li>
+
+      <!-- ── COMMUNICATIONS ─────────────────────── -->
+      <li class="nav-section admin-only-nav">Communications</li>
+      <li id="nav-li-messaging" class="admin-only-nav">
+        <a href="#messaging" data-section="messaging">
+          <span class="ni">📨</span> Messaging
+        </a>
+      </li>
       <li id="nav-li-parent-portal">
         <a href="#parent-portal" data-section="parent-portal">
           <span class="ni">👨‍👩‍👧</span> Parent Portal
         </a>
       </li>
-      <li id="nav-li-fees" class="admin-only-nav">
-        <a href="#fees" data-section="fees">
-          <span class="ni">📋</span> Fee Setup
+
+      <!-- ── ADMINISTRATION ─────────────────────── -->
+      <li class="nav-section admin-only-nav">Administration</li>
+      <li id="nav-li-users" class="admin-only-nav">
+        <a href="#users" data-section="users">
+          <span class="ni">👤</span> User Management
+          <span class="nav-badge" id="nav-badge-users" style="display:none"></span>
+        </a>
+      </li>
+      <li id="nav-li-access-tokens" class="admin-only-nav">
+        <a href="#access-tokens" data-section="access-tokens">
+          <span class="ni">🔑</span> Access Tokens
         </a>
       </li>
       <li id="nav-li-former-students" class="admin-only-nav">
@@ -575,23 +608,12 @@
           <span class="ni">👋</span> Former Staff
         </a>
       </li>
-      <li id="nav-li-access-tokens" class="admin-only-nav">
-        <a href="#access-tokens" data-section="access-tokens">
-          <span class="ni">🔑</span> Access Tokens
-        </a>
-      </li>
-      <li id="nav-li-users" class="admin-only-nav">
-        <a href="#users" data-section="users">
-          <span class="ni">👤</span> User Management
-          <span class="nav-badge" id="nav-badge-users" style="display:none"></span>
-        </a>
-      </li>
-      <li id="nav-li-settings">
+      <li id="nav-li-settings" class="admin-only-nav">
         <a href="#settings" data-section="settings">
           <span class="ni">⚙️</span> Settings
         </a>
       </li>
-    </ul>
+          </ul>
   </nav>
 
   <div class="sidebar-footer">
@@ -734,6 +756,8 @@
     <section id="report-cards"  class="content-section hidden"></section>
     <section id="attendance"    class="content-section hidden"></section>
     <section id="fixtures"      class="content-section hidden"></section>
+    <section id="messaging"     class="content-section hidden"></section>
+    <section id="transcript"    class="content-section hidden"></section>
     <section id="parent-portal" class="content-section hidden"></section>
     <section id="fees"          class="content-section hidden"></section>
     <section id="levies"        class="content-section hidden"></section>
@@ -989,6 +1013,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="change-password.js"></script>
 <script src="access-tokens.js"></script>
 <script src="users.js"></script>
+<script src="messaging.js"></script>
+<script src="transcript.js"></script>
 <script src="script3.js"></script>
 <script src="report-card.js"></script>
 
@@ -1216,8 +1242,24 @@ window.addEventListener('load', function () {
 
     /* ── 5f. Role-based nav visibility ── */
     var session3 = window.SHC_Auth && SHC_Auth.getSession();
-    if (session3 && window.SHC_Auth.canAccessSection) {
+    var isAdmin  = session3 && session3.role === 'Admin';
+    var isBursar = session3 && session3.role === 'Bursar';
+
+    /* Show/hide admin-only items FIRST */
+    document.querySelectorAll('.admin-only-nav').forEach(function (el) {
+      if (isAdmin) {
+        el.style.display = '';
+      } else if (isBursar) {
+        el.style.display = el.id === 'nav-li-fees' ? '' : 'none';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+
+    /* Hide non-admin items the role can't access — skip admin-only-nav items */
+    if (!isAdmin && session3 && window.SHC_Auth.canAccessSection) {
       document.querySelectorAll('[data-section]').forEach(function (el) {
+        if (el.closest('.admin-only-nav')) return; // handled above
         var sec = el.getAttribute('data-section');
         if (sec && !SHC_Auth.canAccessSection(sec)) {
           var li = el.closest('li') || el;
@@ -1225,12 +1267,6 @@ window.addEventListener('load', function () {
         }
       });
     }
-
-    /* ── 5f2. Show/hide admin-only nav items based on role ── */
-    var isAdmin  = session3 && session3.role === 'Admin';
-    document.querySelectorAll('.admin-only-nav').forEach(function (el) {
-      el.style.display = isAdmin ? '' : 'none';
-    });
 
     /* ── 5g. Activity feed from App.data ── */
     var activityList = document.getElementById('dash-activity');

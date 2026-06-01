@@ -1,162 +1,2463 @@
 'use strict';
 /**
- * subjects.js  —  Sacred Heart College Eziukwu Aba (SAHARCO)
- * Subjects
+ * students.js  —  Sacred Heart College Eziukwu Aba (SAHARCO)
+ * Students (fixtures, sort, render, view, edit, bulk, print)
  * Depends on: App, priv, grade(), ordinal(), btnStyle(), labelStyle(),
  *             inputStyle(), selectStyle(), showModal(), closeModal(),
  *             toast(), confirmDlg(), denyAccess() from script.js
  */
-function renderSubjects() {
-  if (!priv.canManage()) { accessDeniedPage('subjects'); return; }
+/* ── FIXTURES ─────────────────────────────────────────────────────────────── */
 
-  const section = document.getElementById('subjects');
-  const types = [...new Set(App.data.subjects.map(s => s.type))];
-  section.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-      <h2 style="margin:0;">Subjects (${App.data.subjects.length})</h2>
-      <button onclick="openSubjectModal()" style="${btnStyle('primary')}">+ Add Subject</button>
-    </div>
-    ${types.map(type => `
-      <div style="background:#fff;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-        <h4 style="margin:0 0 .75rem;color:#374151;">${type}</h4>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-          ${App.data.subjects.filter(s=>s.type===type).map(s=>`
-            <div style="display:flex;align-items:center;gap:.4rem;background:#f3f4f6;border-radius:8px;padding:.4rem .9rem;font-size:.875rem;">
-              <span style="font-weight:600;">${s.name}</span>
-              <span style="color:#9ca3af;font-size:.75rem;">(${s.code})</span>
-              <span style="${badgeStyle(s.level==='All'?'info':s.level==='Senior'?'success':'warning')}">${s.level}</span>
-              <button onclick="deleteSubject(${s.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;">×</button>
-            </div>`).join('')}
-        </div>
-      </div>`).join('')}`;
-}
-
-window.deleteSubject = function(id) {
-  if (!priv.canManage() && denyAccess()) return;
-  if (!confirmDlg('Remove this subject?')) return;
-  App.data.subjects = App.data.subjects.filter(s => s.id !== id); renderSubjects(); toast('Subject removed.', 'warning');
+/**
+ * generateArmFixtures()
+ * Call once to ensure every class in App.data.classes has a sensible arms array.
+ * Skips classes that already have arms defined.
+ * Default pattern: ['A','B','C'] for Junior, ['A','B'] for Senior.
+ */
+window.generateArmFixtures = function () {
+  let added = 0;
+  (App.data.classes || []).forEach(cls => {
+    if (!Array.isArray(cls.arms) || cls.arms.length === 0) {
+      cls.arms = cls.level === 'Senior' ? ['A', 'B'] : ['A', 'B', 'C'];
+      added++;
+    }
+  });
+  if (added > 0) toast(`Arms fixtures generated for ${added} class${added !== 1 ? 'es' : ''}.`, 'success');
+  else toast('All classes already have arms defined.', 'info');
+  renderArms();
 };
 
-function openSubjectModal() {
-  if (!priv.canManage() && denyAccess()) return;
+/**
+ * seedDemoArmsData()
+ * Heavier fixture: creates 3 demo classes with arms if App.data.classes is empty.
+ */
+window.seedDemoArmsData = function () {
+  if (!App.data.classes) App.data.classes = [];
+  if (!App.data.students) App.data.students = [];
+
+  const demoClasses = [
+    { id: 101, name: 'JSS 1', level: 'Junior',  arms: ['A', 'B', 'C'] },
+    { id: 102, name: 'JSS 2', level: 'Junior',  arms: ['A', 'B'] },
+    { id: 103, name: 'SSS 1', level: 'Senior',  arms: ['A', 'B'] },
+  ];
+
+  demoClasses.forEach(demo => {
+    if (!App.data.classes.find(c => c.name === demo.name)) {
+      App.data.classes.push(demo);
+    }
+  });
+
+  toast('Demo class/arm data seeded.', 'success');
+  renderArms();
+};
+
+
+/* ── HELPERS ──────────────────────────────────────────────────────────────── */
+
+function armStudents(className, arm) {
+  return (App.data.students || [])
+    .filter(s => s.class === className && s.arm === arm)
+    .sort((a, b) => String(a.name||'').localeCompare(String(b.name||'')));
+}
+
+function armTeachers(className, arm) {
+  return (App.data.teachers || []).filter(t => t.assignedClass === className && t.assignedArm === arm);
+}
+
+/** Capacity bar HTML: filled / total students vs a configurable max */
+function capacityBar(count, max = 40) {
+  const pct  = Math.min(100, Math.round((count / max) * 100));
+  const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#22c55e';
+  return `
+    <div style="margin-top:.5rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#9ca3af;margin-bottom:.2rem;">
+        <span>${count} enrolled</span><span>max ~${max}</span>
+      </div>
+      <div style="background:#f3f4f6;border-radius:99px;height:5px;overflow:hidden;">
+        <div style="width:${pct}%;background:${color};height:100%;border-radius:99px;transition:width .4s;"></div>
+      </div>
+    </div>`;
+}
+
+/** A single arm card */
+function armCard(cls, arm) {
+  const students = armStudents(cls.name, arm);
+  const teachers = armTeachers(cls.name, arm);
+  const count    = students.length;
+
+  return `
+    <div id="arm-card-${cls.id}-${arm}"
+      draggable="true"
+      ondragstart="armDragStart(event,'${cls.id}','${arm}')"
+      ondragover="event.preventDefault();"
+      ondrop="armDrop(event,'${cls.id}','${arm}')"
+      style="background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:1rem 1.1rem;
+             min-width:160px;flex:1;max-width:220px;cursor:grab;transition:box-shadow .15s, border-color .15s;"
+      onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)';this.style.borderColor='#93c5fd';"
+      onmouseout="this.style.boxShadow='';this.style.borderColor='#e5e7eb';">
+
+      <!-- Drag handle + arm name -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;">
+        <div style="display:flex;align-items:center;gap:.4rem;">
+          <span style="color:#d1d5db;font-size:1rem;cursor:grab;" title="Drag to reorder">⠿</span>
+          <strong style="font-size:1rem;color:#1e3a5f;">${cls.name} ${arm}</strong>
+        </div>
+        <!-- Reorder buttons -->
+        <div style="display:flex;gap:.15rem;">
+          <button title="Move left" onclick="moveArmLeft(${cls.id},'${arm}')"
+            style="background:none;border:1px solid #e5e7eb;border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:.7rem;color:#6b7280;display:flex;align-items:center;justify-content:center;">◀</button>
+          <button title="Move right" onclick="moveArmRight(${cls.id},'${arm}')"
+            style="background:none;border:1px solid #e5e7eb;border-radius:5px;width:22px;height:22px;cursor:pointer;font-size:.7rem;color:#6b7280;display:flex;align-items:center;justify-content:center;">▶</button>
+        </div>
+      </div>
+
+      <!-- Teacher badge -->
+      <div style="font-size:.78rem;color:#6b7280;margin-bottom:.3rem;">
+        ${teachers.length > 0
+          ? `<span style="color:#059669;">👩‍🏫 ${teachers.map(t=>t.name).join(', ')}</span>`
+          : `<span style="color:#d1d5db;">No teacher assigned</span>`}
+      </div>
+
+      ${capacityBar(count)}
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.85rem;">
+        <button onclick="viewArmStudents(${cls.id},'${arm}')"
+          style="${btnStyle('secondary','sm')};font-size:.75rem;">👁 View</button>
+        <button onclick="renameArm(${cls.id},'${arm}')"
+          style="${btnStyle('secondary','sm')};font-size:.75rem;">✏ Rename</button>
+        <button onclick="openMoveStudents(${cls.id},'${arm}')"
+          style="${btnStyle('secondary','sm')};font-size:.75rem;">🔀 Move</button>
+        <button onclick="printClassList('${cls.name}','${arm}')"
+          style="${btnStyle('primary','sm')};font-size:.75rem;">🖨 List</button>
+        <button onclick="printScoresheet('${cls.name}','${arm}')"
+          style="${btnStyle('secondary','sm')};font-size:.75rem;">📋 Scoresheet</button>
+        <button onclick="deleteArm(${cls.id},'${arm}')"
+          style="${btnStyle('danger','sm')};font-size:.75rem;">🗑</button>
+      </div>
+    </div>`;
+}
+
+
+/* ── MAIN RENDER ──────────────────────────────────────────────────────────── */
+
+function renderArms() {
+  if (!priv.canManage()) { accessDeniedPage('arms'); return; }
+
+  const section  = document.getElementById('arms');
+  const classes  = App.data.classes || [];
+  const students = App.data.students || [];
+
+  /* Global stats */
+  const totalArms    = classes.reduce((n, c) => n + (c.arms?.length || 0), 0);
+  const allArmSizes  = classes.flatMap(c => (c.arms||[]).map(a => armStudents(c.name,a).length));
+  const avgSize      = totalArms ? (allArmSizes.reduce((a,b)=>a+b,0)/totalArms).toFixed(1) : 0;
+  const maxSize      = allArmSizes.length ? Math.max(...allArmSizes) : 0;
+  const emptyArms    = allArmSizes.filter(n => n === 0).length;
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+      <h2 style="margin:0;">Class Arms</h2>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="generateArmFixtures()" style="${btnStyle('secondary')}">🔧 Generate Fixtures</button>
+        ${classes.length === 0 ? `<button onclick="seedDemoArmsData()" style="${btnStyle('secondary')}">🌱 Seed Demo Data</button>` : ''}
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1.75rem;">
+      ${[
+        ['🚪','Total Arms',    totalArms,  '#2563eb'],
+        ['📊','Avg Class Size',avgSize,    '#0891b2'],
+        ['🏆','Largest Arm',   maxSize,    '#7c3aed'],
+        ['🟡','Empty Arms',    emptyArms,  emptyArms>0?'#d97706':'#059669'],
+      ].map(([icon, label, val, color]) => `
+        <div style="background:#fff;border-radius:12px;padding:.9rem 1.1rem;
+                    box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid ${color};">
+          <div style="font-size:1.2rem;">${icon}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${color};line-height:1.2;">${val}</div>
+          <div style="font-size:.75rem;color:#6b7280;margin-top:.1rem;">${label}</div>
+        </div>`).join('')}
+    </div>
+
+    ${classes.length === 0
+      ? `<div style="background:#fff;border-radius:12px;padding:4rem 2rem;text-align:center;
+                     box-shadow:0 2px 8px rgba(0,0,0,.07);">
+           <div style="font-size:3rem;margin-bottom:1rem;">🚪</div>
+           <h3 style="margin:0 0 .5rem;color:#374151;">No classes found</h3>
+           <p style="color:#9ca3af;margin:0 0 1.5rem;">
+             Add classes first, or seed demo data to get started.
+           </p>
+           <button onclick="seedDemoArmsData()" style="${btnStyle('primary')}">🌱 Seed Demo Data</button>
+         </div>`
+      : classes.map(cls => renderClassArmsBlock(cls)).join('')
+    }`;
+}
+
+/** Render the collapsible block for one class */
+function renderClassArmsBlock(cls) {
+  const collapseKey = `arms-collapsed-${cls.id}`;
+  const collapsed   = window[collapseKey] || false;
+  const total       = (cls.arms||[]).reduce((n,a) => n + armStudents(cls.name,a).length, 0);
+
+  return `
+    <div id="arms-block-${cls.id}"
+      style="background:#fff;border-radius:14px;padding:1.25rem 1.5rem;
+             margin-bottom:1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+
+      <!-- Class header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  flex-wrap:wrap;gap:.5rem;margin-bottom:${collapsed?'0':'1rem'};">
+        <div style="display:flex;align-items:center;gap:.65rem;cursor:pointer;"
+          onclick="toggleArmsBlock(${cls.id})">
+          <span style="font-size:1rem;color:#6b7280;transition:transform .2s;
+                       display:inline-block;transform:rotate(${collapsed?'-90':'0'}deg);"
+            id="chevron-${cls.id}">▾</span>
+          <h3 style="margin:0;">${cls.name}</h3>
+          <span style="${badgeStyle(cls.level==='Junior'?'info':'success')}">${cls.level}</span>
+          <span style="${badgeStyle('secondary')}">${(cls.arms||[]).length} arm${(cls.arms||[]).length!==1?'s':''}</span>
+          <span style="font-size:.8rem;color:#9ca3af;">${total} students</span>
+        </div>
+        <button onclick="addArm(${cls.id})" style="${btnStyle('primary','sm')}">+ Add Arm</button>
+      </div>
+
+      <!-- Arms grid (collapsible) -->
+      <div id="arms-grid-${cls.id}" style="display:${collapsed?'none':'flex'};flex-wrap:wrap;gap:.85rem;">
+        ${(cls.arms||[]).length === 0
+          ? `<p style="color:#9ca3af;font-size:.875rem;padding:.5rem 0;">
+               No arms for this class. Click "+ Add Arm" to create one.
+             </p>`
+          : (cls.arms||[]).map(arm => armCard(cls, arm)).join('')}
+      </div>
+    </div>`;
+}
+
+
+/* ── COLLAPSE / EXPAND ────────────────────────────────────────────────────── */
+
+window.toggleArmsBlock = function (classId) {
+  const key  = `arms-collapsed-${classId}`;
+  window[key] = !window[key];
+  const grid    = document.getElementById(`arms-grid-${classId}`);
+  const chevron = document.getElementById(`chevron-${classId}`);
+  if (grid)    grid.style.display    = window[key] ? 'none' : 'flex';
+  if (chevron) chevron.style.transform = window[key] ? 'rotate(-90deg)' : 'rotate(0deg)';
+};
+
+
+/* ── DRAG-TO-REORDER ──────────────────────────────────────────────────────── */
+
+let _dragArm = null, _dragClassId = null;
+
+window.armDragStart = function (e, classId, arm) {
+  _dragClassId = parseInt(classId);
+  _dragArm     = arm;
+  e.dataTransfer.effectAllowed = 'move';
+};
+
+window.armDrop = function (e, classId, targetArm) {
+  e.preventDefault();
+  if (_dragArm === null || parseInt(classId) !== _dragClassId || _dragArm === targetArm) return;
+  const cls  = App.data.classes.find(c => c.id === _dragClassId);
+  if (!cls) return;
+  const from = cls.arms.indexOf(_dragArm);
+  const to   = cls.arms.indexOf(targetArm);
+  if (from < 0 || to < 0) return;
+  cls.arms.splice(from, 1);
+  cls.arms.splice(to, 0, _dragArm);
+  _dragArm = null; _dragClassId = null;
+  refreshArmsGrid(cls);
+};
+
+
+/* ── REORDER BUTTONS ──────────────────────────────────────────────────────── */
+
+window.moveArmLeft = function (classId, arm) {
+  const cls = App.data.classes.find(c => c.id === classId);
+  if (!cls) return;
+  const i = cls.arms.indexOf(arm);
+  if (i <= 0) return;
+  [cls.arms[i-1], cls.arms[i]] = [cls.arms[i], cls.arms[i-1]];
+  refreshArmsGrid(cls);
+};
+
+window.moveArmRight = function (classId, arm) {
+  const cls = App.data.classes.find(c => c.id === classId);
+  if (!cls) return;
+  const i = cls.arms.indexOf(arm);
+  if (i < 0 || i >= cls.arms.length - 1) return;
+  [cls.arms[i], cls.arms[i+1]] = [cls.arms[i+1], cls.arms[i]];
+  refreshArmsGrid(cls);
+};
+
+/** Re-render only the arms grid inside a class block (no full page re-render) */
+function refreshArmsGrid(cls) {
+  const grid = document.getElementById(`arms-grid-${cls.id}`);
+  if (!grid) { renderArms(); return; }
+  grid.innerHTML = (cls.arms||[]).length === 0
+    ? `<p style="color:#9ca3af;font-size:.875rem;padding:.5rem 0;">No arms for this class.</p>`
+    : cls.arms.map(arm => armCard(cls, arm)).join('');
+}
+
+
+/* ── ADD ARM ──────────────────────────────────────────────────────────────── */
+
+window.addArm = function (classId) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls = App.data.classes.find(c => c.id === classId);
+  if (!cls) return;
+
   showModal(`
-    <h3 style="margin:0 0 1.5rem;">Add New Subject</h3>
-    <form id="subj-form">
-      <label style="${labelStyle()}">Subject Name</label><input id="sb-name" style="${inputStyle()}" required placeholder="e.g. Economics">
-      <label style="${labelStyle()}">Code</label><input id="sb-code" style="${inputStyle()}" required placeholder="e.g. ECO" maxlength="4">
-      <label style="${labelStyle()}">Level</label>
-      <select id="sb-level" style="${inputStyle()}"><option>All</option><option>Junior</option><option>Senior</option></select>
-      <label style="${labelStyle()}">Type</label>
-      <select id="sb-type" style="${inputStyle()}">
-        <option>Core</option><option>Science</option><option>Arts</option><option>Commercial</option><option>Vocational</option><option>Language</option>
-      </select>
+    <h3 style="margin:0 0 .25rem;">Add Arm to ${cls.name}</h3>
+    <p style="color:#6b7280;font-size:.875rem;margin:0 0 1.5rem;">
+      Current arms: <strong>${cls.arms.join(', ') || 'none'}</strong>
+    </p>
+    <form id="arm-form">
+      <label style="${labelStyle()}">Arm Letter(s) <span style="color:#9ca3af;font-weight:400;">(comma-separated for multiple)</span></label>
+      <input id="arm-letter" placeholder="e.g. D  or  D, E, F"
+        style="${inputStyle()}" autocomplete="off" required autofocus>
+      <div id="arm-error" style="color:#ef4444;font-size:.8rem;margin-top:.3rem;display:none;"></div>
       <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end;">
         <button type="button" onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
-        <button type="submit" style="${btnStyle('primary')}">Add Subject</button>
+        <button type="submit" style="${btnStyle('primary')}">Add Arm</button>
       </div>
     </form>`);
-  document.getElementById('subj-form').onsubmit = async (e) => {
+
+  document.getElementById('arm-form').onsubmit = (e) => {
     e.preventDefault();
-    const name  = document.getElementById('sb-name').value.trim();
-    const code  = document.getElementById('sb-code').value.trim().toUpperCase();
-    const level = document.getElementById('sb-level').value;
-    const type  = document.getElementById('sb-type').value;
-    if (!name || !code) return toast('Name and code are required.', 'error');
-    try {
-      const resp   = await Subjects.create({ name, code, level, type });
-      const saved  = resp.data || resp;
-      App.data.subjects.push({ id: saved.id || Date.now(), name, code, level, type });
-      closeModal(); renderSubjects(); toast('Subject added!', 'success');
-    } catch (err) {
-      toast('Error adding subject: ' + (err.message || 'Unknown error'), 'error');
-    }
+    const raw     = document.getElementById('arm-letter').value;
+    const letters = raw.split(',').map(l => l.trim().toUpperCase()).filter(Boolean);
+    const errEl   = document.getElementById('arm-error');
+
+    if (!letters.length) { errEl.textContent='Enter at least one arm letter.'; errEl.style.display=''; return; }
+
+    const dupes = letters.filter(l => cls.arms.includes(l));
+    if (dupes.length) { errEl.textContent=`Already exists: ${dupes.join(', ')}`; errEl.style.display=''; return; }
+    errEl.style.display = 'none';
+
+    const invalid = letters.filter(l => !/^[A-Z0-9]{1,3}$/.test(l));
+    if (invalid.length) { errEl.textContent=`Invalid arm name(s): ${invalid.join(', ')}. Use 1-3 letters/digits.`; errEl.style.display=''; return; }
+
+    Classes.addArm(cls.name, { arms: letters }).then(() => {
+      letters.forEach(l => cls.arms.push(l));
+      closeModal();
+      refreshArmsGrid(cls);
+      toast(`Arm${letters.length>1?'s':''} ${letters.map(l=>`${cls.name} ${l}`).join(', ')} added!`, 'success');
+    }).catch(err => {
+      toast('Error adding arm: ' + (err.message || 'Unknown error'), 'error');
+    });
   };
+};
+
+
+/* ── RENAME ARM ───────────────────────────────────────────────────────────── */
+
+window.renameArm = function (classId, arm) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls      = App.data.classes.find(c => c.id === classId);
+  const count    = armStudents(cls.name, arm).length;
+  const teachers = armTeachers(cls.name, arm).length;
+
+  showModal(`
+    <h3 style="margin:0 0 .25rem;">Rename Arm — ${cls.name} ${arm}</h3>
+    <p style="color:#6b7280;font-size:.875rem;margin:0 0 ${count||teachers?'.75':'1.5'}rem;">
+      This will update all records that reference this arm.
+    </p>
+    ${count > 0 ? `<div style="${infoNote('info')}">📌 ${count} student record${count!==1?'s':''} will be updated.</div>` : ''}
+    ${teachers > 0 ? `<div style="${infoNote('warning')}">⚠ ${teachers} teacher assignment${teachers!==1?'s':''} will be updated.</div>` : ''}
+    <form id="rename-arm-form" style="margin-top:1.25rem;">
+      <label style="${labelStyle()}">New Arm Name</label>
+      <input id="new-arm-name" value="${arm}" maxlength="5"
+        style="${inputStyle()}" autocomplete="off" required>
+      <div id="rename-error" style="color:#ef4444;font-size:.8rem;margin-top:.3rem;display:none;"></div>
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end;">
+        <button type="button" onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button type="submit" style="${btnStyle('primary')}">Rename</button>
+      </div>
+    </form>`);
+
+  document.getElementById('rename-arm-form').onsubmit = (e) => {
+    e.preventDefault();
+    const newName = document.getElementById('new-arm-name').value.trim().toUpperCase();
+    const errEl   = document.getElementById('rename-error');
+
+    if (!newName)                  { errEl.textContent='Enter a name.'; errEl.style.display=''; return; }
+    if (!/^[A-Z0-9]{1,5}$/.test(newName)) { errEl.textContent='Use 1-5 letters or digits.'; errEl.style.display=''; return; }
+    if (newName === arm)           { closeModal(); return; }
+    if (cls.arms.includes(newName)) { errEl.textContent=`Arm "${newName}" already exists.`; errEl.style.display=''; return; }
+
+    /* Apply rename */
+    cls.arms[cls.arms.indexOf(arm)] = newName;
+    (App.data.students||[]).forEach(s => { if (s.class===cls.name && s.arm===arm) s.arm=newName; });
+    (App.data.teachers||[]).forEach(t => { if (t.assignedClass===cls.name && t.assignedArm===arm) t.assignedArm=newName; });
+
+    closeModal();
+    refreshArmsGrid(cls);
+    toast(`Arm renamed to ${cls.name} ${newName}.`, 'success');
+  };
+};
+
+
+/* ── VIEW STUDENTS IN ARM ─────────────────────────────────────────────────── */
+
+window.viewArmStudents = function (classId, arm) {
+  const cls      = App.data.classes.find(c => c.id === classId);
+  const students = armStudents(cls.name, arm);
+
+  showModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem;">
+      <h3 style="margin:0;">Students — ${cls.name} ${arm}</h3>
+      <span style="${badgeStyle('info')}">${students.length} enrolled</span>
+    </div>
+    ${students.length === 0
+      ? `<div style="text-align:center;padding:2rem;color:#9ca3af;">
+           <div style="font-size:2rem;margin-bottom:.5rem;">🎒</div>
+           <p style="margin:0;">No students enrolled in this arm yet.</p>
+         </div>`
+      : `<div style="overflow-x:auto;max-height:340px;overflow-y:auto;">
+           <table style="${tableStyle()}font-size:.875rem;">
+             <thead><tr style="${thRowStyle()}">
+               <th style="${thStyle()}">#</th>
+               <th style="${thStyle()}">Student ID</th>
+               <th style="${thStyle()}">Name</th>
+               <th style="${thStyle()}">Gender</th>
+             </tr></thead>
+             <tbody>
+               ${students.map((s,i) => `
+                 <tr style="${trStyle()}">
+                   <td style="${tdStyle()}">${i+1}</td>
+                   <td style="${tdStyle()};font-family:monospace;">${s.id}</td>
+                   <td style="${tdStyle()};font-weight:500;">${s.name}</td>
+                   <td style="${tdStyle()}"><span style="${badgeStyle(s.gender==='Female'?'info':'secondary')}">${s.gender||'—'}</span></td>
+                 </tr>`).join('')}
+             </tbody>
+           </table>
+         </div>`}
+    <div style="text-align:right;margin-top:1.25rem;">
+      <button onclick="closeModal()" style="${btnStyle('secondary')}">Close</button>
+    </div>`);
+};
+
+
+/* ── MOVE STUDENTS ────────────────────────────────────────────────────────── */
+
+window.openMoveStudents = function (classId, arm) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls      = App.data.classes.find(c => c.id === classId);
+  const students = armStudents(cls.name, arm);
+  const otherArms = cls.arms.filter(a => a !== arm);
+
+  if (students.length === 0) { toast('No students in this arm to move.', 'info'); return; }
+  if (otherArms.length === 0) { toast('No other arms to move students to.', 'warning'); return; }
+
+  showModal(`
+    <h3 style="margin:0 0 .25rem;">Move Students — ${cls.name} ${arm}</h3>
+    <p style="color:#6b7280;font-size:.875rem;margin:0 0 1.5rem;">
+      Move all <strong>${students.length}</strong> student${students.length!==1?'s':''} from ${arm} to another arm.
+    </p>
+    <label style="${labelStyle()}">Destination Arm</label>
+    <select id="move-target-arm" style="${inputStyle()}">
+      ${otherArms.map(a => `<option value="${a}">${cls.name} ${a} (${armStudents(cls.name,a).length} students)</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:.75rem;margin-top:1.75rem;justify-content:flex-end;">
+      <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+      <button onclick="confirmMoveStudents(${cls.id},'${arm}')" style="${btnStyle('primary')}">Move Students</button>
+    </div>`);
+};
+
+window.confirmMoveStudents = function (classId, fromArm) {
+  const targetArm = document.getElementById('move-target-arm').value;
+  const cls       = App.data.classes.find(c => c.id === classId);
+  const moved     = armStudents(cls.name, fromArm);
+
+  moved.forEach(s => { s.arm = targetArm; });
+  closeModal();
+  refreshArmsGrid(cls);
+  toast(`${moved.length} student${moved.length!==1?'s':''} moved to ${cls.name} ${targetArm}.`, 'success');
+};
+
+
+/* ── DELETE ARM ───────────────────────────────────────────────────────────── */
+
+window.deleteArm = function (classId, arm) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls      = App.data.classes.find(c => c.id === classId);
+  const enrolled = armStudents(cls.name, arm).length;
+  const teachers = armTeachers(cls.name, arm).length;
+
+  /* Block if students are enrolled */
+  if (enrolled > 0) {
+    showModal(`
+      <div style="text-align:center;padding:.5rem 0 1rem;">
+        <div style="font-size:2.5rem;margin-bottom:.75rem;">⛔</div>
+        <h3 style="margin:0 0 .5rem;">Cannot Delete Arm</h3>
+        <p style="color:#6b7280;margin:0 0 1.5rem;">
+          <strong>${cls.name} ${arm}</strong> has <strong>${enrolled} enrolled student${enrolled!==1?'s':''}</strong>.
+          Use "🔀 Move" to reassign students first.
+        </p>
+        <button onclick="closeModal()" style="${btnStyle('primary')}">OK</button>
+      </div>`);
+    return;
+  }
+
+  const teacherNote = teachers > 0
+    ? `<div style="${infoNote('warning')}">⚠ ${teachers} teacher assignment${teachers!==1?'s':''} will be cleared.</div>`
+    : '';
+
+  showModal(`
+    <div style="text-align:center;padding:.5rem 0 1rem;">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🗑️</div>
+      <h3 style="margin:0 0 .5rem;">Delete Arm?</h3>
+      <p style="color:#6b7280;margin:0 0 .75rem;">
+        Delete <strong>${cls.name} ${arm}</strong>? This cannot be undone.
+      </p>
+      ${teacherNote}
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:center;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmDeleteArm(${classId},'${arm}')" style="${btnStyle('danger')}">Yes, Delete</button>
+      </div>
+    </div>`);
+};
+
+window.confirmDeleteArm = function (classId, arm) {
+  const cls = App.data.classes.find(c => c.id === classId);
+  if (!cls) return;
+
+  Classes.deleteArm(cls.name, arm).then(() => {
+    (App.data.teachers||[]).forEach(t => {
+      if (t.assignedClass === cls.name && t.assignedArm === arm) { t.assignedArm = ''; }
+    });
+    cls.arms = cls.arms.filter(a => a !== arm);
+    closeModal();
+    refreshArmsGrid(cls);
+    toast(`Arm ${cls.name} ${arm} removed.`, 'warning');
+  }).catch(err => {
+    toast('Error removing arm: ' + (err.message || 'Unknown error'), 'error');
+  });
+};
+
+
+/* ── STYLE HELPERS (local) ────────────────────────────────────────────────── */
+
+/** Subtle info/warning note box */
+function infoNote(type) {
+  const map = { info: '#eff6ff;border-left:3px solid #3b82f6;color:#1e40af',
+                warning: '#fefce8;border-left:3px solid #f59e0b;color:#92400e' };
+  return `background:${map[type]||map.info};border-radius:0 6px 6px 0;padding:.55rem .85rem;font-size:.82rem;margin:.5rem 0;`;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   12. RESULTS  (improved – Excel bulk entry + template download)
-   Admin   → enter results for any class
-   Teacher → enter results for assigned class/arm only
-   Parent  → view their child's results only (read-only)
-───────────────────────────────────────────────────────────────────────────── */
+   9. STUDENTS  (improved)
+   Admin   → full CRUD + bulk import
+   Teacher → view only
+   Parent  → redirected to results
 
-/* ── EMBEDDED EXCEL TEMPLATE (base64) ──────────────────────────────────────
-   Generated from a pre-built openpyxl workbook with:
-     • Instructions sheet with colour-coded guide
-     • Results Entry sheet with dropdowns, auto-calculated Total/Grade/Remark
-     • 500 blank rows ready to fill
-   ─────────────────────────────────────────────────────────────────────────── */
-const RESULTS_TEMPLATE_B64 = "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";
+   Improvements:
+   ✦ Rich fixture generator with 40 realistic Nigerian student names
+   ✦ Stats dashboard (total, gender split, low attendance, class breakdown)
+   ✦ Advanced filter bar: search + class + arm + gender + attendance filter
+   ✦ Sortable table columns (click header)
+   ✦ Avatar initials chip per student row
+   ✦ View profile: tabbed (Info / Results / Attendance history)
+   ✦ Smart ID generator (respects existing IDs, no collisions)
+   ✦ Attendance quick-edit inline without opening modal
+   ✦ Duplicate name warning on add
+   ✦ Bulk add: Excel upload (SheetJS) + CSV textarea + template download
+   ✦ Transfer student: move to different class/arm with one click
+   ✦ Print student list button
+   ✦ Cascade delete: removes linked results when student is deleted
+   ✦ Confirm delete shows student name + linked data count
+─────────────────────────────────────────────────────────────────────────────── */
 
-/* Download the embedded template as an .xlsx file */
-window.downloadResultsTemplate = function () {
-  const bytes  = Uint8Array.from(atob(RESULTS_TEMPLATE_B64), c => c.charCodeAt(0));
-  const blob   = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url    = URL.createObjectURL(blob);
-  const a      = Object.assign(document.createElement('a'), { href: url, download: 'results_bulk_template.xlsx' });
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  toast('Template downloaded!', 'success');
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   FIXTURES
+══════════════════════════════════════════════════════════════════════════════ */
+
+const STUDENT_FIXTURE_NAMES = {
+  male: [
+    'Emeka Okonkwo','Tunde Adeyemi','Chukwuemeka Eze','Biodun Adewale','Kelechi Obi',
+    'Oluwaseun Afolabi','Aminu Bello','Suleiman Musa','Ifeanyi Nwosu','Gbenga Omotayo',
+    'Chidubem Okeke','Yusuf Ibrahim','Babatunde Olawale','Nnamdi Chukwu','Segun Adebayo',
+    'Chukwudi Nnadi','Kayode Oduola','Uche Onyekachi','Abdullahi Sani','Rotimi Adesanya',
+  ],
+  female: [
+    'Adaeze Okonkwo','Funmilayo Adesanya','Ngozi Eze','Amara Obi','Bukola Adeyemi',
+    'Chisom Nwosu','Fatima Al-Hassan','Blessing Omotayo','Ifeoma Okeke','Yetunde Bello',
+    'Adunola Afolabi','Chiamaka Nnadi','Hafsat Ibrahim','Omowunmi Olawale','Chidinma Chukwu',
+    'Oluwatoyin Adebayo','Nkechi Oduola','Zainab Musa','Ebele Onyekachi','Kehinde Rotimi',
+  ],
 };
 
-/* ── EXCEL IMPORT HELPERS ───────────────────────────────────────────────────
-   We use SheetJS (xlsx) which is typically bundled in school apps.
-   If not present we show a clear error.
-   ─────────────────────────────────────────────────────────────────────────── */
+const PARENT_NAMES = {
+  male:   n => `Mr ${n.split(' ')[1]}`,
+  female: n => `Mrs ${n.split(' ')[1]}`,
+};
 
-/** Parse an uploaded .xlsx/.xls file; returns an array of row-objects from "Results Entry" sheet */
-function parseResultsExcel(file) {
-  return new Promise((resolve, reject) => {
-    if (typeof XLSX === 'undefined') {
-      reject(new Error('SheetJS (XLSX) library not loaded. Please add it to your project.'));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb   = XLSX.read(e.target.result, { type: 'array' });
-        /* Accept either the named sheet or the first sheet */
-        const name = wb.SheetNames.includes('Results Entry') ? 'Results Entry' : wb.SheetNames[0];
-        const ws   = wb.Sheets[name];
-        /* header: row 2 → skip row 1 (title) */
-        const rows = XLSX.utils.sheet_to_json(ws, { range: 1, defval: '' });
-        resolve(rows);
-      } catch (err) { reject(err); }
-    };
-    reader.onerror = () => reject(new Error('File read failed.'));
-    reader.readAsArrayBuffer(file);
+const PHONES = () => `080${Math.floor(10000000 + Math.random()*89999999)}`;
+
+const NIGERIAN_DOBS = (minAge = 10, maxAge = 18) => {
+  const year = new Date().getFullYear() - minAge - Math.floor(Math.random() * (maxAge - minAge));
+  const month = String(Math.floor(Math.random()*12)+1).padStart(2,'0');
+  const day   = String(Math.floor(Math.random()*28)+1).padStart(2,'0');
+  return `${year}-${month}-${day}`;
+};
+
+/** Generate a collision-free student ID */
+function genStudentId(prefix = 'SAHARCO') {
+  const existing = new Set((App.data.students||[]).map(s => s.id));
+  let n = (App.data.students||[]).length + 1;
+  let id;
+  do { id = `${prefix}/${String(n).padStart(3,'0')}`; n++; } while (existing.has(id));
+  return id;
+}
+
+/**
+ * seedStudentFixtures({ count, classFilter })
+ * Generates realistic student records distributed across all classes/arms.
+ * Skips if students already exist unless force=true.
+ */
+window.seedStudentFixtures = function ({ count = 40, force = false } = {}) {
+  if (!App.data.students) App.data.students = [];
+  if (App.data.students.length > 0 && !force) {
+    toast(`${App.data.students.length} students already exist. Use force=true to re-seed.`, 'info');
+    renderStudents(); return;
+  }
+  if (force) App.data.students = [];
+
+  const classes = App.data.classes || [];
+  if (!classes.length) { toast('No classes found. Add classes first.', 'warning'); return; }
+
+  // Build a flat list of all class+arm slots and distribute evenly
+  const slots = classes.flatMap(c => (c.arms||[]).map(a => ({ cls: c.name, arm: a })));
+  if (!slots.length) { toast('No class arms found. Generate arm fixtures first.', 'warning'); return; }
+
+  const maleNames   = [...STUDENT_FIXTURE_NAMES.male];
+  const femaleNames = [...STUDENT_FIXTURE_NAMES.female];
+  const shuffle     = arr => arr.sort(() => Math.random() - .5);
+  shuffle(maleNames); shuffle(femaleNames);
+
+  let mi = 0, fi = 0;
+  for (let i = 0; i < count; i++) {
+    const slot   = slots[i % slots.length];
+    const gender = i % 2 === 0 ? 'Male' : 'Female';
+    const name   = gender === 'Male'
+      ? (maleNames[mi++ % maleNames.length])
+      : (femaleNames[fi++ % femaleNames.length]);
+    const parent = gender === 'Male' ? PARENT_NAMES.male(name) : PARENT_NAMES.female(name);
+    App.data.students.push({
+      id:         genStudentId(),
+      name,
+      class:      slot.cls,
+      arm:        slot.arm,
+      gender,
+      dob:        NIGERIAN_DOBS(),
+      parent,
+      phone:      PHONES(),
+      attendance: Math.floor(60 + Math.random() * 40), // 60–100%
+    });
+  }
+  toast(`${count} student fixture${count!==1?'s':''} generated!`, 'success');
+  renderStudents();
+};
+
+/** Thin fixture — just a handful of quick demo entries */
+window.seedMinimalStudents = function () {
+  window.seedStudentFixtures({ count: 12, force: false });
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SORT STATE
+══════════════════════════════════════════════════════════════════════════════ */
+let _sortCol = 'name', _sortDir = 1; // 1 = asc, -1 = desc
+
+function sortStudents(list) {
+  return [...list].sort((a, b) => {
+    let va = a[_sortCol] ?? '', vb = b[_sortCol] ?? '';
+    if (typeof va === 'number') return (va - vb) * _sortDir;
+    return String(va).localeCompare(String(vb)) * _sortDir;
   });
 }
 
-/** Map raw SheetJS row keys → normalised field names */
-function normaliseRow(raw, idx) {
-  /* The template headers contain decorators like "CA Score * (0-40)";
-     we strip those and do a fuzzy match so renaming the header doesn't break import. */
-  const get = (...keys) => {
-    for (const k of keys) {
-      const match = Object.keys(raw).find(rk => rk.toLowerCase().includes(k.toLowerCase()));
-      if (match && String(raw[match]).trim() !== '') return String(raw[match]).trim();
-    }
-    return '';
-  };
+window.setStudentSort = function (col) {
+  if (_sortCol === col) _sortDir *= -1; else { _sortCol = col; _sortDir = 1; }
+  renderStudents(_currentFilter, _currentFilters);
+};
 
-  const sid     = get('student id', 'studentid', 'student');
-  const subject = get('subject');
-  const caRaw   = get('ca score', 'ca');
-  const examRaw = get('exam score', 'exam');
-  const term    = get('term');
-  const session = get('session');
+let _currentFilter  = '';
+let _currentFilters = {};
 
-  const ca   = parseFloat(caRaw);
-  const exam = parseFloat(examRaw);
 
-  const errors = [];
-  if (!sid)                              errors.push('Missing Student ID');
-  if (!subject)                          errors.push('Missing Subject');
-  if (isNaN(ca)   || ca < 0   || ca > 40)   errors.push(`CA score invalid (${caRaw})`);
-  if (isNaN(exam) || exam < 0 || exam > 60) errors.push(`Exam score invalid (${examRaw})`);
-  if (!term)                             errors.push('Missing Term');
+/* ══════════════════════════════════════════════════════════════════════════════
+   MAIN RENDER
+══════════════════════════════════════════════════════════════════════════════ */
+function renderStudents(filter = '', filters = {}) {
+  if (priv.isParent()) { navigate('results'); return; }
 
-  return { rowNum: idx + 3, sid, subject, ca, exam, term, session, errors, ok: errors.length === 0 };
+  _currentFilter  = filter;
+  _currentFilters = filters;
+
+  const section    = document.getElementById('students');
+  const canManage  = priv.canManage();
+  const all        = App.data.students || [];
+
+  /* ── Apply filters ── */
+  let list = all.filter(s => {
+    const q = filter.toLowerCase();
+    if (q && !s.name.toLowerCase().includes(q) && !s.id.toLowerCase().includes(q) &&
+             !s.class.toLowerCase().includes(q) && !(s.parent||'').toLowerCase().includes(q)) return false;
+    if (filters.cls   && s.class  !== filters.cls)    return false;
+    if (filters.arm   && s.arm    !== filters.arm)    return false;
+    if (filters.gender&& s.gender !== filters.gender) return false;
+    if (filters.attn === 'low'  && s.attendance >= 75) return false;
+    if (filters.attn === 'good' && s.attendance <  75) return false;
+    return true;
+  });
+
+  list = sortStudents(list);
+
+  /* ── Stats ── */
+  const male       = all.filter(s => s.gender === 'Male').length;
+  const female     = all.filter(s => s.gender === 'Female').length;
+  const lowAttn    = all.filter(s => s.attendance < 75).length;
+  const avgAttn    = all.length ? (all.reduce((a,b) => a + b.attendance, 0) / all.length).toFixed(1) : 0;
+
+  /* ── Dropdown options ── */
+  const classOpts = ['', ...new Set(all.map(s => s.class))].map(c =>
+    `<option value="${c}" ${filters.cls===c?'selected':''}>${c||'All Classes'}</option>`).join('');
+  const armOpts   = ['', ...new Set(all.map(s => s.arm))].map(a =>
+    `<option value="${a}" ${filters.arm===a?'selected':''}>${a||'All Arms'}</option>`).join('');
+
+  /* ── Sort indicator ── */
+  const si = col => _sortCol===col ? (_sortDir===1?' ↑':' ↓') : '';
+  const th = (col, label) =>
+    `<th style="${thStyle()};cursor:pointer;user-select:none;" onclick="setStudentSort('${col}')">${label}${si(col)}</th>`;
+
+  section.innerHTML = `
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      ${[
+        ['🎒','Total Students', all.length,   '#2563eb'],
+        ['👦','Male',           male,         '#0891b2'],
+        ['👧','Female',         female,       '#7c3aed'],
+        ['📉','Low Attendance', lowAttn,      lowAttn>0?'#ef4444':'#059669'],
+        ['📊','Avg Attendance', avgAttn+'%',  '#d97706'],
+      ].map(([icon,label,val,color]) => `
+        <div style="background:#fff;border-radius:12px;padding:.9rem 1.1rem;
+                    box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid ${color};cursor:default;">
+          <div style="font-size:1.2rem;">${icon}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${color};line-height:1.2;">${val}</div>
+          <div style="font-size:.75rem;color:#6b7280;margin-top:.1rem;">${label}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Toolbar -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+      <h2 style="margin:0;">Students
+        <span style="font-size:.9rem;font-weight:400;color:#9ca3af;">(${list.length} of ${all.length})</span>
+      </h2>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        ${canManage ? `
+          <button onclick="openStudentModal()" style="${btnStyle('primary')}">+ Add Student</button>
+          <button onclick="openBulkStudentModal()" style="${btnStyle('info')}">⬆ Bulk Add</button>
+          <button onclick="openParentEmailManager()" style="${btnStyle('secondary')}">📧 Parent Emails</button>
+          <button onclick="openDuplicateDetector()" style="${btnStyle('warning')}">🔍 Find Duplicates</button>
+          <button onclick="printStudentList()" style="${btnStyle('secondary')}">🖨 Print</button>
+          <button onclick="seedStudentFixtures({count:40,force:false})" style="${btnStyle('secondary')}">🌱 Seed Fixtures</button>
+        ` : ''}
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div style="background:#fff;border-radius:10px;padding:.85rem 1rem;
+                box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:1.25rem;
+                display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;">
+      <input id="student-search" placeholder="🔍 Search name, ID, parent…"
+        value="${filter}" style="${inputStyle()};max-width:220px;padding:.45rem .75rem;font-size:.875rem;"
+        oninput="renderStudents(this.value, _currentFilters)">
+      <select onchange="renderStudents(_currentFilter,{..._currentFilters,cls:this.value})"
+        style="${inputStyle()};max-width:140px;padding:.45rem .65rem;font-size:.85rem;">${classOpts}</select>
+      <select onchange="renderStudents(_currentFilter,{..._currentFilters,arm:this.value})"
+        style="${inputStyle()};max-width:100px;padding:.45rem .65rem;font-size:.85rem;">${armOpts}</select>
+      <select onchange="renderStudents(_currentFilter,{..._currentFilters,gender:this.value})"
+        style="${inputStyle()};max-width:110px;padding:.45rem .65rem;font-size:.85rem;">
+        <option value="">All Genders</option>
+        <option value="Male" ${filters.gender==='Male'?'selected':''}>Male</option>
+        <option value="Female" ${filters.gender==='Female'?'selected':''}>Female</option>
+      </select>
+      <select onchange="renderStudents(_currentFilter,{..._currentFilters,attn:this.value})"
+        style="${inputStyle()};max-width:150px;padding:.45rem .65rem;font-size:.85rem;">
+        <option value="">All Attendance</option>
+        <option value="low"  ${filters.attn==='low'?'selected':''}>⚠ Below 75%</option>
+        <option value="good" ${filters.attn==='good'?'selected':''}>✅ 75% &amp; above</option>
+      </select>
+      ${(filter || Object.values(filters).some(Boolean))
+        ? `<button onclick="renderStudents('',{})" style="${btnStyle('secondary')};font-size:.8rem;padding:.35rem .75rem;">✕ Clear</button>` : ''}
+    </div>
+
+    ${!canManage ? `<div style="${infoBanner()}">👁 View-only mode — Teachers can view student records but cannot add, edit, or delete.</div>` : ''}
+
+    <!-- Table -->
+    ${list.length === 0 && all.length === 0
+      ? `<div style="background:#fff;border-radius:12px;padding:4rem 2rem;text-align:center;
+                     box-shadow:0 2px 8px rgba(0,0,0,.07);">
+           <div style="font-size:3rem;margin-bottom:1rem;">🎒</div>
+           <h3 style="margin:0 0 .5rem;color:#374151;">No students yet</h3>
+           <p style="color:#9ca3af;margin:0 0 1.5rem;">Add students manually or seed fixture data to get started.</p>
+           ${canManage ? `<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
+             <button onclick="openStudentModal()" style="${btnStyle('primary')}">+ Add Student</button>
+             <button onclick="seedStudentFixtures({count:40})" style="${btnStyle('secondary')}">🌱 Seed 40 Fixtures</button>
+           </div>` : ''}
+         </div>`
+      : `<div style="overflow-x:auto;">
+         <table style="${tableStyle()}">
+           <thead><tr style="${thRowStyle()}">
+             ${th('id','ID')}
+             ${th('name','Student')}
+             ${th('class','Class')}
+             ${th('arm','Arm')}
+             ${th('gender','Gender')}
+             ${th('attendance','Attendance')}
+             <th style="${thStyle()}">Actions</th>
+           </tr></thead>
+           <tbody>
+             ${list.length ? list.map(s => studentRow(s, canManage)).join('')
+               : `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:#9ca3af;">
+                    No students match your filters.
+                    <button onclick="renderStudents('',{})" style="margin-left:.5rem;${btnStyle('secondary')};font-size:.8rem;">Clear filters</button>
+                  </td></tr>`}
+           </tbody>
+         </table></div>`
+    }`;
 }
 
-/* ── MAIN RENDER ─────────────────────────────────────────────────────────── */
+/* ── Single table row ── */
+function studentRow(s, canManage) {
+  const initials = s.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  const avatarColor = stringToColor(s.name);
+  const attnColor = s.attendance < 75 ? '#ef4444' : s.attendance < 90 ? '#f59e0b' : '#22c55e';
+
+  return `<tr id="student-row-${s.id}" style="${trStyle()}" data-sid="${s.id}">
+    <td style="${tdStyle()};font-family:monospace;font-size:.8rem;color:#6b7280;">${s.id}</td>
+    <td style="${tdStyle()}">
+      <div style="display:flex;align-items:center;gap:.65rem;">
+        <div style="width:32px;height:32px;border-radius:50%;background:${avatarColor};
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;">${initials}</div>
+        <div>
+          <div style="font-weight:600;color:#1e3a5f;">${s.name}</div>
+          <div style="font-size:.75rem;color:#9ca3af;">${s.parent||''}</div>
+        </div>
+      </div>
+    </td>
+    <td style="${tdStyle()}">${s.class}</td>
+    <td style="${tdStyle()}"><span style="${badgeStyle('secondary')}">${s.arm}</span></td>
+    <td style="${tdStyle()}">
+      <span style="${badgeStyle(s.gender==='Female'?'info':'secondary')}">${s.gender}</span>
+    </td>
+    <td style="${tdStyle()};min-width:120px;">
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <div style="flex:1;background:#e5e7eb;border-radius:4px;height:7px;min-width:60px;">
+          <div style="width:${s.attendance}%;height:100%;border-radius:4px;background:${attnColor};transition:width .3s;"></div>
+        </div>
+        <span style="font-size:.8rem;font-weight:700;color:${attnColor};min-width:36px;">${s.attendance}%</span>
+      </div>
+    </td>
+    <td style="${tdStyle()}">
+      <button onclick="viewStudent('${s.id}')" style="${btnStyle('info','sm')}">👁 View</button>
+      <button onclick="window.open('student-finance.html?studentId=${encodeURIComponent(s.id)}','_blank')" style="${btnStyle('secondary','sm')}" title="Student Finance Portal">💰</button>
+      ${canManage ? `
+        <button onclick="editStudent('${s.id}')" style="${btnStyle('secondary','sm')}">✏ Edit</button>
+        <button onclick="transferStudent('${s.id}')" style="${btnStyle('secondary','sm')}">🔀</button>
+        <button onclick="deleteStudent('${s.id}')" style="${btnStyle('danger','sm')}">🗑</button>
+      ` : ''}
+    </td>
+  </tr>`;
+}
+
+/** Deterministic pastel color from a string */
+function stringToColor(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const colors = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#9333ea','#16a34a'];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   VIEW STUDENT (tabbed profile)
+══════════════════════════════════════════════════════════════════════════════ */
+window.viewStudent = function (id) {
+  const s       = App.data.students.find(st => st.id === id);
+  const results = App.data.results.filter(r => r.studentId === id);
+  const terms   = [...new Set(results.map(r => r.term))];
+
+  const infoTab = () => `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      ${[
+        ['Student ID', s.id],
+        ['Full Name',  s.name],
+        ['Class',      `${s.class} ${s.arm}`],
+        ['Gender',     s.gender],
+        ['Date of Birth', s.dob || '—'],
+        ['Age',        s.dob ? calcAge(s.dob)+' years' : '—'],
+        ['Parent/Guardian', s.parent || '—'],
+        ['Phone',      s.phone || '—'],
+        ['Attendance', s.attendance + '%'],
+      ].map(([k,v]) => `
+        <div style="background:#f9fafb;border-radius:8px;padding:.65rem .9rem;">
+          <div style="font-size:.75rem;color:#9ca3af;margin-bottom:.15rem;">${k}</div>
+          <div style="font-weight:600;color:#1e3a5f;">${v}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const resultsTab = () => results.length === 0
+    ? `<div style="text-align:center;padding:2.5rem;color:#9ca3af;">
+         <div style="font-size:2rem;margin-bottom:.5rem;">📋</div>
+         <p style="margin:0;">No results recorded yet.</p>
+       </div>`
+    : terms.map(term => {
+        const tr   = results.filter(r => r.term === term);
+        const avg  = (tr.reduce((a,b)=>a+b.total,0)/tr.length).toFixed(1);
+        return `
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem;">
+              <strong style="color:#1e3a5f;">${term}</strong>
+              <span style="${badgeStyle(parseFloat(avg)>=50?'success':'danger')}">Avg: ${avg}%</span>
+            </div>
+            <div style="overflow-x:auto;">
+            <table style="${tableStyle()}font-size:.82rem;">
+              <thead><tr style="${thRowStyle()}">
+                <th style="${thStyle()}">Subject</th><th style="${thStyle()}">CA</th>
+                <th style="${thStyle()}">Exam</th><th style="${thStyle()}">Total</th><th style="${thStyle()}">Grade</th>
+              </tr></thead>
+              <tbody>${tr.map(r=>`<tr style="${trStyle()}">
+                <td style="${tdStyle()}">${r.subject}</td><td style="${tdStyle()}">${r.ca}</td>
+                <td style="${tdStyle()}">${r.exam}</td><td style="${tdStyle()}"><strong>${r.total}</strong></td>
+                <td style="${tdStyle()}"><span style="${badgeStyle(r.total>=50?'success':'danger')}">${grade(r.total).letter}</span></td>
+              </tr>`).join('')}</tbody>
+            </table></div>
+          </div>`;
+      }).join('');
+
+  showModal(`
+    <!-- Avatar header -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #f3f4f6;">
+      <div style="width:52px;height:52px;border-radius:50%;background:${stringToColor(s.name)};
+                  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+                  font-weight:700;color:#fff;flex-shrink:0;">
+        ${s.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase()}
+      </div>
+      <div>
+        <h3 style="margin:0;">${s.name}</h3>
+        <p style="margin:.2rem 0 0;font-size:.85rem;color:#6b7280;">${s.id} &nbsp;·&nbsp; ${s.class} ${s.arm}</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:.35rem;margin-bottom:1.25rem;">
+      <button id="ptab-info"    onclick="switchProfileTab('info')"    style="${btnStyle('primary','sm')}">📋 Info</button>
+      <button id="ptab-results" onclick="switchProfileTab('results')" style="${btnStyle('secondary','sm')}">📊 Results (${results.length})</button>
+    </div>
+
+    <div id="profile-info-panel">${infoTab()}</div>
+    <div id="profile-results-panel" style="display:none;">${resultsTab()}</div>
+
+    <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem;">
+      <button onclick="window.open('student-finance.html?studentId=${encodeURIComponent(s.id)}','_blank')" style="${btnStyle('warning')}">💰 Finance Portal</button>
+      ${priv.canManage() ? `<button onclick="closeModal();editStudent('${s.id}')" style="${btnStyle('secondary')}">✏ Edit</button>` : ''}
+      <button onclick="closeModal()" style="${btnStyle('primary')}">Close</button>
+    </div>`);
+};
+
+window.switchProfileTab = function (tab) {
+  const panels = { info: 'profile-info-panel', results: 'profile-results-panel' };
+  const btns   = { info: 'ptab-info', results: 'ptab-results' };
+  Object.keys(panels).forEach(k => {
+    document.getElementById(panels[k]).style.display = k === tab ? '' : 'none';
+    document.getElementById(btns[k]).style.cssText   = btnStyle(k===tab?'primary':'secondary','sm');
+  });
+};
+
+function calcAge(dob) {
+  const d = new Date(dob), n = new Date();
+  let age = n.getFullYear() - d.getFullYear();
+  if (n.getMonth() < d.getMonth() || (n.getMonth()===d.getMonth() && n.getDate()<d.getDate())) age--;
+  return age;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ADD / EDIT STUDENT
+══════════════════════════════════════════════════════════════════════════════ */
+function openStudentModal(s = null) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const isEdit      = !!s;
+  const classOpts   = App.data.classes.map(c =>
+    `<option ${s?.class===c.name?'selected':''}>${c.name}</option>`).join('');
+  const currentArms = (s ? App.data.classes.find(c=>c.name===s.class)?.arms
+                         : App.data.classes[0]?.arms) || [];
+
+  showModal(`
+    <h3 style="margin:0 0 1.5rem;">${isEdit ? `✏ Edit — ${s.name}` : '➕ Add New Student'}</h3>
+    <form id="student-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+        <div style="grid-column:1/-1;">
+          <label style="${labelStyle()}">Full Name <span style="color:#ef4444;">*</span></label>
+          <input id="st-name" value="${s?.name||''}" placeholder="First Last"
+            style="${inputStyle()}" required autocomplete="off">
+          <div id="st-name-warn" style="color:#d97706;font-size:.8rem;margin-top:.2rem;display:none;"></div>
+        </div>
+
+        <div>
+          <label style="${labelStyle()}">Class <span style="color:#ef4444;">*</span></label>
+          <select id="st-class" style="${inputStyle()}" onchange="updateStudentModalArms()">${classOpts}</select>
+        </div>
+        <div>
+          <label style="${labelStyle()}">Arm <span style="color:#ef4444;">*</span></label>
+          <select id="st-arm" style="${inputStyle()}">
+            ${currentArms.map(a=>`<option ${s?.arm===a?'selected':''}>${a}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label style="${labelStyle()}">Gender</label>
+          <select id="st-gender" style="${inputStyle()}">
+            <option ${s?.gender==='Male'?'selected':''}>Male</option>
+            <option ${s?.gender==='Female'?'selected':''}>Female</option>
+          </select>
+        </div>
+        <div>
+          <label style="${labelStyle()}">Date of Birth</label>
+          <input type="date" id="st-dob" value="${s?.dob||''}" style="${inputStyle()}">
+        </div>
+
+        <div>
+          <label style="${labelStyle()}">Parent / Guardian</label>
+          <input id="st-parent" value="${s?.parent||''}" placeholder="Name" style="${inputStyle()}">
+        </div>
+        <div>
+          <label style="${labelStyle()}">Phone</label>
+          <input id="st-phone" value="${s?.phone||''}" placeholder="080xxxxxxxx" style="${inputStyle()}">
+        </div>
+
+        <div style="grid-column:1/-1;">
+          <label style="${labelStyle()}">
+            Parent / Guardian Email
+            <span style="font-size:.73rem;color:#6b7280;font-weight:400;"> — used for report card delivery &amp; notifications</span>
+          </label>
+          <input type="email" id="st-parent-email" value="${s?.parent_email||''}"
+            placeholder="parent@example.com" style="${inputStyle()}">
+          ${s?.parent_email ? '<div style="font-size:.73rem;color:#16a34a;margin-top:.2rem;">✓ Email on file</div>' : '<div style="font-size:.73rem;color:#f59e0b;margin-top:.2rem;">⚠ No email — add one to enable notifications</div>'}
+        </div>
+
+        ${isEdit ? `
+        <div>
+          <label style="${labelStyle()}">Attendance (%)</label>
+          <input type="number" id="st-attendance" min="0" max="100"
+            value="${s?.attendance??100}" style="${inputStyle()}">
+        </div>` : ''}
+
+        <div style="grid-column:1/-1;display:flex;gap:.75rem;justify-content:flex-end;margin-top:.5rem;">
+          <button type="button" onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+          <button type="submit" style="${btnStyle('primary')}">${isEdit?'💾 Save Changes':'✅ Add Student'}</button>
+        </div>
+      </div>
+    </form>`);
+
+  /* Duplicate name check on blur */
+  document.getElementById('st-name').addEventListener('blur', function() {
+    const val     = this.value.trim().toLowerCase();
+    const warnEl  = document.getElementById('st-name-warn');
+    const dupes   = (App.data.students||[]).filter(st =>
+      st.name.toLowerCase() === val && st.id !== s?.id);
+    if (dupes.length) {
+      warnEl.textContent = `⚠ A student named "${dupes[0].name}" already exists (${dupes[0].id}).`;
+      warnEl.style.display = '';
+    } else { warnEl.style.display = 'none'; }
+  });
+
+  document.getElementById('student-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('st-name').value.trim();
+    if (!name) return toast('Full name is required.', 'error');
+
+    const data = {
+      name,
+      class:      document.getElementById('st-class').value,
+      arm:        document.getElementById('st-arm').value,
+      gender:     document.getElementById('st-gender').value,
+      dob:        document.getElementById('st-dob').value    || null,
+      parent:     document.getElementById('st-parent').value.trim()  || null,
+      phone:        document.getElementById('st-phone').value.trim()        || null,
+      parent_email: document.getElementById('st-parent-email')?.value.trim() || null,
+    };
+
+    if (!data.class) return toast('Class is required.', 'error');
+    if (!data.arm)   return toast('Arm is required.', 'error');
+
+    try {
+      if (isEdit) {
+        data.attendance = parseInt(document.getElementById('st-attendance').value) || s.attendance;
+        await Students.update(s.id, data);
+        Object.assign(s, data);
+        toast('Student updated!', 'success');
+      } else {
+        data.attendance = 100;
+        const resp = await Students.create(data);
+        const saved = resp.data || resp;
+        saved.class = saved.class || data.class;
+        saved.arm   = saved.arm   || data.arm;
+        App.data.students.push(saved);
+        toast(`Student added! ID: ${saved.id}`, 'success');
+      }
+      closeModal();
+      renderStudents(_currentFilter, _currentFilters);
+      if (isEdit) {
+        const row = document.getElementById(`student-row-${s.id}`);
+        if (row) { row.style.background='#d1fae5'; setTimeout(()=>row.style.background='',1400); }
+      }
+    } catch (err) {
+      toast('Error saving student: ' + (err.message || 'Unknown error'), 'error');
+    }
+  };
+}
+
+window.updateStudentModalArms = function () {
+  const cls     = document.getElementById('st-class')?.value;
+  const classData = App.data.classes.find(c => c.name === cls);
+  const armSel  = document.getElementById('st-arm');
+  if (armSel && classData) armSel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+};
+
+window.editStudent = function (id) {
+  if (!priv.canManage()) { denyAccess('Only Admins can edit students.'); return; }
+  openStudentModal(App.data.students.find(st => st.id === id));
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TRANSFER STUDENT
+══════════════════════════════════════════════════════════════════════════════ */
+window.transferStudent = function (id) {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const s        = App.data.students.find(st => st.id === id);
+  const classOpts = App.data.classes.map(c =>
+    `<option ${s.class===c.name?'selected':''}>${c.name}</option>`).join('');
+  const currentArms = App.data.classes.find(c=>c.name===s.class)?.arms || [];
+
+  showModal(`
+    <h3 style="margin:0 0 .25rem;">Transfer Student</h3>
+    <p style="color:#6b7280;font-size:.875rem;margin:0 0 1.5rem;">
+      Moving <strong>${s.name}</strong> from <strong>${s.class} ${s.arm}</strong>
+    </p>
+    <label style="${labelStyle()}">New Class</label>
+    <select id="transfer-class" style="${inputStyle()}" onchange="updateTransferArms()">${classOpts}</select>
+    <label style="${labelStyle()}">New Arm</label>
+    <select id="transfer-arm" style="${inputStyle()}">
+      ${currentArms.map(a=>`<option ${s.arm===a?'selected':''}>${a}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end;">
+      <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+      <button onclick="confirmTransfer('${id}')" style="${btnStyle('primary')}">🔀 Transfer</button>
+    </div>`);
+};
+
+window.updateTransferArms = function () {
+  const cls     = document.getElementById('transfer-class')?.value;
+  const classData = App.data.classes.find(c => c.name === cls);
+  const armSel  = document.getElementById('transfer-arm');
+  if (armSel && classData) armSel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+};
+
+window.confirmTransfer = function (id) {
+  const s      = App.data.students.find(st => st.id === id);
+  const newCls = document.getElementById('transfer-class').value;
+  const newArm = document.getElementById('transfer-arm').value;
+  if (newCls === s.class && newArm === s.arm) { closeModal(); return; }
+  const oldLabel = `${s.class} ${s.arm}`;
+  s.class = newCls; s.arm = newArm;
+  closeModal();
+  renderStudents(_currentFilter, _currentFilters);
+  toast(`${s.name} transferred from ${oldLabel} → ${newCls} ${newArm}.`, 'success');
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DELETE STUDENT
+══════════════════════════════════════════════════════════════════════════════ */
+window.deleteStudent = function (id) {
+  if (!priv.canManage()) { denyAccess('Only Admins can delete students.'); return; }
+  const s        = App.data.students.find(st => st.id === id);
+  const resCount = (App.data.results||[]).filter(r => r.studentId === id).length;
+
+  showModal(`
+    <div style="text-align:center;padding:.5rem 0 1rem;">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🗑️</div>
+      <h3 style="margin:0 0 .5rem;">Delete Student?</h3>
+      <p style="color:#6b7280;margin:0;">
+        Delete <strong>${s.name}</strong> (${s.id})?
+      </p>
+      ${resCount > 0 ? `
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;
+                    padding:.6rem .9rem;margin:.85rem 0 0;font-size:.85rem;color:#991b1b;">
+          ⚠ This will also delete <strong>${resCount} result record${resCount!==1?'s':''}</strong>.
+        </div>` : ''}
+      <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:center;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmDeleteStudent('${id}')" style="${btnStyle('danger')}">Yes, Delete</button>
+      </div>
+    </div>`);
+};
+
+window.confirmDeleteStudent = function (id) {
+  const s = App.data.students.find(st => st.id === id);
+  App.data.students = App.data.students.filter(st => st.id !== id);
+  if (App.data.results) App.data.results = App.data.results.filter(r => r.studentId !== id);
+  closeModal();
+  renderStudents(_currentFilter, _currentFilters);
+  toast(`${s?.name||'Student'} deleted.`, 'warning');
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BULK ADD (CSV textarea + Excel upload)
+══════════════════════════════════════════════════════════════════════════════ */
+window.openBulkStudentModal = function () {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const classOpts = App.data.classes.map(c => `<option>${c.name}</option>`).join('');
+
+  showModal(`
+    <h3 style="margin:0 0 .25rem;">Bulk Add Students</h3>
+    <p style="color:#6b7280;font-size:.875rem;margin:0 0 1.25rem;">
+      Choose an import method below.
+    </p>
+
+    <!-- Method tabs -->
+    <div style="display:flex;gap:.35rem;margin-bottom:1.25rem;">
+      <button id="btab-csv"   onclick="switchBulkTab('csv')"   style="${btnStyle('primary','sm')}">📋 CSV Text</button>
+      <button id="btab-excel" onclick="switchBulkTab('excel')" style="${btnStyle('secondary','sm')}">📊 Excel File</button>
+    </div>
+
+    <!-- Class + Arm selectors (shared) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div><label style="${labelStyle()}">Class</label>
+        <select id="bulk-class" style="${inputStyle()}" onchange="updateBulkArms()">${classOpts}</select>
+      </div>
+      <div><label style="${labelStyle()}">Arm</label>
+        <select id="bulk-arm" style="${inputStyle()}">
+          ${App.data.classes[0]?.arms.map(a=>`<option>${a}</option>`).join('')||''}
+        </select>
+      </div>
+    </div>
+
+    <!-- CSV tab -->
+    <div id="bulk-tab-csv">
+      <p style="font-size:.82rem;color:#6b7280;margin:0 0 .6rem;">
+        Format: <code style="background:#f3f4f6;padding:.15rem .4rem;border-radius:4px;">
+        Full Name, Gender, DOB (YYYY-MM-DD), Parent Name, Phone</code>
+      </p>
+      <textarea id="bulk-students-text" rows="9"
+        style="${inputStyle()};resize:vertical;font-family:monospace;font-size:.83rem;"
+        placeholder="Adaeze Okonkwo, Female, 2009-03-14, Mrs Okonkwo, 08012345678&#10;Emeka Eze, Male, 2010-07-22, Mr Eze, 08099887766"></textarea>
+      <div id="bulk-csv-preview" style="margin-top:.65rem;"></div>
+      <div style="display:flex;gap:.65rem;margin-top:1rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="previewBulkStudents()" style="${btnStyle('secondary')}">👁 Preview</button>
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="saveBulkStudents()" style="${btnStyle('primary')}">✅ Import</button>
+      </div>
+    </div>
+
+    <!-- Excel tab -->
+    <div id="bulk-tab-excel" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
+        <p style="margin:0;font-size:.85rem;color:#6b7280;">Upload a .xlsx file with columns:<br>
+          <code style="background:#f3f4f6;padding:.15rem .4rem;border-radius:4px;font-size:.8rem;">
+          Name | Gender | DOB | Parent | Phone</code>
+        </p>
+        <button onclick="downloadStudentTemplate()" style="${btnStyle('secondary')};font-size:.82rem;">⬇ Template</button>
+      </div>
+      <div id="student-excel-drop"
+        ondragover="event.preventDefault();this.style.borderColor='#2563eb';"
+        ondragleave="this.style.borderColor='#d1d5db';"
+        ondrop="handleStudentExcelDrop(event)"
+        onclick="document.getElementById('student-excel-input').click()"
+        style="border:2px dashed #d1d5db;border-radius:10px;padding:2rem;text-align:center;
+               background:#f9fafb;cursor:pointer;transition:border-color .2s;">
+        <div style="font-size:2rem;margin-bottom:.4rem;">📊</div>
+        <p style="margin:0;font-weight:600;color:#374151;font-size:.9rem;">Click or drag &amp; drop Excel file</p>
+        <p style="margin:.2rem 0 0;font-size:.78rem;color:#9ca3af;">.xlsx / .xls only</p>
+      </div>
+      <input type="file" id="student-excel-input" accept=".xlsx,.xls"
+        style="display:none" onchange="handleStudentExcelSelect(this)">
+      <div id="student-excel-info" style="margin-top:.65rem;"></div>
+      <div id="student-excel-preview" style="margin-top:.65rem;"></div>
+      <div style="display:flex;gap:.65rem;margin-top:1rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button id="btn-import-students" onclick="saveExcelStudents()"
+          style="${btnStyle('primary')}" disabled>✅ Import</button>
+      </div>
+    </div>`);
+
+  /* initialise arm dropdown */
+  updateBulkArms();
+};
+
+window.switchBulkTab = function (tab) {
+  document.getElementById('bulk-tab-csv').style.display   = tab==='csv'   ? '' : 'none';
+  document.getElementById('bulk-tab-excel').style.display = tab==='excel' ? '' : 'none';
+  document.getElementById('btab-csv').style.cssText   = btnStyle(tab==='csv'?'primary':'secondary','sm');
+  document.getElementById('btab-excel').style.cssText = btnStyle(tab==='excel'?'primary':'secondary','sm');
+};
+
+window.updateBulkArms = function () {
+  const cls = document.getElementById('bulk-class')?.value;
+  const classData = App.data.classes.find(c => c.name === cls);
+  const armSel = document.getElementById('bulk-arm');
+  if (armSel && classData) armSel.innerHTML = classData.arms.map(a=>`<option>${a}</option>`).join('');
+};
+
+window.previewBulkStudents = function () {
+  const lines   = document.getElementById('bulk-students-text').value.trim().split('\n').filter(Boolean);
+  const preview = document.getElementById('bulk-csv-preview');
+  const parsed  = lines.map((line, i) => {
+    const p = line.split(',').map(x=>x.trim());
+    return { ok: !!p[0], num: i+1, name: p[0]||'', gender: p[1]||'Male', dob: p[2]||'' };
+  });
+  const valid = parsed.filter(p=>p.ok).length;
+  preview.innerHTML = `
+    <div style="background:#f9fafb;border-radius:8px;padding:.85rem 1rem;max-height:180px;overflow-y:auto;">
+      <p style="margin:0 0 .4rem;font-size:.82rem;font-weight:600;">${parsed.length} row(s) — ${valid} valid, ${parsed.length-valid} invalid:</p>
+      ${parsed.map(p=>`<div style="font-size:.8rem;color:${p.ok?'#374151':'#ef4444'};">
+        ${p.ok?'✔':'✘'} ${p.num}. ${p.name||'(empty)'} &nbsp;·&nbsp; ${p.gender}
+      </div>`).join('')}
+    </div>`;
+};
+
+window.saveBulkStudents = async function () {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls  = document.getElementById('bulk-class')?.value?.trim();
+  const arm  = document.getElementById('bulk-arm')?.value?.trim();
+  const text = document.getElementById('bulk-students-text')?.value?.trim();
+
+  if (!cls)  { toast('Select a class first.', 'error'); return; }
+  if (!arm)  { toast('Select an arm first.', 'error'); return; }
+  if (!text) { toast('Enter student names first.', 'error'); return; }
+
+  const lines = text.split('\n').filter(l => l.trim());
+  if (!lines.length) { toast('No student data entered.', 'error'); return; }
+
+  const students = [];
+  lines.forEach(line => {
+    const p = line.split(',').map(x => x.trim());
+    if (!p[0]) return;
+    students.push({
+      name:   p[0],
+      gender: (['Male','Female'].includes(p[1]) ? p[1] : 'Male'),
+      dob:    p[2] || null,
+      parent: p[3] || '',
+      phone:  p[4] || '',
+    });
+  });
+
+  if (!students.length) { toast('No valid rows found.', 'error'); return; }
+
+  const btn = document.querySelector('[onclick="saveBulkStudents()"]');
+  const origText = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+
+  try {
+    const payload = { class: cls, arm, students };
+    console.log('[bulk] sending:', payload);
+    const resp = await Students.bulkCreate(payload);
+    console.log('[bulk] response:', resp);
+
+    const imported = resp.imported ?? resp.data?.length ?? students.length;
+    const skipped  = resp.skipped ?? 0;
+
+    // Refresh from server
+    const fresh = await Students.getAll({ limit: 2000 });
+    if (fresh.data?.length) App.data.students = fresh.data;
+
+    closeModal();
+    renderStudents(_currentFilter, _currentFilters);
+    toast(`✅ ${imported} student${imported !== 1 ? 's' : ''} imported!${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+  } catch (e) {
+    console.error('[bulk] error:', e);
+    toast('Import failed: ' + (e.message || 'Unknown error — check console'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = origText || '✅ Import'; }
+  }
+};
+
+
+/* ── Excel student import ── */
+window.handleStudentExcelDrop = function (e) {
+  e.preventDefault();
+  document.getElementById('student-excel-drop').style.borderColor='#d1d5db';
+  if (e.dataTransfer.files[0]) processStudentExcel(e.dataTransfer.files[0]);
+};
+window.handleStudentExcelSelect = function (input) {
+  if (input.files[0]) processStudentExcel(input.files[0]);
+};
+
+function processStudentExcel(file) {
+  const info = document.getElementById('student-excel-info');
+  if (typeof XLSX === 'undefined') {
+    info.innerHTML = `<p style="color:#ef4444;font-size:.85rem;">⚠ SheetJS (XLSX) library not loaded.</p>`; return;
+  }
+  info.innerHTML = `<p style="color:#6b7280;font-size:.83rem;">⏳ Reading ${file.name}…</p>`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb    = XLSX.read(e.target.result, { type:'array' });
+      const ws    = wb.Sheets[wb.SheetNames[0]];
+      const rows  = XLSX.utils.sheet_to_json(ws, { defval:'' });
+
+      const get = (row, ...keys) => {
+        for (const k of keys) {
+          const match = Object.keys(row).find(rk=>rk.toLowerCase().includes(k.toLowerCase()));
+          if (match) return String(row[match]).trim();
+        } return '';
+      };
+
+      const parsed = rows.map((row,i) => {
+        const name = get(row,'name','full');
+        return { ok: !!name, num:i+2, name, gender: get(row,'gender')||'Male',
+                 dob: get(row,'dob','birth','date'), parent: get(row,'parent','guardian'),
+                 phone: get(row,'phone','tel') };
+      });
+      window._parsedStudentExcel = parsed;
+
+      const valid = parsed.filter(p=>p.ok).length;
+      info.innerHTML = `<p style="font-size:.83rem;color:#374151;">✅ ${file.name} — ${parsed.length} row(s) found.</p>`;
+      document.getElementById('btn-import-students').disabled = valid === 0;
+
+      document.getElementById('student-excel-preview').innerHTML = `
+        <div style="background:#f9fafb;border-radius:8px;padding:.85rem;max-height:200px;overflow-y:auto;">
+          <p style="margin:0 0 .4rem;font-size:.82rem;font-weight:600;">${valid} valid · ${parsed.length-valid} invalid</p>
+          ${parsed.map(p=>`<div style="font-size:.8rem;color:${p.ok?'#374151':'#ef4444'};">
+            ${p.ok?'✔':'✘'} ${p.num}. ${p.name||'(empty)'} &nbsp;·&nbsp; ${p.gender}
+          </div>`).join('')}
+        </div>`;
+    } catch(err) {
+      info.innerHTML = `<p style="color:#ef4444;font-size:.83rem;">⚠ ${err.message}</p>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+window.saveExcelStudents = async function () {
+  if (!priv.canManage()) { denyAccess(); return; }
+  const cls  = document.getElementById('bulk-class')?.value;
+  const arm  = document.getElementById('bulk-arm')?.value;
+  const rows = (window._parsedStudentExcel || []).filter(p => p.ok);
+
+  if (!cls || !arm) { toast('Select a class and arm first.', 'error'); return; }
+  if (!rows.length) { toast('No valid rows to import.', 'warning'); return; }
+
+  const students = rows.map(p => ({
+    name:   p.name,
+    gender: p.gender || 'Male',
+    dob:    p.dob    || '',
+    parent: p.parent || '',
+    phone:  p.phone  || '',
+  }));
+
+  const btn = document.getElementById('btn-import-students');
+  if (btn) { btn.disabled = true; btn.textContent = 'Importing…'; }
+
+  try {
+    const resp = await Students.bulkCreate({ class: cls, arm, students });
+    const imported = resp.imported || resp.data?.length || students.length;
+    const skipped  = resp.skipped || 0;
+
+    // Refresh local student list from server
+    const fresh = await Students.getAll({ limit: 2000 });
+    App.data.students = fresh.data || App.data.students;
+
+    window._parsedStudentExcel = null;
+    closeModal();
+    renderStudents(_currentFilter, _currentFilters);
+    toast(`✅ ${imported} student${imported !== 1 ? 's' : ''} imported!${skipped ? ` (${skipped} skipped)` : ''}`, 'success');
+  } catch (e) {
+    toast('Import failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Import Students'; }
+  }
+};
+
+/** Download a minimal Excel template for bulk student import */
+window.downloadStudentTemplate = function () {
+  if (typeof XLSX === 'undefined') {
+    toast('SheetJS not loaded.', 'error'); return;
+  }
+  const wb  = XLSX.utils.book_new();
+  const ws  = XLSX.utils.aoa_to_sheet([
+    ['Name *','Gender','DOB (YYYY-MM-DD)','Parent / Guardian','Phone'],
+    ['Adaeze Okonkwo','Female','2009-03-14','Mrs Okonkwo','08012345678'],
+    ['Emeka Eze','Male','2010-07-22','Mr Eze','08099887766'],
+  ]);
+  ws['!cols'] = [{wch:24},{wch:10},{wch:18},{wch:22},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Students');
+  XLSX.writeFile(wb, 'students_template.xlsx');
+  toast('Template downloaded!', 'success');
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PRINT
+══════════════════════════════════════════════════════════════════════════════ */
+window.printStudentList = function () {
+  const students = App.data.students || [];
+  const rows     = students.map((s,i) => `
+    <tr>
+      <td>${i+1}</td><td>${s.id}</td><td>${s.name}</td>
+      <td>${s.class} ${s.arm}</td><td>${s.gender}</td><td>${s.attendance}%</td>
+    </tr>`).join('');
+
+  const win = window.open('','_blank');
+  win.document.write(`
+    <html><head><title>Student List</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;padding:20px;}
+      h2{margin-bottom:4px;} p{color:#666;margin:0 0 16px;}
+      table{width:100%;border-collapse:collapse;}
+      th,td{border:1px solid #ddd;padding:6px 10px;text-align:left;}
+      th{background:#f3f4f6;font-weight:600;}
+      tr:nth-child(even){background:#fafafa;}
+      @media print{button{display:none;}}
+    </style></head><body>
+    <h2>Student List — ${App.data.schoolInfo?.name||'School'}</h2>
+    <p>Generated: ${new Date().toLocaleString()} &nbsp;|&nbsp; Total: ${students.length}</p>
+    <button onclick="window.print()" style="margin-bottom:12px;padding:6px 14px;cursor:pointer;">🖨 Print</button>
+    <table>
+      <thead><tr><th>#</th><th>ID</th><th>Name</th><th>Class</th><th>Gender</th><th>Attendance</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </body></html>`);
+  win.document.close();
+};
+
+/* ─────────────────────────────────────────
+   10. TEACHERS / STAFF  (Admin only)
+───────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────────
+   STAFF MANAGEMENT MODULE
+   Handles: Teachers, Admin, Support, Leadership staff
+   Features: CRUD, Credential Uploads, Positions, Departments, Filters, Export
+   ───────────────────────────────────────────────────────────────────────────── */
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const STAFF_POSITIONS = {
+  Academic:       ['Class Teacher','Subject Teacher','Form Master/Mistress','Head of Department','Assistant HOD','Remedial Teacher','Laboratory Technician'],
+  Administrative: ['Principal Secretary','School Registrar','Admissions Officer','Examination Officer','Account Officer','Bursar','Records Officer','Data Entry Clerk'],
+  Support:        ['Librarian','Library Assistant','ICT Technician','Lab Assistant','Nurse/Health Officer','Counsellor','Driver','Security Officer','Cleaner','Gardener','Canteen Attendant'],
+  Leadership:     ['Principal','Vice Principal (Academics)','Vice Principal (Administration)','Dean of Students','Head of Junior School','Head of Senior School','Chaplain/Welfare Officer']
+};
+
+const STAFF_CATEGORIES = ['All', 'Academic', 'Administrative', 'Support', 'Leadership'];
+
+const STAFF_DEPARTMENTS = [
+  'Mathematics','English Language','Sciences','Social Sciences','Humanities',
+  'Languages','Business Studies','Technical','Arts','Physical Education',
+  'ICT / Computer Studies','Religious Studies','Home Economics',
+  'Administration','Bursary / Finance','Library','Health / Medical',
+  'Security','Maintenance','Catering'
+];
+
+// STAFF_SUBJECTS and STAFF_CLASSES are computed dynamically from App.data
+// so they always reflect whatever subjects/classes the admin has set up.
+// Fallback to common defaults only if App.data hasn't loaded yet.
+const DEFAULT_SUBJECTS = [
+  'Mathematics','English Language','Biology','Chemistry','Physics',
+  'Economics','Government','Literature','Accounting','Geography',
+  'CRS / MRS','Social Studies','Basic Technology','Agricultural Sci.',
+  'Computer Studies','French','Civic Education','Fine Arts','Music',
+  'Physical Education','Home Economics','Further Mathematics','Data Processing'
+];
+
+function getStaffSubjects() {
+  const fromDB = (App?.data?.subjects || []).map(s => s.name || s).filter(Boolean);
+  return fromDB.length ? fromDB : DEFAULT_SUBJECTS;
+}
+
+function getStaffClasses() {
+  const fromDB = (App?.data?.classes || []).map(c => c.name || c).filter(Boolean);
+  return fromDB.length ? fromDB : ['JSS 1','JSS 2','JSS 3','SS 1','SS 2','SS 3'];
+}
+
+// Keep backward-compatible array references (used in staff.js via STAFF_SUBJECTS / STAFF_CLASSES)
+// These are computed at call time so always fresh
+Object.defineProperty(window, 'STAFF_SUBJECTS', { get: getStaffSubjects, configurable: true });
+Object.defineProperty(window, 'STAFF_CLASSES',  { get: getStaffClasses,  configurable: true });
+
+const STAFF_STATUS_COLORS = {
+  Active: 'success',
+  'On Leave': 'warning',
+  Suspended: 'danger',
+  Resigned: 'gray'
+};
+
+// ── Module State ───────────────────────────────────────────────────────────────
+let _activeStaffCategory = 'All';
+let _currentEditStaffId = null;
+let _pendingStaffFiles = [];
+
+// ── Inject CSS ─────────────────────────────────────────────────────────────────
+(function injectStaffStyles() {
+  if (document.getElementById('staff-module-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'staff-module-styles';
+  style.textContent = `
+    .sm-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:.75rem; margin-bottom:1.5rem; }
+    .sm-stat { background:var(--surface,#181c27); border:1px solid var(--border,#2a2f42); border-radius:10px; padding:.9rem 1rem; }
+    .sm-stat-num { font-size:1.6rem; font-weight:700; font-family:monospace; line-height:1; }
+    .sm-stat-label { font-size:.72rem; color:var(--text2,#8892a4); text-transform:uppercase; letter-spacing:.05em; margin-top:.3rem; }
+    .sm-tabs { display:flex; gap:.4rem; background:var(--surface,#181c27); border-radius:10px; padding:.3rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+    .sm-tab { padding:.4rem .9rem; border-radius:7px; font-size:.8rem; font-weight:500; cursor:pointer; transition:all .15s; color:var(--text2,#8892a4); border:none; background:none; font-family:inherit; }
+    .sm-tab.active { background:var(--accent,#4f8ef7); color:#fff; }
+    .sm-filters { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1.2rem; align-items:center; }
+    .sm-search-wrap { position:relative; flex:1; min-width:200px; }
+    .sm-search-wrap input { width:100%; padding:.55rem .9rem .55rem 2.2rem; background:var(--surface,#181c27); border:1px solid var(--border,#2a2f42); border-radius:8px; color:var(--text,#e2e8f0); font-size:.85rem; font-family:inherit; outline:none; transition:border-color .15s; }
+    .sm-search-wrap input:focus { border-color:var(--accent,#4f8ef7); }
+    .sm-search-icon { position:absolute; left:.65rem; top:50%; transform:translateY(-50%); color:var(--text3,#4a5568); font-size:.85rem; pointer-events:none; }
+    .sm-filter-sel { padding:.52rem .8rem; background:var(--surface,#181c27); border:1px solid var(--border,#2a2f42); border-radius:8px; color:var(--text,#e2e8f0); font-size:.82rem; font-family:inherit; outline:none; cursor:pointer; }
+    .sm-table-wrap { overflow-x:auto; background:var(--surface,#181c27); border:1px solid var(--border,#2a2f42); border-radius:10px; }
+    .sm-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+    .sm-table thead tr { background:var(--surface2,#1e2333); }
+    .sm-table th { padding:.7rem 1rem; text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text2,#8892a4); font-weight:600; white-space:nowrap; }
+    .sm-table td { padding:.7rem 1rem; border-top:1px solid var(--border,#2a2f42); vertical-align:middle; }
+    .sm-table tr:hover td { background:rgba(79,142,247,.04); }
+    .sm-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#4f8ef7,#7c3aed); display:inline-flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; color:#fff; flex-shrink:0; }
+    .sm-name-cell { display:flex; align-items:center; gap:.6rem; }
+    .sm-badge { display:inline-block; padding:.2rem .55rem; border-radius:99px; font-size:.7rem; font-weight:600; }
+    .sm-badge-success { background:rgba(16,185,129,.15); color:#10b981; }
+    .sm-badge-warning { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .sm-badge-danger  { background:rgba(239,68,68,.15); color:#ef4444; }
+    .sm-badge-blue    { background:rgba(79,142,247,.15); color:#4f8ef7; }
+    .sm-badge-purple  { background:rgba(124,58,237,.15); color:#a78bfa; }
+    .sm-badge-gray    { background:rgba(148,163,184,.1); color:#94a3b8; }
+    .sm-cred-badge { display:inline-flex; align-items:center; gap:.3rem; background:rgba(79,142,247,.12); border:1px solid rgba(79,142,247,.25); color:#4f8ef7; border-radius:6px; padding:.15rem .45rem; font-size:.68rem; font-weight:600; cursor:pointer; }
+    .sm-upload-zone { border:2px dashed var(--border,#2a2f42); border-radius:10px; padding:1.2rem; text-align:center; cursor:pointer; transition:border-color .2s, background .2s; position:relative; }
+    .sm-upload-zone:hover, .sm-upload-zone.drag { border-color:var(--accent,#4f8ef7); background:rgba(79,142,247,.05); }
+    .sm-upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .sm-cred-list { display:flex; flex-direction:column; gap:.4rem; margin-top:.7rem; }
+    .sm-cred-item { display:flex; align-items:center; gap:.6rem; background:var(--bg,#0f1117); border:1px solid var(--border,#2a2f42); border-radius:7px; padding:.45rem .75rem; font-size:.78rem; }
+    .sm-cred-item .ci-name { flex:1; color:var(--text,#e2e8f0); }
+    .sm-cred-item .ci-size { color:var(--text3,#4a5568); font-size:.7rem; }
+    .sm-cred-item .ci-del { cursor:pointer; color:#ef4444; font-size:.85rem; border:none; background:none; padding:0; }
+    .sm-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .sm-span2 { grid-column:1/-1; }
+    .sm-form-group label { display:block; font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--text2,#8892a4); margin-bottom:.4rem; }
+    .sm-form-group input, .sm-form-group select, .sm-form-group textarea { width:100%; padding:.6rem .85rem; background:var(--bg,#0f1117); border:1px solid var(--border,#2a2f42); border-radius:8px; color:var(--text,#e2e8f0); font-size:.85rem; font-family:inherit; outline:none; transition:border-color .15s; }
+    .sm-form-group input:focus, .sm-form-group select:focus, .sm-form-group textarea:focus { border-color:var(--accent,#4f8ef7); }
+    .sm-form-group textarea { resize:vertical; min-height:70px; }
+    .sm-form-section { grid-column:1/-1; padding:.5rem 0 .3rem; border-top:1px solid var(--border,#2a2f42); margin-top:.3rem; }
+    .sm-form-section span { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--accent,#4f8ef7); }
+    .sm-empty { text-align:center; padding:3rem; color:var(--text3,#4a5568); }
+    .sm-empty-icon { font-size:2rem; margin-bottom:.6rem; }
+  `;
+  document.head.appendChild(style);
+})();
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function smMakeId() {
+  const num = (App.data.staff || App.data.teachers || []).length + 1;
+  return 'S' + String(num).padStart(3, '0');
+}
+
+function smGetInitials(name) {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+function smAvatarColor(id) {
+  const colors = ['#4f8ef7', '#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+  const num = parseInt((id || '0').replace(/\D/g, '')) || 0;
+  return colors[num % colors.length];
+}
+
+function smFileIcon(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const icons = { pdf: '📄', jpg: '🖼️', jpeg: '🖼️', png: '🖼️', doc: '📝', docx: '📝' };
+  return icons[ext] || '📎';
+}
+
+function smFormatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// ── Render Entry Point ─────────────────────────────────────────────────────────
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT — CLASS LIST
+   Purpose options: Register / Attendance / Payment / Exam
+════════════════════════════════════════════════════════════════ */
+window.printClassList = function(className, arm) {
+  const students = armStudents(className, arm);
+  if (!students.length) { alert('No students in this class/arm.'); return; }
+
+  const school = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+  const principal  = school.principal || '';
+
+  // Prompt for purpose — shown as modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:grid;place-items:center;padding:1rem';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:1.75rem;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22)">
+      <h3 style="margin:0 0 1rem;color:#1e3a5f;font-size:1rem;font-weight:700">🖨 Print Class List — ${className} ${arm}</h3>
+      <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.1rem">Select the purpose for this list:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.1rem">
+        ${[
+          ['📋','Register / Roll Call', 'register'],
+          ['✅','Daily Attendance',     'attendance'],
+          ['💰','Fee Payment List',     'payment'],
+          ['📝','Exam / Score Entry',   'exam'],
+          ['📞','Contact / Phone List', 'contact'],
+          ['🏆','Results / Awards',     'results'],
+        ].map(([ico, label, type]) => `
+          <button onclick="window._doPrintList('${className}','${arm}','${type}');this.closest('div').parentElement.remove()"
+            style="padding:.65rem .75rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                   background:#f8fafc;font-size:.82rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.5rem;
+                   transition:all .15s"
+            onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+            onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+            <span>${ico}</span><span>${label}</span>
+          </button>`).join('')}
+      </div>
+      <button onclick="this.closest('div').parentElement.remove()"
+        style="width:100%;padding:.5rem;border:1.5px solid #e5e7eb;border-radius:8px;
+               background:#fff;color:#6b7280;font-size:.85rem;font-weight:600;cursor:pointer">
+        Cancel
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+};
+
+window._doPrintList = function(className, arm, purpose) {
+  const students = armStudents(className, arm);
+  const school   = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  const purposes = {
+    register:   { title:'Class Register',          cols:['S/N','Student Name','Student ID','Signature'] },
+    attendance: { title:'Attendance Sheet',         cols:['S/N','Student Name','Student ID','Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'] },
+    payment:    { title:'Fee Payment Register',     cols:['S/N','Student Name','Student ID','Fee Type','Amount','Payment Date','Status','Collector\'s Initials'] },
+    exam:       { title:'Examination Score Sheet',  cols:['S/N','Student Name','Student ID','CA (___/20)','Exam (___/80)','Total','Grade','Remark'] },
+    contact:    { title:'Parent / Guardian Contact',cols:['S/N','Student Name','Student ID','Parent Name','Phone','Email','Address'] },
+    results:    { title:'Academic Results Sheet',   cols:['S/N','Student Name','Student ID','1st Term','2nd Term','3rd Term','Avg','Pos','Remark'] },
+  };
+  const cfg = purposes[purpose] || purposes.register;
+
+  const rows = students.map((s, i) => {
+    const cells = cfg.cols.map((col, ci) => {
+      if (ci === 0) return `<td style="text-align:center">${i+1}</td>`;
+      if (ci === 1) return `<td style="font-weight:600">${s.name}</td>`;
+      if (ci === 2) return `<td style="font-family:monospace;font-size:.78rem">${s.id}</td>`;
+      return `<td></td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const colW = Math.floor(100 / cfg.cols.length);
+  const headerRow = cfg.cols.map(h => `<th style="width:${colW}%">${h}</th>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${cfg.title} — ${className} ${arm}</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; }
+    .header { text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a5f; padding-bottom: 6px; }
+    .header h1 { font-size: 14px; font-weight: 800; color: #1e3a5f; }
+    .header h2 { font-size: 12px; font-weight: 700; margin: 3px 0; }
+    .header .meta { display: flex; justify-content: space-between; font-size: 10px; margin-top: 4px; color: #374151; }
+    .logo { width: 50px; height: 50px; object-fit: contain; float: left; margin-right: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th { background: #1e3a5f; color: #fff; padding: 4px 5px; font-size: 9px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; border: 1px solid #1e3a5f; }
+    td { padding: 5px 5px; border: 1px solid #d1d5db; height: 22px; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    tr:first-child td { font-weight: 700; }
+    .sign-row { display: flex; justify-content: space-between; margin-top: 18px; font-size: 10px; }
+    .sign-box { text-align: center; }
+    .sign-line { border-top: 1px solid #111; width: 160px; margin: 18px auto 2px; }
+    @media print { .no-print { display: none; } }
+    .no-print { text-align: center; margin-bottom: 10px; }
+    .no-print button { background: #1e3a5f; color: #fff; border: none; padding: 6px 18px; border-radius: 6px; cursor: pointer; font-weight: 700; margin-right: 8px; }
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#6b7280!important">✕ Close</button>
+  </div>
+  <div class="header">
+    <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+    <h1>${schoolName}</h1>
+    <h2>${cfg.title} — ${className} ${arm}</h2>
+    <div class="meta">
+      <span><strong>Class:</strong> ${className} ${arm} &nbsp;&nbsp; <strong>No. of Students:</strong> ${students.length}</span>
+      <span><strong>Session:</strong> ${session} &nbsp;&nbsp; <strong>Term:</strong> ${term}</span>
+      <span><strong>Date Printed:</strong> ${new Date().toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr>${headerRow}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="sign-row">
+    <div class="sign-box"><div class="sign-line"></div><span>Class Teacher's Signature</span></div>
+    <div class="sign-box"><div class="sign-line"></div><span>Form Master's Signature</span></div>
+    <div class="sign-box"><div class="sign-line"></div><span>Principal's Signature</span></div>
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=1100,height=750,scrollbars=yes');
+  if (w) { w.document.write(html); w.document.close(); }
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   PRINT — EMPTY SCORESHEET
+   Prints a subject × student grid for manual score entry
+════════════════════════════════════════════════════════════════ */
+window.printScoresheet = function(className, arm) {
+  const students = armStudents(className, arm);
+  if (!students.length) { alert('No students in this class/arm.'); return; }
+
+  const school   = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  // Get allocated subjects for this class/arm
+  const allocKey   = `${className}_${arm}`;
+  const rawAlloc   = App.data.subjectAllocations?.[allocKey]
+                  || App.data.subjectAllocations?.[className]
+                  || [];
+  const subjects   = rawAlloc.length
+    ? rawAlloc.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean)
+    : (App.data.subjects || []).map(s => s.name || s.subject_name || '').filter(Boolean);
+
+  const maxCA   = typeof getMaxCA   === 'function' ? getMaxCA()   : 20;
+  const maxExam = typeof getMaxExam === 'function' ? getMaxExam() : 80;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:grid;place-items:center;padding:1rem';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:1.75rem;max-width:460px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22)">
+      <h3 style="margin:0 0 .75rem;color:#1e3a5f;font-size:1rem;font-weight:700">📋 Print Scoresheet — ${className} ${arm}</h3>
+      <p style="font-size:.84rem;color:#6b7280;margin-bottom:1rem">Select scoresheet type:</p>
+      <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem">
+        <button onclick="window._doPrintScoresheet('${className}','${arm}','single');this.closest('div').parentElement.remove()"
+          style="padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                 background:#f8fafc;font-size:.84rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.6rem"
+          onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+          onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+          <span>📄</span>
+          <div><strong>Single Subject Sheet</strong>
+            <div style="font-size:.75rem;color:#6b7280">One sheet per subject — CA + Exam columns</div>
+          </div>
+        </button>
+        <button onclick="window._doPrintScoresheet('${className}','${arm}','all');this.closest('div').parentElement.remove()"
+          style="padding:.65rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;
+                 background:#f8fafc;font-size:.84rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:.6rem"
+          onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd'"
+          onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e5e7eb'">
+          <span>📊</span>
+          <div><strong>All Subjects Grid</strong>
+            <div style="font-size:.75rem;color:#6b7280">All subjects across top — students down the side</div>
+          </div>
+        </button>
+      </div>
+      <button onclick="this.closest('div').parentElement.remove()"
+        style="width:100%;padding:.5rem;border:1.5px solid #e5e7eb;border-radius:8px;
+               background:#fff;color:#6b7280;font-size:.85rem;font-weight:600;cursor:pointer">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+};
+
+window._doPrintScoresheet = function(className, arm, type) {
+  const students   = armStudents(className, arm);
+  const school     = App.data.schoolInfo || {};
+  const schoolName = school.name || school.school_name || 'Sacred Heart College Eziukwu Aba';
+  const session    = school.session || school.current_session || '____/____';
+  const term       = school.term    || school.current_term    || '__________ Term';
+
+  const allocKey = `${className}_${arm}`;
+  const rawAlloc = App.data.subjectAllocations?.[allocKey] || App.data.subjectAllocations?.[className] || [];
+  const subjects = rawAlloc.length
+    ? rawAlloc.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean)
+    : (App.data.subjects || []).map(s => s.name || s.subject_name || '').filter(Boolean);
+
+  const maxCA   = typeof getMaxCA   === 'function' ? getMaxCA()   : 20;
+  const maxExam = typeof getMaxExam === 'function' ? getMaxExam() : 80;
+
+  const baseStyle = `
+    @page { size: A4 landscape; margin: 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #111; }
+    .hdr { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px; margin-bottom: 6px; }
+    .hdr h1 { font-size: 13px; font-weight: 800; color: #1e3a5f; }
+    .hdr h2 { font-size: 11px; font-weight: 700; margin: 2px 0; }
+    .meta { display: flex; justify-content: space-between; font-size: 9px; margin-top: 3px; }
+    .logo { width: 44px; height: 44px; object-fit: contain; float: left; margin-right: 6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1e3a5f; color: #fff; padding: 3px 4px; font-size: 8.5px; text-align: center; border: 1px solid #1e3a5f; font-weight: 700; text-transform: uppercase; }
+    th.subj { background: #2563eb; }
+    td { padding: 4px 4px; border: 1px solid #d1d5db; height: 20px; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    .sn { text-align: center; width: 28px; }
+    .name { font-weight: 600; min-width: 140px; }
+    .sid { font-family: monospace; font-size: 8.5px; min-width: 110px; }
+    .score { text-align: center; min-width: 36px; }
+    .total { text-align: center; min-width: 36px; font-weight: 700; background: #f0fdf4 !important; }
+    .sign { display: flex; justify-content: space-between; margin-top: 14px; font-size: 9px; }
+    .sbox { text-align: center; }
+    .sline { border-top: 1px solid #111; width: 140px; margin: 14px auto 2px; }
+    .no-print { text-align: center; margin-bottom: 8px; }
+    .no-print button { background: #1e3a5f; color: #fff; border: none; padding: 5px 16px; border-radius: 5px; cursor: pointer; font-weight: 700; margin-right: 6px; }
+    @media print { .no-print { display: none; } .page-break { page-break-after: always; } }`;
+
+  let body = '';
+
+  if (type === 'single') {
+    // One scoresheet per subject
+    subjects.forEach((subj, si) => {
+      const rows = students.map((s, i) => `
+        <tr>
+          <td class="sn">${i+1}</td>
+          <td class="name">${s.name}</td>
+          <td class="sid">${s.id}</td>
+          <td class="score"></td>
+          <td class="score"></td>
+          <td class="total"></td>
+          <td class="score"></td>
+          <td class="score"></td>
+        </tr>`).join('');
+      body += `
+        <div class="${si < subjects.length-1 ? 'page-break' : ''}">
+          <div class="hdr">
+            <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+            <h1>${schoolName}</h1>
+            <h2>Score Sheet — ${subj} — ${className} ${arm}</h2>
+            <div class="meta">
+              <span><strong>Class:</strong> ${className} ${arm}</span>
+              <span><strong>Subject:</strong> ${subj} &nbsp; <strong>Max CA:</strong> ${maxCA} &nbsp; <strong>Max Exam:</strong> ${maxExam}</span>
+              <span><strong>${session} — ${term}</strong></span>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th class="sn">S/N</th>
+              <th style="min-width:140px">Student Name</th>
+              <th style="min-width:110px">Student ID</th>
+              <th class="score">CA 1<br>(${Math.round(maxCA/2)})</th>
+              <th class="score">CA 2<br>(${maxCA - Math.round(maxCA/2)})</th>
+              <th class="total">CA Total<br>(${maxCA})</th>
+              <th class="score">Exam<br>(${maxExam})</th>
+              <th class="score">Total<br>(100)</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="sign">
+            <div class="sbox"><div class="sline"></div><span>Subject Teacher</span></div>
+            <div class="sbox"><div class="sline"></div><span>HOD / Coordinator</span></div>
+            <div class="sbox"><div class="sline"></div><span>Principal</span></div>
+          </div>
+        </div>`;
+    });
+  } else {
+    // All-subjects grid
+    const subjectCols = subjects.map(s => `<th class="subj score" title="${s}">${s.length > 12 ? s.slice(0,11)+'…' : s}<br>(100)</th>`).join('');
+    const rows = students.map((s, i) => {
+      const scoreCells = subjects.map(() => `<td class="score"></td>`).join('');
+      return `<tr>
+        <td class="sn">${i+1}</td>
+        <td class="name">${s.name}</td>
+        <td class="sid">${s.id}</td>
+        ${scoreCells}
+        <td class="total"></td>
+        <td class="score"></td>
+        <td class="score"></td>
+      </tr>`;
+    }).join('');
+    body = `
+      <div class="hdr">
+        <img class="logo" src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+        <h1>${schoolName}</h1>
+        <h2>Class Score Sheet — ${className} ${arm} — All Subjects</h2>
+        <div class="meta">
+          <span><strong>Class:</strong> ${className} ${arm} &nbsp; <strong>Students:</strong> ${students.length}</span>
+          <span><strong>Session:</strong> ${session} &nbsp; <strong>Term:</strong> ${term}</span>
+          <span><strong>Date:</strong> ${new Date().toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th class="sn">S/N</th>
+          <th style="min-width:150px">Student Name</th>
+          <th style="min-width:100px">Student ID</th>
+          ${subjectCols}
+          <th class="total">Total<br>Score</th>
+          <th class="score">Avg</th>
+          <th class="score">Pos</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <div class="sign">
+        <div class="sbox"><div class="sline"></div><span>Class Teacher</span></div>
+        <div class="sbox"><div class="sline"></div><span>Form Master</span></div>
+        <div class="sbox"><div class="sline"></div><span>Principal</span></div>
+      </div>`;
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Scoresheet — ${className} ${arm}</title>
+    <style>${baseStyle}</style></head><body>
+    <div class="no-print">
+      <button onclick="window.print()">🖨 Print</button>
+      <button onclick="window.close()" style="background:#6b7280!important">✕ Close</button>
+    </div>
+    ${body}
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=1150,height=780,scrollbars=yes');
+  if (w) { w.document.write(html); w.document.close(); }
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   PARENT EMAIL MANAGER
+   Bulk tool to add / update parent email addresses
+════════════════════════════════════════════════════════════════ */
+window.openParentEmailManager = function(filterClass, filterArm) {
+  const classes = App.data.classes || [];
+  const classOpts = `<option value="">All Classes</option>` +
+    classes.map(c => `<option value="${c.name}" ${filterClass===c.name?'selected':''}>${c.name}</option>`).join('');
+
+  const allStudents = App.data.students || [];
+  let list = [...allStudents].sort((a,b)=>a.name.localeCompare(b.name));
+  if (filterClass) list = list.filter(s => s.class === filterClass);
+  if (filterArm)   list = list.filter(s => s.arm   === filterArm);
+
+  const missing   = list.filter(s => !s.parent_email);
+  const hasEmail  = list.filter(s =>  s.parent_email);
+
+  const rows = list.map(s => {
+    const hasMail = !!s.parent_email;
+    return `<tr id="per-row-${s.id.replace(/[^a-z0-9]/gi,'-')}">
+      <td style="font-weight:600">${s.name}</td>
+      <td style="font-size:.78rem;color:#6b7280">${s.class||''} ${s.arm||''}</td>
+      <td style="font-size:.75rem;font-family:monospace">${s.id}</td>
+      <td style="font-size:.8rem;color:#6b7280">${s.parent||'—'}</td>
+      <td>
+        <div style="display:flex;gap:.4rem;align-items:center;">
+          <input type="email" id="pem-${s.id.replace(/[^a-z0-9]/gi,'-')}"
+            value="${s.parent_email||''}" placeholder="email@example.com"
+            style="flex:1;min-width:180px;padding:.38rem .65rem;border:1.5px solid ${hasMail?'#86efac':'#fca5a5'};
+                   border-radius:7px;font-size:.82rem;outline:none;"
+            onfocus="this.style.borderColor='#93c5fd'"
+            onblur="this.style.borderColor=this.value?'#86efac':'#fca5a5'">
+          <button onclick="saveSingleParentEmail('${s.id}')"
+            style="padding:.38rem .75rem;background:#1e3a5f;color:#fff;border:none;border-radius:7px;
+                   font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+            💾 Save
+          </button>
+        </div>
+        ${hasMail?`<div style="font-size:.7rem;color:#16a34a;margin-top:.2rem;">✓ ${s.parent_email}</div>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  showModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+      <h3 style="margin:0;color:#1e3a5f;font-size:1rem;font-weight:800;">📧 Parent Email Manager</h3>
+      <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:.78rem;color:#16a34a;font-weight:600;">✓ ${hasEmail.length} have email</span>
+        <span style="font-size:.78rem;color:#dc2626;font-weight:600;">⚠ ${missing.length} missing</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+      <select id="pem-filter-class" onchange="openParentEmailManager(this.value,document.getElementById('pem-filter-arm')?.value)"
+        style="padding:.42rem .7rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.83rem;outline:none">
+        ${classOpts}
+      </select>
+      <select id="pem-filter-arm" onchange="openParentEmailManager(document.getElementById('pem-filter-class')?.value,this.value)"
+        style="padding:.42rem .7rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.83rem;outline:none">
+        <option value="">All Arms</option>
+        ${filterClass ? (classes.find(c=>c.name===filterClass)?.arms||[]).map(a=>`<option value="${a}" ${filterArm===a?'selected':''}>${a}</option>`).join('') : ''}
+      </select>
+      <label style="display:flex;align-items:center;gap:.3rem;font-size:.82rem;color:#374151;cursor:pointer;">
+        <input type="checkbox" id="pem-show-missing" ${!filterClass?'checked':''} onchange="
+          const rows = document.querySelectorAll('#pem-table tr[id]');
+          rows.forEach(r=>{ if(this.checked){ r.style.display=r.dataset.hasMail==='0'?'':'none'; }else{r.style.display='';} })
+        ">
+        Show only missing
+      </label>
+    </div>
+
+    <div style="max-height:480px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
+      <table id="pem-table" style="width:100%;border-collapse:collapse;font-size:.83rem;">
+        <thead style="position:sticky;top:0;z-index:1;">
+          <tr>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Student</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Class</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">ID</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Parent</th>
+            <th style="padding:.55rem .75rem;background:#1e3a5f;color:#fff;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase">Email Address</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:.5rem;margin-top:.85rem;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div style="font-size:.78rem;color:#6b7280;">
+        Tip: Press <kbd style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:.1rem .4rem;font-size:.73rem;">Tab</kbd>
+        to move between fields, then click 💾 Save.
+      </div>
+      <div style="display:flex;gap:.5rem;">
+        <button onclick="saveAllParentEmails()" style="padding:.48rem 1.1rem;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;">
+          💾 Save All
+        </button>
+        <button onclick="closeModal()" style="padding:.48rem 1rem;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;">
+          Close
+        </button>
+      </div>
+    </div>`);
+
+  // Mark rows with data attr for "show missing" filter
+  requestAnimationFrame(() => {
+    list.forEach(s => {
+      const row = document.getElementById(`per-row-${s.id.replace(/[^a-z0-9]/gi,'-')}`);
+      if (row) row.dataset.hasMail = s.parent_email ? '1' : '0';
+    });
+  });
+};
+
+window.saveSingleParentEmail = async function(studentId) {
+  const safeId  = studentId.replace(/[^a-z0-9]/gi,'-');
+  const input   = document.getElementById(`pem-${safeId}`);
+  const email   = input?.value?.trim() || null;
+  const row     = document.getElementById(`per-row-${safeId}`);
+
+  // Basic validation
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    input.style.borderColor = '#dc2626';
+    toast('Please enter a valid email address.', 'error');
+    return;
+  }
+
+  try {
+    await Students.update(studentId, { parent_email: email });
+    // Update local cache
+    const s = (App.data.students||[]).find(x=>x.id===studentId);
+    if (s) s.parent_email = email;
+    if (input) { input.style.borderColor = email ? '#86efac' : '#fca5a5'; }
+    if (row)   { row.dataset.hasMail = email ? '1' : '0'; }
+    toast(`✅ Email ${email ? 'saved' : 'removed'} for ${s?.name||studentId}`, 'success');
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  }
+};
+
+window.saveAllParentEmails = async function() {
+  const inputs = document.querySelectorAll('#pem-table input[type="email"]');
+  let saved = 0, errors = 0;
+  for (const input of inputs) {
+    const email = input.value.trim() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errors++; continue; }
+    // Extract student ID from input id: pem-SAHARCO-20250115-0001 -> SAHARCO/20250115/0001
+    const rawId = input.id.replace(/^pem-/, '');
+    // Find matching student by safe ID
+    const s = (App.data.students||[]).find(st => st.id.replace(/[^a-z0-9]/gi,'-') === rawId);
+    if (!s) continue;
+    if (s.parent_email === email) continue; // no change
+    try {
+      await Students.update(s.id, { parent_email: email });
+      s.parent_email = email;
+      saved++;
+    } catch(e) { errors++; }
+  }
+  if (errors) toast(`${saved} saved, ${errors} failed (check email formats)`, 'warning');
+  else toast(`✅ ${saved} email(s) saved successfully`, 'success');
+  if (saved > 0) closeModal();
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   DUPLICATE STUDENT DETECTOR
+   Finds duplicates by: exact name, similar name (≥85%), same
+   class+arm+parent combo, or same phone number.
+   Prompts: Keep All / Remove Duplicates / Merge Records
+════════════════════════════════════════════════════════════════ */
+window.openDuplicateDetector = function() {
+  const students = App.data.students || [];
+  if (!students.length) { toast('No students loaded.', 'warning'); return; }
+
+  // ── Similarity: Levenshtein distance normalised ──────────────────
+  function similarity(a, b) {
+    a = a.toLowerCase().trim();
+    b = b.toLowerCase().trim();
+    if (a === b) return 1;
+    const la = a.length, lb = b.length;
+    if (!la || !lb) return 0;
+    const dp = Array.from({ length: la + 1 }, (_, i) =>
+      Array.from({ length: lb + 1 }, (_, j) => j === 0 ? i : j === 0 ? i : 0)
+    );
+    for (let i = 1; i <= la; i++)
+      for (let j = 1; j <= lb; j++)
+        dp[i][j] = a[i-1] === b[j-1]
+          ? dp[i-1][j-1]
+          : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    return 1 - dp[la][lb] / Math.max(la, lb);
+  }
+
+  // ── Find all duplicate groups ────────────────────────────────────
+  const groups  = [];
+  const matched = new Set();
+
+  for (let i = 0; i < students.length; i++) {
+    if (matched.has(students[i].id)) continue;
+    const group = [students[i]];
+    const reasons = {};
+
+    for (let j = i + 1; j < students.length; j++) {
+      if (matched.has(students[j].id)) continue;
+      const si = students[i], sj = students[j];
+      const reasons_ij = [];
+
+      // Exact name match (case-insensitive)
+      if (si.name.toLowerCase().trim() === sj.name.toLowerCase().trim())
+        reasons_ij.push('exact name match');
+
+      // Similar name (≥85% similarity)
+      else if (similarity(si.name, sj.name) >= 0.85)
+        reasons_ij.push(`similar name (${Math.round(similarity(si.name, sj.name)*100)}%)`);
+
+      // Same class + arm + parent (same household)
+      if (si.class === sj.class && si.arm === sj.arm && si.parent &&
+          si.parent.toLowerCase().trim() === (sj.parent||'').toLowerCase().trim())
+        reasons_ij.push('same class, arm & parent');
+
+      // Same phone
+      if (si.phone && si.phone === sj.phone)
+        reasons_ij.push('same phone number');
+
+      if (reasons_ij.length) {
+        group.push(sj);
+        reasons[sj.id] = reasons_ij;
+        matched.add(sj.id);
+      }
+    }
+
+    if (group.length > 1) {
+      matched.add(students[i].id);
+      groups.push({ students: group, reasons });
+    }
+  }
+
+  if (!groups.length) {
+    showModal(`
+      <h3 style="color:#16a34a;margin:0 0 1rem;">✅ No Duplicates Found</h3>
+      <p style="color:#6b7280;font-size:.9rem;margin-bottom:1.5rem;">
+        No duplicate or similar student records were detected across ${students.length} students.
+      </p>
+      <div style="text-align:right;">
+        <button onclick="closeModal()" style="${btnStyle('primary')}">Close</button>
+      </div>`);
+    return;
+  }
+
+  _renderDupModal(groups, 0);
+};
+
+function _dupCard(s, isFirst, groupId) {
+  const school = App.data.schoolInfo || {};
+  return `
+    <div id="dup-card-${s.id.replace(/[^a-z0-9]/gi,'-')}"
+      style="background:${isFirst?'#eff6ff':'#fff'};border:2px solid ${isFirst?'#93c5fd':'#e5e7eb'};
+             border-radius:12px;padding:1rem 1.1rem;position:relative;">
+      ${isFirst ? '<div style="position:absolute;top:.5rem;right:.5rem;background:#2563eb;color:#fff;border-radius:5px;padding:.15rem .5rem;font-size:.68rem;font-weight:700;">FIRST RECORD</div>' : ''}
+      <div style="font-weight:700;font-size:.95rem;color:#111;margin-bottom:.25rem;">${s.name}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.25rem .75rem;font-size:.8rem;color:#374151;margin-bottom:.75rem;">
+        <span>🆔 ${s.id}</span>
+        <span>🏫 ${s.class||'—'} ${s.arm||''}</span>
+        <span>👤 ${s.gender||'—'}</span>
+        <span>🎂 ${s.dob ? s.dob.slice(0,10) : '—'}</span>
+        <span>👨‍👩‍👧 ${s.parent||'—'}</span>
+        <span>📞 ${s.phone||'—'}</span>
+        <span>📧 ${s.parent_email||'—'}</span>
+        <span>📊 ${s.attendance||100}% attendance</span>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button onclick="_dupAction('keep','${s.id}','${groupId}')"
+          style="padding:.3rem .75rem;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;">
+          ✓ Keep
+        </button>
+        <button onclick="_dupAction('remove','${s.id}','${groupId}')"
+          style="padding:.3rem .75rem;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:.78rem;font-weight:700;cursor:pointer;">
+          🗑 Remove
+        </button>
+        <button onclick="_dupAction('edit','${s.id}','${groupId}')"
+          style="padding:.3rem .75rem;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;">
+          ✏ Edit
+        </button>
+      </div>
+    </div>`;
+}
+
+function _renderDupModal(groups, idx) {
+  const group = groups[idx];
+  const groupId = `grp${idx}`;
+  // Store groups on window for action handlers
+  window._dupGroups = groups;
+  window._dupGroupIdx = idx;
+
+  const reasonLines = group.students.slice(1).map(s => {
+    const r = group.reasons[s.id] || [];
+    return `<li><strong>${s.name}</strong> — ${r.join(', ')}</li>`;
+  }).join('');
+
+  showModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+      <h3 style="margin:0;color:#1e3a5f;font-size:1rem;font-weight:800;">
+        🔍 Duplicate Group ${idx+1} of ${groups.length}
+        <span style="font-size:.78rem;color:#6b7280;font-weight:400;margin-left:.5rem;">(${group.students.length} records)</span>
+      </h3>
+      <div style="display:flex;gap:.4rem;">
+        ${idx > 0 ? `<button onclick="_renderDupModal(window._dupGroups,${idx-1})" style="padding:.3rem .65rem;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:.8rem;cursor:pointer;">← Prev</button>` : ''}
+        ${idx < groups.length-1 ? `<button onclick="_renderDupModal(window._dupGroups,${idx+1})" style="padding:.3rem .65rem;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;font-size:.8rem;cursor:pointer;">Next →</button>` : ''}
+      </div>
+    </div>
+
+    <!-- Why flagged -->
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#92400e;">
+      <strong>⚠ Why flagged:</strong>
+      <ul style="margin:.35rem 0 0 1.1rem;line-height:1.8;">${reasonLines}</ul>
+    </div>
+
+    <!-- Cards -->
+    <div style="display:flex;flex-direction:column;gap:.75rem;max-height:420px;overflow-y:auto;margin-bottom:1rem;">
+      ${group.students.map((s,i) => _dupCard(s, i===0, groupId)).join('')}
+    </div>
+
+    <!-- Bulk actions -->
+    <div style="background:#f8fafc;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:.8rem;font-weight:600;color:#374151;flex:1;">Quick actions for this group:</span>
+      <button onclick="_dupKeepFirst('${groupId}')"
+        style="padding:.38rem .85rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;">
+        ✓ Keep First, Remove Rest
+      </button>
+      <button onclick="_dupKeepAll('${groupId}')"
+        style="padding:.38rem .85rem;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;">
+        Keep All (Skip)
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:.78rem;color:#6b7280;">
+      <span>Group ${idx+1} of ${groups.length} · ${groups.reduce((n,g)=>n+g.students.length,0)} total flagged records</span>
+      <button onclick="closeModal()" style="padding:.3rem .75rem;border:1px solid #e5e7eb;border-radius:7px;background:#fff;font-size:.8rem;cursor:pointer;">Close</button>
+    </div>`);
+}
+
+window._dupAction = async function(action, studentId, groupId) {
+  const groups = window._dupGroups;
+  const idx    = window._dupGroupIdx;
+  const safeId = studentId.replace(/[^a-z0-9]/gi,'-');
+
+  if (action === 'remove') {
+    if (!confirm(`Remove student ${studentId}? This will delete all their records.`)) return;
+    try {
+      await Students.delete(studentId);
+      // Remove from App.data.students
+      const i = App.data.students.findIndex(s => s.id === studentId);
+      if (i >= 0) App.data.students.splice(i, 1);
+      // Remove from group
+      groups[idx].students = groups[idx].students.filter(s => s.id !== studentId);
+      toast(`Removed ${studentId}`, 'warning');
+      // Remove card from modal
+      const card = document.getElementById(`dup-card-${safeId}`);
+      if (card) card.remove();
+      // If only one left in group, advance
+      if (groups[idx].students.length <= 1) {
+        groups.splice(idx, 1);
+        if (!groups.length) {
+          closeModal();
+          toast('✅ All duplicate groups resolved!', 'success');
+          renderStudents(_currentFilter, _currentFilters);
+          return;
+        }
+        _renderDupModal(groups, Math.min(idx, groups.length - 1));
+      }
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+  }
+
+  if (action === 'keep') {
+    const card = document.getElementById(`dup-card-${safeId}`);
+    if (card) {
+      card.style.border = '2px solid #86efac';
+      card.style.background = '#f0fdf4';
+      const btn = [...card.querySelectorAll('button')].find(b => b.textContent.includes('Keep'));
+      if (btn) { btn.textContent = '✓ Kept'; btn.style.background = '#16a34a'; btn.disabled = true; }
+    }
+    toast(`✓ ${studentId} marked to keep`, 'success');
+  }
+
+  if (action === 'edit') {
+    closeModal();
+    editStudent(studentId);
+  }
+};
+
+window._dupKeepFirst = async function(groupId) {
+  const groups = window._dupGroups;
+  const idx    = window._dupGroupIdx;
+  const group  = groups[idx];
+  const toRemove = group.students.slice(1);
+  if (!confirm(`Remove ${toRemove.length} duplicate record(s) and keep "${group.students[0].name}" (${group.students[0].id})?`)) return;
+
+  let removed = 0;
+  for (const s of toRemove) {
+    try {
+      await Students.delete(s.id);
+      const i = App.data.students.findIndex(x => x.id === s.id);
+      if (i >= 0) App.data.students.splice(i, 1);
+      removed++;
+    } catch(e) { toast(`Failed to remove ${s.id}: ${e.message}`, 'error'); }
+  }
+
+  toast(`✅ Kept "${group.students[0].name}" — removed ${removed} duplicate(s)`, 'success');
+  groups.splice(idx, 1);
+
+  if (!groups.length) {
+    closeModal();
+    toast('✅ All duplicate groups resolved!', 'success');
+    renderStudents(_currentFilter, _currentFilters);
+    return;
+  }
+  _renderDupModal(groups, Math.min(idx, groups.length - 1));
+};
+
+window._dupKeepAll = function(groupId) {
+  const groups = window._dupGroups;
+  const idx    = window._dupGroupIdx;
+  groups.splice(idx, 1);
+  if (!groups.length) {
+    closeModal();
+    toast('Done — all groups reviewed.', 'success');
+    return;
+  }
+  _renderDupModal(groups, Math.min(idx, groups.length - 1));
+};

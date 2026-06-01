@@ -298,7 +298,7 @@ window.openUserModal = function(u = null) {
       </div>
       <div>
         <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Student/Ward ID</label>
-        <input id="um-studentid" value="${u?.student_id||u?.ward_id||''}" placeholder="e.g. SHC/001" style="${inputStyle()};width:100%;">
+        <input id="um-studentid" value="${u?.student_id||u?.ward_id||''}" placeholder="e.g. SAHARCO/20250115/0001" style="${inputStyle()};width:100%;">
       </div>
       <div>
         <label style="font-size:.8rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Assigned Class</label>

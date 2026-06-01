@@ -34,7 +34,7 @@
   };
 })();
 
-function renderParentPortal() {
+window.renderParentPortal = function() {
   const section = document.getElementById('parent-portal');
   if (!section) return;
 
@@ -42,34 +42,116 @@ function renderParentPortal() {
   const wardId  = user?.wardId || user?.ward_id || null;
   const isParent= user?.role === 'Parent';
 
-  // Linked parent — show their child's financial dashboard automatically
+  // Linked parent account — show their child's dashboard automatically
   if (isParent && wardId) {
     _renderParentDashboard(section, wardId);
     return;
   }
 
-  // Unlinked / token-based access
+  // Two-option landing: Finance (phone verify) or Report Cards (token)
   section.innerHTML = `
-    <div style="max-width:760px;margin:2rem auto;">
-      <h2 style="margin:0 0 .4rem;color:#1e40af;">Parent / Guardian Portal</h2>
-      <p style="color:#64748b;margin:0 0 2rem;">
-        Enter the access token provided by the school to view your child's academic and financial records.
-      </p>
-      <div style="background:#fff;border-radius:14px;padding:2rem;box-shadow:0 4px 16px rgba(0,0,0,.1);margin-bottom:2rem;">
-        <label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.5rem;">Access Token</label>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-          <input id="pp-token-input" type="text" placeholder="SHC-PRC-2026-XXXXXX"
-            style="flex:1;min-width:220px;padding:.65rem .9rem;border:1.5px solid #d1d5db;border-radius:8px;
-                   font-family:monospace;font-size:1rem;letter-spacing:1.5px;text-transform:uppercase;outline:none;"
-            onkeydown="if(event.key==='Enter')validateParentToken()">
-          <button onclick="validateParentToken()" style="padding:.65rem 1.5rem;background:#1e3a5f;color:#fff;border:none;
-            border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;">View Records</button>
+    <div style="max-width:840px;margin:2rem auto;padding:0 1rem;">
+      <h2 style="margin:0 0 .3rem;color:#1e3a5f;font-size:1.3rem;font-weight:800;">👨‍👩‍👧 Parent / Guardian Portal</h2>
+      <p style="color:#6b7280;margin:0 0 2rem;font-size:.875rem;">Access your child's records — no account required.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1.25rem;margin-bottom:2rem;">
+
+        <!-- Option 1: Finance (Student ID + Phone) -->
+        <div style="background:#fff;border-radius:14px;padding:1.75rem;box-shadow:0 2px 10px rgba(0,0,0,.08);border-top:4px solid #1e3a5f;">
+          <div style="font-size:1.75rem;margin-bottom:.5rem;">💰</div>
+          <div style="font-weight:700;color:#1e3a5f;font-size:1rem;margin-bottom:.35rem;">Finance &amp; Performance</div>
+          <div style="font-size:.82rem;color:#6b7280;margin-bottom:1.1rem;line-height:1.6;">
+            View fee charges, payment status, attendance and results using your child's
+            <strong>Student ID</strong> and your <strong>phone number</strong>.
+          </div>
+          <div style="margin-bottom:.65rem;">
+            <label style="font-size:.76rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Student ID</label>
+            <input id="pp-sid-input" type="text" placeholder="e.g. SAHARCO/20250115/0001"
+              style="width:100%;padding:.55rem .85rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.875rem;
+                     font-family:monospace;text-transform:uppercase;outline:none;box-sizing:border-box;"
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter')ppLoginDirect()">
+          </div>
+          <div style="margin-bottom:.9rem;">
+            <label style="font-size:.76rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Parent / Guardian Phone</label>
+            <input id="pp-phone-input" type="tel" placeholder="e.g. 08012345678"
+              style="width:100%;padding:.55rem .85rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.875rem;
+                     outline:none;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')ppLoginDirect()">
+          </div>
+          <div id="pp-direct-error" style="color:#dc2626;font-size:.78rem;min-height:1.1rem;margin-bottom:.5rem;"></div>
+          <button onclick="ppLoginDirect()"
+            style="width:100%;padding:.65rem;background:#1e3a5f;color:#fff;border:none;border-radius:8px;
+                   font-size:.9rem;font-weight:600;cursor:pointer;">
+            View Finance &amp; Performance →
+          </button>
         </div>
-        <div id="pp-error" style="color:#ef4444;font-size:.85rem;margin-top:.5rem;min-height:1.25rem;"></div>
+
+        <!-- Option 2: Report Cards (Access Token) -->
+        <div style="background:#fff;border-radius:14px;padding:1.75rem;box-shadow:0 2px 10px rgba(0,0,0,.08);border-top:4px solid #c8972b;">
+          <div style="font-size:1.75rem;margin-bottom:.5rem;">📄</div>
+          <div style="font-weight:700;color:#1e3a5f;font-size:1rem;margin-bottom:.35rem;">Report Cards &amp; Results</div>
+          <div style="font-size:.82rem;color:#6b7280;margin-bottom:1.1rem;line-height:1.6;">
+            View term report cards and detailed results using the
+            <strong>Access Token</strong> provided by the school on results day.
+          </div>
+          <div style="margin-bottom:.9rem;">
+            <label style="font-size:.76rem;font-weight:600;color:#374151;display:block;margin-bottom:.3rem;">Access Token</label>
+            <input id="pp-token-input" type="text" placeholder="SHC-PRC-2026-XXXXXX"
+              style="width:100%;padding:.55rem .85rem;border:1.5px solid #e5e7eb;border-radius:8px;
+                     font-family:monospace;font-size:.9rem;letter-spacing:1px;text-transform:uppercase;
+                     outline:none;box-sizing:border-box;"
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter')validateParentToken()">
+          </div>
+          <div id="pp-error" style="color:#dc2626;font-size:.78rem;min-height:1.1rem;margin-bottom:.5rem;"></div>
+          <button onclick="validateParentToken()"
+            style="width:100%;padding:.65rem;background:#c8972b;color:#fff;border:none;border-radius:8px;
+                   font-size:.9rem;font-weight:600;cursor:pointer;">
+            View Report Card →
+          </button>
+        </div>
       </div>
-      <div id="pp-report-output"></div>
+
+      <div style="background:#f8fafc;border-radius:10px;padding:.9rem 1.25rem;font-size:.8rem;color:#6b7280;border:1px solid #e5e7eb;">
+        📞 Need help? Contact the school office to get your Student ID or Access Token.
+      </div>
+
+      <div id="pp-report-output" style="margin-top:1.5rem;"></div>
     </div>`;
-}
+};
+
+
+/* ── Direct login: Student ID + parent phone ──────────────────── */
+window.ppLoginDirect = async function() {
+  const sid   = (document.getElementById('pp-sid-input')?.value  || '').trim().toUpperCase();
+  const phone = (document.getElementById('pp-phone-input')?.value || '').trim().replace(/\s/g,'');
+  const errEl = document.getElementById('pp-direct-error');
+  if (!sid)   { errEl.textContent = 'Please enter the Student ID.';   return; }
+  if (!phone) { errEl.textContent = 'Please enter the phone number.'; return; }
+  errEl.textContent = 'Verifying…';
+  try {
+    const BASE = window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api';
+    const resp = await fetch(`${BASE}/students/parent-verify/${encodeURIComponent(sid)}`);
+    if (!resp.ok) { errEl.textContent = 'Student ID not found. Please check and try again.'; return; }
+    const json    = await resp.json();
+    const student = json.data || json.student || json;
+    // Compare last 8 digits of phone
+    const stored  = (student.phone || student.parent_phone || '').replace(/\s/g,'').replace(/^(\+234|234)/, '0');
+    const entered = phone.replace(/^(\+234|234)/, '0');
+    if (!stored || entered.slice(-8) !== stored.slice(-8)) {
+      errEl.textContent = 'Phone number does not match our records. Please contact the school.';
+      return;
+    }
+    errEl.textContent = '';
+    window._ppPhone = phone;
+    const section = document.getElementById('parent-portal');
+    _renderParentDashboard(section, sid);
+  } catch(e) {
+    errEl.textContent = 'Connection error — please try again.';
+    console.error('[ppLoginDirect]', e);
+  }
+};
 
 async function _renderParentDashboard(section, wardId) {
   section.innerHTML = `<div style="max-width:860px;margin:0 auto;"><div style="text-align:center;padding:2rem;color:#9ca3af;">Loading your child's records…</div></div>`;
@@ -78,10 +160,23 @@ async function _renderParentDashboard(section, wardId) {
     const token = sessionStorage.getItem('shc_token');
     const hdr   = { Authorization: `Bearer ${token}` };
 
+    // Use public /pp/ routes when no auth token (phone-verified parent)
+    const _ppPhone  = window._ppPhone || '';
+    const _finBase  = token ? `${BASE}/student-finance` : `${BASE}/student-finance/pp`;
+    const _finQuery = token
+      ? `sid=${encodeURIComponent(wardId)}`
+      : `sid=${encodeURIComponent(wardId)}&phone=${encodeURIComponent(_ppPhone)}`;
+
+    const fetchFin = (path) => {
+      const url = `${_finBase}/${path}?${_finQuery}`;
+      const opts = token ? { headers: hdr, credentials:'include' } : { credentials:'include' };
+      return fetch(url, opts).then(r => r.json());
+    };
+
     const [sumResp, chargesResp, leviesResp] = await Promise.all([
-      fetch(`${BASE}/student-finance/summary?sid=${encodeURIComponent(wardId)}`, { headers: hdr, credentials:'include' }).then(r=>r.json()),
-      fetch(`${BASE}/student-finance/charges?sid=${encodeURIComponent(wardId)}`, { headers: hdr, credentials:'include' }).then(r=>r.json()),
-      fetch(`${BASE}/student-finance/levies?sid=${encodeURIComponent(wardId)}`,  { headers: hdr, credentials:'include' }).then(r=>r.json()),
+      fetchFin('summary'),
+      fetchFin('charges'),
+      fetchFin('levies'),
     ]);
 
     const student  = sumResp.data?.student  || {};

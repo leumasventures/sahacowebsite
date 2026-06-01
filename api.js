@@ -156,6 +156,7 @@
     getCumulative:           function (p) { return get('/results/cumulative' + buildQuery(p)); },
     getStudentCumulative:    function (id, session) { return get('/results/cumulative/student/' + id + buildQuery({ session: session })); },
     getClassAllocation:      function (c, a) { return get('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a)); },
+    getByClass:              function (c, a, p) { return get('/results' + buildQuery(Object.assign({ class: c, arm: a }, p || {}))); },
     setClassAllocation:      function (c, a, subs) { return put('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a), { subjects: subs }); },
     clearClassAllocation:    function (c, a) { return del('/results/allocations/class/' + encodeURIComponent(c) + '/' + encodeURIComponent(a)); },
     getStudentAllocation:    function (id) { return get('/results/allocations/student/' + id); },

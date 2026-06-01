@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✝</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sacred Heart College – Admission List</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -678,8 +679,8 @@ function avatarColor(name) {
   var sum = 0; for (var i = 0; i < name.length; i++) sum += name.charCodeAt(i);
   return COLORS[sum % COLORS.length];
 }
-function initials(r) { return ((r.lastName||'?')[0] + (r.firstName||'?')[0]).toUpperCase(); }
-function fullName(r) { return [r.lastName, r.firstName, r.middleName].filter(Boolean).join(' '); }
+function initials(r) { return (((r.last_name||r.lastName||'?')[0]) + ((r.first_name||r.firstName||'?')[0])).toUpperCase(); }
+function fullName(r) { return r.applicantName || [r.first_name||r.firstName, r.middle_name||r.middleName, r.last_name||r.lastName].filter(Boolean).join(' ') || '—'; }
 
 /* ── Badge HTML ── */
 function badgeHtml(status) {
@@ -698,9 +699,9 @@ function renderTable() {
 
   var filtered = list.filter(function(r) {
     var name = fullName(r).toLowerCase();
-    var matchSearch = !search || name.includes(search) || (r.admNo||'').toLowerCase().includes(search) || (r.classApply||'').toLowerCase().includes(search);
-    var matchCls    = !cls    || r.classApply === cls;
-    var matchSess   = !sess   || r.acadSession === sess;
+    var matchSearch = !search || name.includes(search) || (r.applicationNo||r.admNo||'').toLowerCase().includes(search) || (r.class_apply||r.classApply||r.applyingForClass||'').toLowerCase().includes(search);
+    var matchCls    = !cls    || (r.class_apply||r.classApply||r.applyingForClass||'') === cls;
+    var matchSess   = !sess   || (r.acad_session||r.acadSession||r.session||'') === sess;
     var matchStatus = currentStatusFilter === 'All' || r.status === currentStatusFilter;
     return matchSearch && matchCls && matchSess && matchStatus;
   });
@@ -734,11 +735,11 @@ function renderTable() {
     return '<tr onclick="openDetail(' + idx + ')">' +
       '<td><span class="av-chip" style="background:' + color + '">' + inits + '</span></td>' +
       '<td><strong style="font-weight:600">' + fullName(r) + '</strong></td>' +
-      '<td style="font-family:monospace;font-size:.78rem;color:var(--slate-500)">' + (r.admNo||'—') + '</td>' +
-      '<td>' + (r.classApply||'—') + (r.preferredArm?' '+r.preferredArm:'') + '</td>' +
+      '<td style="font-family:monospace;font-size:.78rem;color:var(--slate-500)">' + (r.applicationNo||r.admNo||'—') + '</td>' +
+      '<td>' + (r.class_apply||r.classApply||r.applyingForClass||'—') + (r.preferred_arm||r.preferredArm?' '+(r.preferred_arm||r.preferredArm):'') + '</td>' +
       '<td>' + (r.gender||'—') + '</td>' +
-      '<td style="color:var(--slate-500);font-size:.8rem">' + (r.dateApplied||'—') + '</td>' +
-      '<td style="font-size:.8rem">' + (r.guardianPhone||'—') + '</td>' +
+      '<td style="color:var(--slate-500);font-size:.8rem">' + (r.appliedAt||r.dateApplied||'—') + '</td>' +
+      '<td style="font-size:.8rem">' + (r.parent_phone||r.guardian_phone||r.guardianPhone||'—') + '</td>' +
       '<td>' + badgeHtml(r.status) + '</td>' +
       '<td onclick="event.stopPropagation()">' +
         '<div class="tbl-actions">' +
@@ -826,35 +827,40 @@ async function deleteRecord(idx) {
 
 /* ── Detail modal ── */
 function openDetail(idx) {
-  var list = getAdmissions();
-  var r = list[idx];
+  var r = _allRecords[idx];
   if (!r) return;
 
-  document.getElementById('modal-title').textContent = fullName(r) + ' · ' + (r.admNo||'');
+  document.getElementById('modal-title').textContent = fullName(r) + ' · ' + (r.applicationNo||r.admNo||'');
 
   var body = document.getElementById('modal-body');
   body.innerHTML =
     section('Personal Information', [
       ['Full Name', fullName(r)],
-      ['Gender', r.gender], ['Date of Birth', r.dob], ['Blood Group', r.bloodGroup||'—'],
-      ['State of Origin', r.stateOrigin], ['LGA', r.lga||'—'],
-      ['Address', r.address||'—']
+      ['Gender', r.gender||'—'], ['Date of Birth', r.dob||'—'],
+      ['Blood Group', r.blood_group||r.bloodGroup||'—'], ['Genotype', r.genotype||'—'],
+      ['State of Origin', r.state_origin||r.stateOrigin||'—'],
+      ['LGA', r.lga||'—'], ['Address', r.address||'—']
     ]) +
     section('Academic', [
-      ['Class Applied', r.classApply + (r.preferredArm?' ('+r.preferredArm+')':'')],
-      ['Session', r.acadSession], ['Entry Term', r.entryTerm],
-      ['Previous School', r.prevSchool||'—'], ['Last Class', r.lastClass||'—']
+      ['Class Applied', (r.class_apply||r.classApply||r.applyingForClass||'—') + (r.preferred_arm||r.preferredArm?' ('+(r.preferred_arm||r.preferredArm)+')':'')],
+      ['Session', r.acad_session||r.acadSession||r.session||'—'],
+      ['Entry Term', r.entry_term||r.entryTerm||'—'],
+      ['Previous School', r.prev_school||r.prevSchool||'—'],
+      ['Last Class', r.last_class||r.lastClass||'—']
     ]) +
     section('Guardian / Parent', [
-      ['Guardian Name', (r.guardianLast||'') + ' ' + (r.guardianFirst||'')],
-      ['Relationship', r.relation||'—'], ['Phone', r.guardianPhone||'—'],
-      ['Email', r.guardianEmail||'—'], ['Address', r.guardianAddr||'—']
+      ['Guardian Name', r.parent_name||r.guardian_name||((r.guardian_first||r.guardianFirst||'')+' '+(r.guardian_last||r.guardianLast||'')).trim()||'—'],
+      ['Relationship', r.relation||'—'],
+      ['Phone', r.parent_phone||r.guardian_phone||r.guardianPhone||'—'],
+      ['Email', r.parent_email||r.guardian_email||r.guardianEmail||'—'],
+      ['Address', r.guardian_addr||r.guardianAddr||'—']
     ]) +
     section('Medical', [
-      ['Blood Group', r.bloodGroup||'—'], ['Genotype', r.genotype||'—'],
-      ['Allergies', r.allergies||'—'], ['Conditions', r.medConditions||'None']
+      ['Blood Group', r.blood_group||r.bloodGroup||'—'],
+      ['Genotype', r.genotype||'—'],
+      ['Allergies', r.allergies||'—'], ['Notes', r.notes||'—']
     ]) +
-    '<div style="margin-top:.75rem">' + badgeHtml(r.status) + '&nbsp; Applied: ' + (r.dateApplied||'—') + '</div>';
+    '<div style="margin-top:.75rem">' + badgeHtml(r.status) + '&nbsp; Applied: ' + (r.appliedAt||r.dateApplied||'—') + '</div>';
 
   var footer = document.getElementById('modal-footer');
   var btns = '<button class="btn btn-ghost" onclick="closeModal()">Close</button>';
@@ -890,11 +896,11 @@ document.getElementById('detail-modal').addEventListener('click', function(e) {
 
 /* ── Excel export ── */
 function exportExcel() {
-  var list = getAdmissions();
+  var list = _allRecords;
   if (!list.length) { showToast('No records to export', 'amber'); return; }
   var rows = [['Adm. No', 'Last Name', 'First Name', 'Gender', 'DOB', 'Class', 'Session', 'Status', 'Guardian Name', 'Guardian Phone', 'Guardian Email', 'Date Applied']];
   list.forEach(function(r) {
-    rows.push([r.admNo, r.lastName, r.firstName, r.gender, r.dob, r.classApply, r.acadSession, r.status, (r.guardianLast||'') + ' ' + (r.guardianFirst||''), r.guardianPhone, r.guardianEmail, r.dateApplied]);
+    rows.push([r.applicationNo||r.admNo, r.last_name||r.lastName, r.first_name||r.firstName, r.gender, r.dob, r.class_apply||r.classApply||r.applyingForClass, r.acad_session||r.acadSession||r.session, r.status, r.parent_name||r.guardian_name||'', r.parent_phone||r.guardian_phone||'', r.parent_email||r.guardian_email||'', r.appliedAt||r.dateApplied]);
   });
   var ws = XLSX.utils.aoa_to_sheet(rows);
   var wb = XLSX.utils.book_new();
@@ -985,10 +991,11 @@ window.confirmEnroll = async function(idx, btn) {
 };
 
 /* ── Load admissions from API ── */
-async function loadAdmissions() {
+async function loadAdmissions(attempt) {
+  attempt = attempt || 1;
   try {
     document.getElementById('adm-tbody').innerHTML =
-      '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#6b7280;">Loading…</td></tr>';
+      '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#6b7280;">Loading' + (attempt > 1 ? ' (retry ' + attempt + ')…' : '…') + '</td></tr>';
 
     // Wait for api.js to be ready
     if (!window.Admissions) {
@@ -1008,8 +1015,15 @@ async function loadAdmissions() {
     }
     renderTable();
   } catch(e) {
-    document.getElementById('adm-tbody').innerHTML =
-      '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#dc2626;">Failed to load: ' + e.message + '</td></tr>';
+    if (attempt < 3) {
+      // Render cold-start: retry after delay
+      setTimeout(function() { loadAdmissions(attempt + 1); }, 2000 * attempt);
+      document.getElementById('adm-tbody').innerHTML =
+        '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#d97706;">Server warming up — retrying in ' + (attempt * 2) + 's…</td></tr>';
+    } else {
+      document.getElementById('adm-tbody').innerHTML =
+        '<tr><td colspan="9" style="text-align:center;padding:2rem;color:#dc2626;">Failed to load: ' + e.message + ' — <button onclick="loadAdmissions(1)" style="color:#2563eb;background:none;border:none;cursor:pointer;text-decoration:underline;">Try again</button></td></tr>';
+    }
   }
 }
 

@@ -16,6 +16,94 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    REPORT CARDS
 ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   APPROVAL SYSTEM — Principal stamps report cards
+══════════════════════════════════════════════════════════════ */
+window.rcApprove = async function(studentId, term, session) {
+  if (!priv.isAdmin()) { toast('Only Admin can approve report cards', 'error'); return; }
+  const principal = App.data.schoolInfo?.principal || App.currentUser?.name || 'The Principal';
+  const now       = new Date().toISOString();
+  try {
+    // Save approval in remarks
+    await Results.setRemark(studentId, term, session, {
+      approved:   true,
+      approvedBy: principal,
+      approvedAt: now,
+    });
+    // Update local cache
+    const entry = (App.data.remarks || []).find(r =>
+      r.studentId === studentId && r.term === term && r.session === session
+    );
+    if (entry) {
+      entry.approved   = true;
+      entry.approvedBy = principal;
+      entry.approvedAt = now;
+    } else {
+      if (!App.data.remarks) App.data.remarks = [];
+      App.data.remarks.push({ studentId, term, session, approved: true, approvedBy: principal, approvedAt: now });
+    }
+    toast('✅ Report card approved and stamped', 'success');
+    // Refresh report cards
+    generateReportCards();
+  } catch(e) {
+    // If API doesn't support it yet, do it locally only
+    const entry = (App.data.remarks || []).find(r =>
+      r.studentId === studentId && r.term === term && r.session === session
+    );
+    if (entry) {
+      entry.approved = true; entry.approvedBy = principal; entry.approvedAt = now;
+    } else {
+      if (!App.data.remarks) App.data.remarks = [];
+      App.data.remarks.push({ studentId, term, session, approved: true, approvedBy: principal, approvedAt: now });
+    }
+    toast('✅ Approved (saved locally)', 'success');
+    generateReportCards();
+  }
+};
+
+window.rcRevoke = async function(studentId, term, session) {
+  if (!priv.isAdmin()) { toast('Only Admin can revoke approval', 'error'); return; }
+  if (!confirm('Remove approval and stamp from this report card?')) return;
+  try {
+    await Results.setRemark(studentId, term, session, {
+      approved: false, approvedBy: '', approvedAt: null,
+    });
+  } catch(e) { /* ignore — update locally anyway */ }
+  const entry = (App.data.remarks || []).find(r =>
+    r.studentId === studentId && r.term === term && r.session === session
+  );
+  if (entry) { entry.approved = false; entry.approvedBy = ''; entry.approvedAt = null; }
+  toast('Approval revoked', 'warning');
+  generateReportCards();
+};
+
+/* Approve ALL cards for a class at once */
+window.rcApproveAll = async function(cls, arm, term, session) {
+  if (!priv.isAdmin()) { toast('Only Admin can approve report cards', 'error'); return; }
+  const students  = (App.data.students || []).filter(s => s.class === cls && s.arm === arm);
+  if (!students.length) { toast('No students found', 'warning'); return; }
+  if (!confirm(`Approve and stamp ALL ${students.length} report cards for ${cls} ${arm}?`)) return;
+  const principal = App.data.schoolInfo?.principal || App.currentUser?.name || 'The Principal';
+  const now       = new Date().toISOString();
+  let count = 0;
+  for (const s of students) {
+    try {
+      await Results.setRemark(s.id, term, session, {
+        approved: true, approvedBy: principal, approvedAt: now,
+      });
+    } catch(e) { /* update locally */ }
+    const entry = (App.data.remarks || []).find(r =>
+      r.studentId === s.id && r.term === term && r.session === session
+    );
+    if (entry) { entry.approved = true; entry.approvedBy = principal; entry.approvedAt = now; }
+    else { (App.data.remarks = App.data.remarks||[]).push({ studentId:s.id, term, session, approved:true, approvedBy:principal, approvedAt:now }); }
+    count++;
+  }
+  toast(`✅ ${count} report cards approved`, 'success');
+  generateReportCards();
+};
+
 function renderReportCards() {
   if (priv.isParent()) { navigate('results'); return; }
 
@@ -76,7 +164,7 @@ window.updateRCArms = function() {
   if (classData?.arms) armSel.innerHTML += classData.arms.map(a => `<option>${a}</option>`).join('');
 };
 
-window.generateReportCards = function() {
+window.generateReportCards = async function() {
   const cls     = document.getElementById('rc-class')?.value;
   const arm     = document.getElementById('rc-arm')?.value;
   const term    = document.getElementById('rc-term')?.value;
@@ -89,28 +177,107 @@ window.generateReportCards = function() {
   const students = App.data.students.filter(s => s.class === cls && s.arm === arm);
   if (!students.length) return toast('No students found in this class/arm.', 'warning');
 
-  const output   = document.getElementById('report-cards-output');
-  const school   = App.data.schoolInfo || {};
+  const output = document.getElementById('report-cards-output');
+  const school = App.data.schoolInfo || {};
 
-  output.innerHTML = students.map(student => buildReportCard(student, cls, arm, term, session, school)).join('');
+  output.innerHTML = '<div style="text-align:center;padding:2.5rem;color:#6b7280;font-size:.9rem;">⏳ Loading results &amp; allocations from server…</div>';
+
+  // ── 1. Fetch subject allocations from API ─────────────────────────────
+  const allocKey = `${cls}_${arm}`;
+  try {
+    const ar = await Results.getClassAllocation(cls, arm);
+    const raw = ar.subjects || ar.data || [];
+    const names = raw.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean);
+    if (!App.data.subjectAllocations) App.data.subjectAllocations = {};
+    if (names.length) App.data.subjectAllocations[allocKey] = names;
+  } catch(e) { console.warn('[rc] alloc fetch:', e.message); }
+
+  // ── 2. Fetch fresh results for this class/term/session ────────────────
+  try {
+    const rr = await Results.getByClass(cls, arm, { term, session });
+    const fresh = rr.data || rr.results || [];
+    fresh.forEach(r => {
+      const sid   = r.student_id || r.studentId || '';
+      const subj  = r.subject_name || r.subject  || '';
+      const entry = {
+        ...r,
+        studentId:    sid,
+        subject:      subj,
+        subject_name: subj,
+        total: r.total != null ? r.total : (Number(r.ca||0) + Number(r.exam||0)),
+      };
+      const idx2 = App.data.results.findIndex(x =>
+        (x.studentId === sid) &&
+        ((x.subject||x.subject_name||'').toLowerCase() === subj.toLowerCase()) &&
+        x.term === r.term && x.session === r.session
+      );
+      if (idx2 >= 0) App.data.results[idx2] = entry;
+      else App.data.results.push(entry);
+    });
+    console.log(`[rc] loaded ${fresh.length} results for ${cls} ${arm}`);
+  } catch(e) { console.warn('[rc] results fetch:', e.message); }
+
+  output.innerHTML = students.map(s => buildReportCard(s, cls, arm, term, session, school)).join('');
+
+  // "Approve All" bar at the top — admin only, more than one student
+  if (priv.isAdmin() && students.length > 0) {
+    const bar = document.createElement('div');
+    bar.className = 'no-print';
+    bar.style.cssText = 'display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:#eff6ff;border-radius:10px;margin-bottom:1rem;border:1.5px solid #bfdbfe;';
+    bar.innerHTML = `<span style="font-size:.875rem;font-weight:600;color:#1e3a8a;">
+      🖋 Principal Approval — ${cls} ${arm} &nbsp;·&nbsp; ${students.length} card(s)
+    </span>
+    <button onclick="rcApproveAll('${cls}','${arm}','${term}','${session}')"
+      style="background:#1e3a8a;color:#fff;border:none;border-radius:8px;padding:.45rem 1.1rem;
+             font-size:.84rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;margin-left:auto;">
+      <img src="images/sahacostamp.jpg" style="width:20px;height:20px;border-radius:50%;object-fit:contain;" onerror="this.style.display='none'">
+      Approve All &amp; Stamp
+    </button>`;
+    output.insertBefore(bar, output.firstChild);
+  }
+
   toast(`Generated ${students.length} report card(s)`, 'success');
 };
+
 
 /* ── Core card builder ─────────────────────────────────────────────────────── */
 function buildReportCard(student, cls, arm, term, session, school) {
   /* ── data ── */
   // subjectAllocations is a key-value object: { "ClassName_Arm": [subjectNames] }
   const allocKey     = `${cls}_${arm}`;
-  const allocByClass = App.data.subjectAllocations?.[allocKey]
+  const rawAlloc     = App.data.subjectAllocations?.[allocKey]
                     || App.data.subjectAllocations?.[`${cls}`]
                     || [];
-  // Fall back to all subjects if no allocations defined for this class/arm
-  const subjectNames = allocByClass.length
-    ? allocByClass
-    : (App.data.subjects || []).map(s => s.name);
+  // Normalise allocation to plain strings (may be {id,name} objects)
+  const allocNorm    = rawAlloc.map(s => typeof s === 'string' ? s : (s.name || s.subject_name || '')).filter(Boolean);
+  // If we have allocations, use only those. Otherwise show subjects that actually have results.
+  const subjectNames = allocNorm.length
+    ? allocNorm
+    : [...new Set([
+        ...(App.data.subjects || []).map(s => s.name),
+        ...(App.data.results || [])
+          .filter(r => r.studentId === student.id && r.term === term && r.session === session)
+          .map(r => r.subject_name || r.subject).filter(Boolean)
+      ])];
 
   const results      = (App.data.results || []).filter(r =>
     r.studentId === student.id && r.term === term && r.session === session);
+
+  // Compute total with ca+exam fallback if total is missing
+  const resultsWithTotal = results.map(r => {
+    const ca   = Number(r.ca   ?? r.CA   ?? 0);
+    const exam = Number(r.exam ?? r.Exam ?? r.EXAM ?? 0);
+    // ALWAYS recompute — never trust cached total (DB GENERATED column issues)
+    const tot  = ca + exam;
+    return {
+      ...r,
+      ca,
+      exam,
+      total:        tot,
+      subject:      r.subject      || r.subject_name || '',
+      subject_name: r.subject_name || r.subject      || '',
+    };
+  });
   const remarkEntry  = ((App.data.remarks || []).find(r =>
     r.studentId === student.id && r.term === term && r.session === session)) || {};
   const domains      = getDomainScores(student.id, term, session);
@@ -118,8 +285,8 @@ function buildReportCard(student, cls, arm, term, session, school) {
   const position     = computePosition(student.id, cls, arm, term, session);
   const teacher      = (App.data.teachers || []).find(t => t.class === cls && t.arm === arm);
 
-  const totalScore   = results.reduce((s, r) => s + (r.total || 0), 0);
-  const subjectCount = results.length;
+  const totalScore   = resultsWithTotal.reduce((s, r) => s + (r.total || 0), 0);
+  const subjectCount = resultsWithTotal.length;
   const _dp           = typeof getDecimalPlaces === "function" ? getDecimalPlaces() : 1;
   const average      = subjectCount ? (totalScore / subjectCount).toFixed(_dp) : null;
   const overallGrade = average ? grade(parseFloat(average)) : { letter: '—', remark: '—' };
@@ -150,19 +317,28 @@ function buildReportCard(student, cls, arm, term, session, school) {
 
   /* ── subject rows (only allocated subjects) ── */
   const subjectRows = subjectNames.map(name => {
-    const r  = results.find(x => x.subject === name);
-    if (!r)  return `<tr style="background:#fafafa;">
+    // Match by subject, subject_name, or case-insensitive comparison
+    const r = resultsWithTotal.find(x =>
+      (x.subject      && x.subject.trim().toLowerCase()      === name.trim().toLowerCase()) ||
+      (x.subject_name && x.subject_name.trim().toLowerCase() === name.trim().toLowerCase())
+    );
+    if (!r) return `<tr style="background:#fafafa;">
       <td style="${TD('left','padding-left:10px;font-weight:500;')}">${name}</td>
       <td style="${TD()}">—</td><td style="${TD()}">—</td>
       <td style="${TD()}">—</td><td style="${TD()}">—</td>
       <td style="${TD('left','font-size:10px;color:#9ca3af;')}">Not recorded</td></tr>`;
-    const g = grade(r.total);
-    const stripe = (r.total||0) < 50 ? 'background:#fff5f5;' : '';
+    // Always recompute total from ca+exam (avoids DB GENERATED column null issues)
+    const ca_n  = Number(r.ca   ?? r.CA   ?? 0);
+    const ex_n  = Number(r.exam ?? r.Exam ?? r.EXAM ?? 0);
+    const total = ca_n + ex_n;
+    const g = grade(total);
+    const pass = typeof getPassMark==='function' ? getPassMark() : 40;
+    const stripe = total < pass ? 'background:#fff5f5;' : '';
     return `<tr style="${stripe}">
       <td style="${TD('left','padding-left:10px;font-weight:500;')}">${name}</td>
-      <td style="${TD()}">${r.ca ?? '—'}</td>
-      <td style="${TD()}">${r.exam ?? '—'}</td>
-      <td style="${TD()}">${gradeBar(r.total)}<strong>${r.total ?? '—'}</strong></td>
+      <td style="${TD()}">${r.ca != null ? r.ca : '—'}</td>
+      <td style="${TD()}">${r.exam != null ? r.exam : '—'}</td>
+      <td style="${TD()}">${gradeBar(total)}<strong>${total}</strong></td>
       <td style="${TD()}">${gradeChip(g.letter)}</td>
       <td style="${TD('left','font-size:10px;color:#4b5563;')}">${g.remark}</td>
     </tr>`;
@@ -189,9 +365,14 @@ function buildReportCard(student, cls, arm, term, session, school) {
   }).join('');
 
   /* ── logo / photo / stamp placeholders ── */
-  const logoHtml = school.logo
-    ? `<img src="${school.logo}" style="width:80px;height:80px;object-fit:contain;" alt="logo">`
-    : `<div style="width:80px;height:80px;border:2px solid #1e3a8a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#1e3a8a;text-align:center;">SCHOOL<br>LOGO</div>`;
+  // Logo: use the school's actual logo image
+  const _logoUrl  = school.logo || school.logo_url || 'images/sahaco logo.jpg';
+  const logoHtml  = `<img src="${_logoUrl}" style="width:80px;height:80px;object-fit:contain;border-radius:6px;" alt="SAHARCO Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+    <div style="display:none;width:80px;height:80px;border:2px solid #1e3a8a;border-radius:6px;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#1e3a8a;text-align:center;">SAHARCO</div>`;
+  // Watermark — centred behind all content, low opacity
+  const watermarkHtml = `<div aria-hidden="true" style="pointer-events:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);opacity:.07;z-index:0;">
+    <img src="${_logoUrl}" style="width:340px;height:340px;object-fit:contain;" alt="" onerror="this.parentElement.style.display='none'">
+  </div>`;
 
   const _showPhoto = typeof showStudentPhoto==="function" ? showStudentPhoto() : false;
   const photoHtml = _showPhoto
@@ -200,13 +381,33 @@ function buildReportCard(student, cls, arm, term, session, school) {
         : `<div style="width:80px;height:90px;border:2px dashed #c7d7f5;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#9ca3af;text-align:center;">STUDENT<br>PHOTO</div>`)
     : '';
 
-  const stampHtml = `<div style="width:80px;height:80px;border:3px double #1e3a8a;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#1e3a8a;text-align:center;letter-spacing:.5px;padding:6px;">
-    <div style="font-size:8px;font-weight:900;">${(school.name||'SHC').split(' ').map(w=>w[0]).join('').slice(0,4)}</div>
-    <div style="width:60px;border-top:1px solid #1e3a8a;margin:2px 0;"></div>
-    <div>OFFICIAL</div><div>STAMP</div>
-    <div style="width:60px;border-top:1px solid #1e3a8a;margin:2px 0;"></div>
-    <div style="font-size:7px;">${new Date().getFullYear()}</div>
-  </div>`;
+  // isApproved: stored on the remark entry
+  const isApproved  = !!(remarkEntry.approved);
+  const approvedBy  = remarkEntry.approvedBy  || '';
+  const approvedAt  = remarkEntry.approvedAt
+    ? new Date(remarkEntry.approvedAt).toLocaleDateString('en-NG')
+    : '';
+
+  // Stamp: shown when approved, blank circle when not
+  const stampHtml = isApproved
+    ? `<div style="text-align:center;">
+        <img src="images/sahacostamp.jpg"
+          style="width:80px;height:80px;object-fit:contain;border-radius:50%;border:2px solid #1e3a8a;"
+          alt="Official Stamp"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div style="display:none;width:80px;height:80px;border:3px double #1e3a8a;border-radius:50%;
+          flex-direction:column;align-items:center;justify-content:center;font-size:7px;
+          font-weight:700;color:#1e3a8a;text-align:center;padding:6px;">
+          <div style="font-size:8px;font-weight:900;">SAHARCO</div><div>OFFICIAL</div>
+        </div>
+        <div style="font-size:8px;color:#16a34a;font-weight:700;margin-top:2px;">✓ APPROVED</div>
+        ${approvedAt ? `<div style="font-size:7px;color:#6b7280;">${approvedAt}</div>` : ''}
+       </div>`
+    : `<div style="width:80px;height:80px;border:2px dashed #c7d7f5;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:7px;color:#9ca3af;text-align:center;line-height:1.4;">
+        STAMP<br>PENDING
+       </div>`;
 
   /* ── attendance details ── */
   const attPct   = parseFloat(student.attendance || 0);
@@ -214,7 +415,7 @@ function buildReportCard(student, cls, arm, term, session, school) {
   const attLabel = attPct < 75 ? 'Below Minimum' : attPct < 90 ? 'Fair' : 'Excellent';
 
   /* ── shared page styles ── */
-  const PAGE_STYLE = `font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff;page-break-after:always;max-width:780px;margin:0 auto;border:1.5px solid #1e3a8a;`;
+  const PAGE_STYLE = `position:relative;overflow:hidden;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;background:#fff;page-break-after:always;max-width:780px;margin:0 auto;border:1.5px solid #1e3a8a;`;
   const HEADER = `
     <div style="padding:14px 18px 10px;border-bottom:3px solid #1e3a8a;display:flex;align-items:center;gap:14px;">
       ${logoHtml}
@@ -231,17 +432,20 @@ function buildReportCard(student, cls, arm, term, session, school) {
 
   const STUDENT_BAND = `
     <div style="background:#e8f0fe;padding:8px 18px;border-bottom:1px solid #c7d7f5;">
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:6px;">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;gap:6px;">
         <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Student Name</div>
           <div style="font-size:13px;font-weight:800;color:#111;">${student.name}</div></div>
         <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Adm. No.</div>
-          <div style="font-weight:700;">${student.id}</div></div>
+          <div style="font-weight:700;font-size:10px;">${student.id}</div></div>
         <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Class</div>
           <div style="font-weight:700;">${cls} ${arm}</div></div>
         <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Gender</div>
           <div style="font-weight:700;">${student.gender||'—'}</div></div>
-        <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">D.O.B</div>
-          <div style="font-weight:700;">${student.dob||'—'}</div></div>
+        <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Date of Birth</div>
+          <div style="font-weight:700;">${student.dob ? String(student.dob).slice(0,10) : '—'}</div></div>
+        <div><div style="font-size:9px;color:#6b7280;text-transform:uppercase;font-weight:700;">Term / Session</div>
+          <div style="font-weight:700;font-size:10px;">${term}</div>
+          <div style="font-size:9px;color:#6b7280;">${session}</div></div>
       </div>
     </div>`;
 
@@ -258,7 +462,11 @@ function buildReportCard(student, cls, arm, term, session, school) {
           <div style="font-size:9px;color:#475569;margin-top:3px;">Parent / Guardian Signature</div>
         </div>
         <div style="text-align:center;">
-          <div style="height:40px;border-bottom:1.5px solid #334155;"></div>
+          ${isApproved
+            ? `<div style="height:40px;display:flex;align-items:center;justify-content:center;">
+                <img src="images/sahacostamp.jpg" style="height:38px;object-fit:contain;opacity:.85;" onerror="this.style.display='none'">
+               </div>`
+            : `<div style="height:40px;border-bottom:1.5px solid #334155;"></div>`}
           <div style="font-size:9px;color:#475569;margin-top:3px;">Principal's Signature</div>
           <div style="font-size:9px;font-weight:700;color:#1e3a8a;">${school.principal||''}</div>
         </div>
@@ -270,8 +478,32 @@ function buildReportCard(student, cls, arm, term, session, school) {
   /* ════════════════════════════════════════════════
      PAGE 1 — Summary + Subject Results + Remarks
   ════════════════════════════════════════════════ */
+  const approveBtn = canEditPrincipal ? `
+    <div class="rc-approve-bar no-print" style="display:flex;align-items:center;gap:.75rem;
+      padding:.6rem 1rem;margin-bottom:.25rem;background:${isApproved?'#f0fdf4':'#fffbeb'};
+      border:1.5px solid ${isApproved?'#86efac':'#fcd34d'};border-radius:10px;">
+      <span style="font-size:.85rem;font-weight:700;color:${isApproved?'#16a34a':'#92400e'};">
+        ${isApproved ? '✅ Approved by ' + approvedBy + (approvedAt?' on '+approvedAt:'') : '⏳ Pending Principal Approval'}
+      </span>
+      ${isApproved
+        ? `<button onclick="rcRevoke('${student.id}','${term}','${session}')"
+             style="background:#fee2e2;color:#991b1b;border:none;border-radius:6px;padding:.3rem .75rem;
+                    font-size:.78rem;font-weight:600;cursor:pointer;margin-left:auto;">
+             ✕ Revoke Approval
+           </button>`
+        : `<button onclick="rcApprove('${student.id}','${term}','${session}')"
+             style="background:#1e3a8a;color:#fff;border:none;border-radius:6px;padding:.35rem 1rem;
+                    font-size:.82rem;font-weight:700;cursor:pointer;margin-left:auto;
+                    display:flex;align-items:center;gap:.4rem;">
+             <img src="images/sahacostamp.jpg" style="width:18px;height:18px;border-radius:50%;object-fit:contain;" onerror="this.style.display='none'">
+             Approve &amp; Stamp
+           </button>`}
+    </div>` : '';
+
   const page1 = `
+  ${approveBtn}
   <div class="report-card rc-page1" data-sid="${student.id}" style="${PAGE_STYLE}">
+    ${watermarkHtml}
     ${HEADER}
     ${STUDENT_BAND}
 

@@ -218,7 +218,7 @@
 <!-- ── Top Bar ── -->
 <div class="topbar">
   <div class="topbar-brand">
-    <span class="logo">🏫</span>
+    <span class="logo"><img src="images/sahaco logo.jpg" style="width:36px;height:36px;object-fit:contain;border-radius:50%;" onerror="this.outerHTML='🏫'"></span>
     <div>
       <h1 id="school-name-top">Sacred Heart College Eziukwu Aba</h1>
       <p>Student Finance Portal</p>
@@ -595,7 +595,7 @@ async function renderOverview() {
                 <td>${p.term}</td>
                 <td style="font-weight:600;color:var(--danger);">${fmt(p.amount)}</td>
                 <td>${statusBadge(p.status)}</td>
-                <td><button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')>💳 Pay</button></td>
+                <td><button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button></td>
               </tr>`).join('')}
             ${levies.filter(l=>l.status==='Unpaid').slice(0,2).map(l=>`
               <tr>
@@ -603,7 +603,7 @@ async function renderOverview() {
                 <td>${l.term||'—'}</td>
                 <td style="font-weight:600;color:var(--danger);">${fmt(l.amount_paid)}</td>
                 <td>${statusBadge(l.status)}</td>
-                <td><button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})>💳 Pay</button></td>
+                <td><button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -667,7 +667,7 @@ async function renderCharges() {
               <td>${statusBadge(p.status)}</td>
               <td>
                 <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
-                  ${p.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')>💳 Pay</button>`:''}
+                  ${p.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickPayModal('${p.id}','${p.fee_type}',${p.amount},'${p.term}')">💳 Pay</button>`:''}
                   <button class="btn btn-secondary btn-sm" onclick="generateReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾 Receipt</button>
                   <button class="btn btn-danger btn-sm edit-only" onclick="deleteCharge('${p.id}')">🗑</button>
                 </div>
@@ -756,7 +756,7 @@ async function renderLevies() {
               <td>${statusBadge(l.status)}</td>
               <td>
                 <div style="display:flex;gap:.25rem;flex-wrap:wrap;">
-                  ${l.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})>💳 Pay</button>`:''}
+                  ${l.status!=='Paid'?`<button class="btn btn-success btn-sm edit-only" onclick="quickLevyPayModal('${l.id}','${l.levy_name}',${l.amount_paid})">💳 Pay</button>`:''}
                   <button class="btn btn-secondary btn-sm" onclick="generateLevyReceipt(${JSON.stringify(l).replace(/"/g,'&quot;')})">🧾 Receipt</button>
                 </div>
               </td>
@@ -1251,6 +1251,353 @@ function exportStudentCSV() {
   if (!_student) { toast('Select a student first', 'warning'); return; }
   window.open(API + '/student-finance/export?sid=' + encodeURIComponent(_student.id), '_blank');
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   BURSAR TOOLS — Bulk fee assignment & class management
+════════════════════════════════════════════════════════════════ */
+
+// Add Bursar Tools nav item
+function addBursarNav() {
+  if (!canEdit()) return;
+  const nav = document.querySelector('.sfp-nav');
+  if (!nav || nav.querySelector('[data-view="bursar-tools"]')) return;
+  const item = document.createElement('div');
+  item.className = 'sfp-nav-item';
+  item.dataset.view = 'bursar-tools';
+  item.innerHTML = '<span class="ni">⚙️</span> Bursar Tools';
+  item.onclick = () => switchView('bursar-tools');
+  nav.appendChild(item);
+  
+  const item2 = document.createElement('div');
+  item2.className = 'sfp-nav-item';
+  item2.dataset.view = 'class-finance';
+  item2.innerHTML = '<span class="ni">🏫</span> Class Finance';
+  item2.onclick = () => switchView('class-finance');
+  nav.appendChild(item2);
+}
+
+// Override switchView to handle new views
+const _origSwitchView = switchView;
+window.switchView = function(view) {
+  if (view === 'bursar-tools') {
+    _view = view;
+    document.querySelectorAll('.sfp-nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+    renderBursarTools();
+    return;
+  }
+  if (view === 'class-finance') {
+    _view = view;
+    document.querySelectorAll('.sfp-nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+    renderClassFinance();
+    return;
+  }
+  _origSwitchView(view);
+};
+
+/* ── BURSAR TOOLS: Bulk assign fees to a student ── */
+function renderBursarTools() {
+  const main = $('sfp-main');
+  if (!_student) {
+    main.innerHTML = '<div class="empty"><div class="empty-icon">👈</div><p>Select a student first.</p></div>';
+    return;
+  }
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  main.innerHTML = `
+    <div class="section-title">⚙️ Bursar Tools — ${_student.name}</div>
+
+    <!-- Bulk assign multiple fees -->
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-header">
+        <h3>📋 Assign Multiple Fees at Once</h3>
+      </div>
+      <div style="padding:1.25rem;">
+        <div class="form-row" style="margin-bottom:1rem;">
+          <div class="form-group">
+            <label>Term *</label>
+            <select id="bulk-term">${termOpts}</select>
+          </div>
+          <div class="form-group">
+            <label>Session</label>
+            <input type="text" id="bulk-session" placeholder="e.g. 2025/2026" value="${_schoolInfo.current_session||''}">
+          </div>
+        </div>
+        <div id="bulk-fee-rows">
+          <div class="bulk-fee-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.5rem;">
+            <input class="fee-name" type="text" placeholder="Fee name" style="padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;">
+            <input class="fee-amt" type="number" placeholder="Amount" min="0" style="padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;">
+            <button onclick="this.closest('.bulk-fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.5rem .75rem;cursor:pointer;font-weight:700;">✕</button>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addBulkFeeRow()" style="margin-top:.5rem;">+ Add Row</button>
+        <div class="form-actions" style="margin-top:1rem;">
+          <button class="btn btn-primary" onclick="submitBulkFees()">💾 Assign All Fees</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pay All Outstanding at Once -->
+    <div class="card">
+      <div class="card-header"><h3>💳 Pay All Outstanding</h3></div>
+      <div style="padding:1.25rem;">
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem;">
+          Record a single bulk payment to clear all outstanding charges for this student.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Total Amount Paid (₦) *</label>
+            <input type="number" id="payall-amount" placeholder="0.00" min="0">
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" id="payall-date" value="${new Date().toISOString().slice(0,10)}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select id="payall-method">
+              <option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reference</label>
+            <input type="text" id="payall-ref" placeholder="Optional">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-success" onclick="submitPayAll()">✅ Record Bulk Payment</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function addBulkFeeRow() {
+  const container = document.getElementById('bulk-fee-rows');
+  const row = document.createElement('div');
+  row.className = 'bulk-fee-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.5rem;';
+  row.innerHTML = `
+    <input class="fee-name" type="text" placeholder="Fee name" style="padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;">
+    <input class="fee-amt" type="number" placeholder="Amount" min="0" style="padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;">
+    <button onclick="this.closest('.bulk-fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.5rem .75rem;cursor:pointer;font-weight:700;">✕</button>`;
+  container.appendChild(row);
+}
+
+async function assignTemplateFee(name, amount) {
+  if (!_student) { toast('Select a student first', 'warning'); return; }
+  const term = _schoolInfo.current_term || 'First Term';
+  try {
+    await apiFetch('/student-finance/charge?sid=' + encodeURIComponent(_student.id), {
+      method: 'POST',
+      body: { feeType: name, amount, date: new Date().toISOString().slice(0,10), term, status: 'Unpaid' }
+    });
+    toast(`✅ ${name} (₦${amount.toLocaleString()}) assigned`, 'success');
+    loadBalanceChip();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function submitBulkFees() {
+  if (!_student) { toast('Select a student first', 'warning'); return; }
+  const term    = document.getElementById('bulk-term')?.value;
+  const session = document.getElementById('bulk-session')?.value;
+  const rows    = document.querySelectorAll('.bulk-fee-row');
+  const fees    = [];
+  rows.forEach(row => {
+    const name = row.querySelector('.fee-name')?.value?.trim();
+    const amt  = parseFloat(row.querySelector('.fee-amt')?.value || 0);
+    if (name && amt > 0) fees.push({ name, amt });
+  });
+  if (!fees.length) { toast('Add at least one fee', 'warning'); return; }
+  let count = 0;
+  for (const f of fees) {
+    try {
+      await apiFetch('/student-finance/charge?sid=' + encodeURIComponent(_student.id), {
+        method: 'POST',
+        body: { feeType: f.name, amount: f.amt, date: new Date().toISOString().slice(0,10), term, session, status: 'Unpaid' }
+      });
+      count++;
+    } catch(e) { toast(`Failed: ${f.name} — ${e.message}`, 'error'); }
+  }
+  toast(`✅ ${count} fee(s) assigned to ${_student.name}`, 'success');
+  loadBalanceChip();
+}
+
+async function submitPayAll() {
+  if (!_student) return;
+  const amount = parseFloat(document.getElementById('payall-amount')?.value || 0);
+  const date   = document.getElementById('payall-date')?.value;
+  const method = document.getElementById('payall-method')?.value;
+  const ref    = document.getElementById('payall-ref')?.value || null;
+  if (!amount || !date) { toast('Amount and date are required', 'error'); return; }
+  try {
+    await apiFetch('/student-finance/pay-all?sid=' + encodeURIComponent(_student.id), {
+      method: 'POST',
+      body: { amount, date, method, reference: ref }
+    });
+    toast(`✅ Bulk payment of ₦${amount.toLocaleString()} recorded`, 'success');
+    loadBalanceChip();
+    renderOverview();
+    switchView('overview');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+/* ── CLASS FINANCE: overview of all students in a class ── */
+async function renderClassFinance() {
+  const main = $('sfp-main');
+  main.innerHTML = '<div class="loading">Loading classes…</div>';
+  
+  // Get list of classes
+  const classResp = await apiFetch('/classes').catch(() => null);
+  const classes   = classResp?.data || [];
+  
+  main.innerHTML = `
+    <div class="section-title">🏫 Class Finance Overview</div>
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-header"><h3>Select Class</h3></div>
+      <div style="padding:1.25rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="flex:1;min-width:180px;margin:0;">
+          <label style="display:block;font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem;">Class</label>
+          <select id="cf-class" style="width:100%;padding:.55rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem;" onchange="updateCfArms()">
+            <option value="">— Select class —</option>
+            ${classes.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;min-width:120px;margin:0;">
+          <label style="display:block;font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem;">Arm</label>
+          <select id="cf-arm" style="width:100%;padding:.55rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem;">
+            <option value="">All Arms</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadClassFinance()">📊 Load</button>
+        <button class="btn btn-secondary" onclick="openClassBulkFeeModal()" style="margin-left:.25rem;">⚡ Assign Fee to Class</button>
+      </div>
+    </div>
+    <div id="cf-output"></div>`;
+}
+
+function updateCfArms() {
+  const clsName = document.getElementById('cf-class')?.value;
+  const armSel  = document.getElementById('cf-arm');
+  if (!armSel || !clsName) return;
+  armSel.innerHTML = '<option value="">All Arms</option>';
+  // Try to get arms from the response we already loaded
+  apiFetch('/classes').then(r => {
+    const cls = (r.data||[]).find(c=>c.name===clsName);
+    if (cls?.arms) cls.arms.forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; armSel.appendChild(o); });
+  }).catch(()=>{});
+}
+
+async function loadClassFinance() {
+  const cls = document.getElementById('cf-class')?.value;
+  const arm = document.getElementById('cf-arm')?.value;
+  const out = document.getElementById('cf-output');
+  if (!cls) { toast('Select a class first', 'warning'); return; }
+  out.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const params = new URLSearchParams({ class: cls });
+    if (arm) params.set('arm', arm);
+    const resp = await apiFetch('/student-finance/class-summary?' + params.toString());
+    const students = resp.data || [];
+    const totalOwed = students.reduce((s,st)=>s+parseFloat(st.balance||0),0);
+    const cleared   = students.filter(s=>parseFloat(s.balance||0)<=0).length;
+    out.innerHTML = `
+      <div class="stat-grid" style="margin-bottom:1.25rem;">
+        ${[
+          ['Students',    students.length, '#1e3a5f'],
+          ['Total Owed',  fmt(totalOwed),  totalOwed>0?'#dc2626':'#16a34a'],
+          ['Fully Paid',  cleared,         '#16a34a'],
+          ['Outstanding', students.length-cleared, students.length-cleared>0?'#dc2626':'#16a34a'],
+        ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c};"><div class="sv" style="color:${c};">${v}</div><div class="sl">${l}</div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>${cls}${arm?' '+arm:''} — Financial Status</h3>
+          <button class="btn btn-secondary btn-sm" onclick="exportClassCSV('${cls}','${arm||''}')">⬇ Export CSV</button>
+        </div>
+        <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Student</th><th>ID</th><th>Total Charged</th><th>Total Paid</th><th>Balance</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody>
+            ${students.map(st => {
+              const bal = parseFloat(st.balance||0);
+              const ok  = bal <= 0;
+              return `<tr>
+                <td style="font-weight:600;">${st.name}</td>
+                <td style="font-size:.78rem;color:var(--text3);font-family:monospace;">${st.id}</td>
+                <td>${fmt(st.totalCharged||0)}</td>
+                <td style="color:#16a34a;font-weight:600;">${fmt(st.totalPaid||0)}</td>
+                <td style="color:${ok?'#16a34a':'#dc2626'};font-weight:700;">${fmt(bal)}</td>
+                <td><span class="badge ${ok?'badge-paid':'badge-unpaid'}">${ok?'Clear':'Owes'}</span></td>
+                <td><button class="btn btn-secondary btn-sm" onclick="goToStudent('${st.id}')">View →</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table></div>
+      </div>`;
+  } catch(e) { out.innerHTML = `<div class="empty"><p style="color:var(--danger);">Error: ${e.message}</p></div>`; }
+}
+
+function goToStudent(id) {
+  const sel = $('stu-picker');
+  if (sel) { sel.value = id; }
+  selectStudent(id);
+  switchView('overview');
+}
+
+async function openClassBulkFeeModal() {
+  const cls  = document.getElementById('cf-class')?.value;
+  const arm  = document.getElementById('cf-arm')?.value;
+  if (!cls) { toast('Select a class first', 'warning'); return; }
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`
+    <h3>⚡ Assign Fee to All Students in ${cls}${arm?' '+arm:''}</h3>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem;">
+      This will assign the same fee charge to every student in the selected class/arm.
+    </p>
+    <div class="form-group"><label>Fee Type *</label><input type="text" id="cbf-type" placeholder="e.g. School Fees, PTA Levy"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Amount (₦) *</label><input type="number" id="cbf-amount" min="0"></div>
+      <div class="form-group"><label>Term *</label><select id="cbf-term">${termOpts}</select></div>
+    </div>
+    <div class="form-group"><label>Session</label><input type="text" id="cbf-session" value="${_schoolInfo.current_session||''}" placeholder="e.g. 2025/2026"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitClassBulkFee('${cls}','${arm||''}')">⚡ Assign to All Students</button>
+    </div>`);
+}
+
+async function submitClassBulkFee(cls, arm) {
+  const feeType = document.getElementById('cbf-type')?.value?.trim();
+  const amount  = parseFloat(document.getElementById('cbf-amount')?.value || 0);
+  const term    = document.getElementById('cbf-term')?.value;
+  const session = document.getElementById('cbf-session')?.value;
+  if (!feeType || !amount) { toast('Fee type and amount required', 'error'); return; }
+  try {
+    const resp = await apiFetch('/student-finance/bulk-charge', {
+      method: 'POST',
+      body: { class: cls, arm: arm || undefined, feeType, amount, term, session, status: 'Unpaid' }
+    });
+    closeModal();
+    toast(`✅ Fee assigned to ${resp.data?.count||'all'} students in ${cls}${arm?' '+arm:''}`, 'success');
+    loadClassFinance();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function exportClassCSV(cls, arm) {
+  const params = new URLSearchParams({ class: cls });
+  if (arm) params.set('arm', arm);
+  window.open(API + '/student-finance/export-class?' + params.toString(), '_blank');
+}
+
+// Boot the bursar nav items after page loads
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(addBursarNav, 800); // after boot() runs
+});
+
+/* ── END BURSAR FEATURES ── */
 
 /* ── Boot ── */
 boot();

@@ -779,9 +779,13 @@
             </div>
 
             <div class="field col-span-2">
-              <label>Email Address</label>
-              <input type="email" id="g-email" placeholder="Parent/guardian email (for portal access)">
-              <span class="hint">A parent portal login will be sent to this address.</span>
+              <label>Email Address <span class="req">*</span></label>
+              <input type="email" id="g-email" placeholder="Parent/guardian email address" required
+                style="border-color:#2563eb;background:#f0f7ff;">
+              <span class="err-msg">A valid email address is required for the parent portal and school communications.</span>
+              <span class="hint" style="color:#2563eb;font-weight:600;">
+                📧 Required — used for report cards, fee statements, and parent portal access.
+              </span>
             </div>
 
             <div class="field col-span-2">
@@ -948,7 +952,7 @@
       <h2>Registration Submitted!</h2>
       <p>The student registration has been successfully submitted and is pending review.</p>
       <p style="margin-top:.5rem;font-size:.82rem;">Admission Number:</p>
-      <div class="reg-number-display" id="reg-number">SHC-0000</div>
+      <div class="reg-number-display" id="reg-number">SAHARCO-PENDING</div>
       <p style="font-size:.78rem;color:var(--slate-400);">Keep this number for reference. The admissions team will review and confirm the placement.</p>
       <div class="success-actions">
         <button class="btn btn-ghost" onclick="window.print()">🖨️ Print Form</button>
@@ -1053,7 +1057,7 @@ document.querySelectorAll('input, select, textarea').forEach(function(el) {
 function genAdmNo() {
   var year = new Date().getFullYear().toString().slice(-2);
   var num  = String(Math.floor(Math.random() * 9000) + 1000);
-  return 'SHC/' + year + '/' + num;
+  const today=new Date();const ds=today.getFullYear().toString()+String(today.getMonth()+1).padStart(2,'0')+String(today.getDate()).padStart(2,'0');return 'SAHARCO/'+ds+'/'+num;
 }
 
 /* ── Build admission record ── */

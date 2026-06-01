@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✝</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sacred Heart College – Enroll Students</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -440,7 +441,10 @@ async function loadData() {
     _classes  = clsRes.data  ?? clsRes  ?? [];
     _approved = (admRes.data ?? admRes  ?? []).map(a => ({
       ...a,
-      _conflict: !hasArm(a.class_apply, a.preferred_arm),
+      _conflict: !hasArm(
+        a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '',
+        a.preferred_arm ?? a.assigned_arm ?? ''
+      ),
     }));
 
     // Session chip from App.data or settings
@@ -485,7 +489,7 @@ function classIdOf(className) {
   return _classes.find(c => c.name === className)?.id ?? null;
 }
 function fname(a) {
-  return [a.last_name, a.first_name, a.middle_name].filter(Boolean).join(' ');
+  return a.applicantName || [a.last_name, a.first_name, a.middle_name].filter(Boolean).join(' ') || a.first_name || '—';
 }
 function inits(a) {
   return ((a.last_name?.[0] ?? '?') + (a.first_name?.[0] ?? '?')).toUpperCase();
@@ -505,7 +509,7 @@ function renderTable() {
   _filtered = _approved.filter(a => {
     const n  = fname(a).toLowerCase();
     const ok = (!q || n.includes(q) || (a.adm_no ?? '').toLowerCase().includes(q))
-            && (!clsF  || a.class_apply === clsF)
+            && (!clsF  || (a.class_apply??a.applyingForClass??a.applying_for_class??'') === clsF)
             && (!confF || (confF === 'ok' ? !a._conflict : a._conflict));
     return ok;
   });
@@ -537,8 +541,8 @@ function renderTable() {
 
   tbody.innerHTML = _filtered.map((a, i) => {
     const ov      = _overrides[a.id] ?? {};
-    const cls     = ov.className ?? a.class_apply ?? '';
-    const arm     = ov.arm       ?? a.preferred_arm ?? '';
+    const cls     = ov.className ?? a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '';
+    const arm     = ov.arm       ?? a.preferred_arm ?? a.assigned_arm ?? '';
     const arms    = armsOf(cls);
     const checked = _selected.has(a.id);
     const color   = aColor(fname(a));
@@ -658,8 +662,8 @@ window.__preview = function() {
   if (!to.length) return toast('Select at least one student first.', 'amber');
 
   const hasConflict = to.some(a => {
-    const cls = _overrides[a.id]?.className ?? a.class_apply;
-    const arm = _overrides[a.id]?.arm       ?? a.preferred_arm;
+    const cls = _overrides[a.id]?.className ?? a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '';
+    const arm = _overrides[a.id]?.arm       ?? a.preferred_arm ?? a.assigned_arm ?? '';
     return !hasArm(cls, arm);
   });
 
@@ -676,8 +680,8 @@ window.__preview = function() {
 
   html += '<div style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:.4rem;">';
   to.forEach(a => {
-    const cls      = _overrides[a.id]?.className ?? a.class_apply ?? '—';
-    const arm      = _overrides[a.id]?.arm       ?? a.preferred_arm ?? '?';
+    const cls      = _overrides[a.id]?.className ?? a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '—';
+    const arm      = _overrides[a.id]?.arm       ?? a.preferred_arm ?? a.assigned_arm ?? '?';
     const conflict = !hasArm(cls, arm);
     const color    = aColor(fname(a));
     html += `<div style="display:flex;align-items:center;gap:.7rem;background:${conflict?'#fef9c3':'#f0fdf4'};border:1px solid ${conflict?'#fde68a':'#bbf7d0'};border-radius:8px;padding:.6rem .85rem;">
@@ -698,9 +702,11 @@ window.__start    = function() { window.__preview(); };
 window.__doEnroll = async function() {
   // Only send records where class+arm are valid
   const valid = selectedRecords().filter(a => {
-    const cls = _overrides[a.id]?.className ?? a.class_apply;
-    const arm = _overrides[a.id]?.arm       ?? a.preferred_arm;
-    return cls && hasArm(cls, arm);
+    const cls = _overrides[a.id]?.className
+      ?? a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '';
+    const arm = _overrides[a.id]?.arm
+      ?? a.preferred_arm ?? a.assigned_arm ?? '';
+    return cls && arm;  // just need both to be non-empty; backend validates class exists
   });
 
   if (!valid.length) {
@@ -717,25 +723,33 @@ window.__doEnroll = async function() {
 
   try {
     // Build payload — one entry per student
-    const enrollments = valid.map(a => ({
-      admission_id: a.id,
-      class_id:     classIdOf(_overrides[a.id]?.className ?? a.class_apply),
-      arm:          _overrides[a.id]?.arm ?? a.preferred_arm,
-    }));
+    const enrollments = valid.map(a => {
+      const cls = _overrides[a.id]?.className
+        ?? a.class_apply ?? a.applyingForClass ?? a.applying_for_class ?? '';
+      const arm = _overrides[a.id]?.arm
+        ?? a.preferred_arm ?? a.assigned_arm ?? '';
+      return {
+        admission_id:  a.id,
+        class_id:      cls,   // backend accepts class name via db.findClass()
+        arm:           arm,
+      };
+    });
+
+    console.log('[enroll] payload:', JSON.stringify({ enrollments }));
 
     fill.style.width = '60%';
 
-    // Single API call — backend handles everything atomically in the DB
-    const res = await Admissions.bulkEnroll(enrollments);
+    // Backend expects { enrollments: [...] }
+    const res = await Admissions.bulkEnroll({ enrollments });
 
     fill.style.width = '100%';
     await new Promise(r => setTimeout(r, 400));
     overlay.classList.remove('open');
 
     showResultModal({
-      success: res.enrolled ?? [],
-      skipped: res.skipped  ?? [],
-      error:   res.errors   ?? [],
+      success: res.enrolled ?? res.data?.enrolled ?? [],
+      skipped: res.skipped  ?? res.data?.skipped  ?? [],
+      error:   res.errors   ?? res.data?.errors   ?? [],
     });
 
     _selected.clear();

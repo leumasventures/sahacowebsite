@@ -499,6 +499,9 @@ function navigate(sectionId) {
     'access-tokens': 'Access Tokens',
     'users':         'User Management',
     settings:        'Settings',
+    messaging:       'Communications Centre',
+    transcript:      'Transcripts & Profiles',
+    'parent-portal': 'Parent Portal',
 
     // ── Admission pages (external — title only, no renderSection needed) ──
     admissions:      'Admission List',
@@ -528,6 +531,9 @@ function renderSection(id) {
     case 'timetable':       renderTimetable();    break;
     case 'fees':            renderFees();           break;
     case 'levies':          navigate('fees'); return; // merged into Finance
+    case 'messaging':       renderMessaging();      break;
+    case 'transcript':      renderTranscript();     break;
+    case 'parent-portal':   renderParentPortal();   break;
     case 'former-students': renderFormerStudents(); break;
     case 'former-staff':    renderFormerStaff();    break;
     case 'access-tokens':   renderAccessTokens(); break;
@@ -544,20 +550,30 @@ function renderSection(id) {
    5. SIDEBAR
 ───────────────────────────────────────── */
 function initSidebar() {
-  /* Hide nav links that the current role cannot access */
+  /* Hide nav links for roles that can't access them.
+     Skip admin-only-nav items — controlled by the inline role filter.
+     Skip external links (no leading #). */
   $$('.sidebar-nav a[href]').forEach(a => {
-    const section = a.getAttribute('href').replace('#', '');
+    if (a.closest('.admin-only-nav')) return; // handled by dashboard.html role filter
+    const href = a.getAttribute('href') || '';
+    if (!href.startsWith('#')) return; // external links — always visible
+    const section = href.slice(1);
     const allowed = App.currentUser.privileges?.allowedSections;
-    if (allowed && !allowed.includes(section)) {
+    if (allowed && section && !allowed.includes(section)) {
       a.closest('li')?.style.setProperty('display', 'none');
     }
   });
 
   $$('.sidebar-nav a').forEach(a => {
     a.addEventListener('click', e => {
+      const href = a.getAttribute('href') || '';
+      // External links — let browser navigate normally
+      if (!href.startsWith('#')) {
+        if (window.innerWidth < 768) collapseSidebar(true);
+        return;
+      }
       e.preventDefault();
-      const hash = a.getAttribute('href').replace('#', '');
-      navigate(hash);
+      navigate(href.slice(1));
       if (window.innerWidth < 768) collapseSidebar(true);
     });
   });

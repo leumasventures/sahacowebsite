@@ -1,1009 +1,1107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Parent Portal — Sacred Heart College Eziukwu Aba</title>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Finance Portal — Sacred Heart College</title>
   <style>
     :root {
-      --maroon:      #7B1D1D;
-      --maroon-dark: #5A1212;
-      --maroon-mid:  #A33030;
-      --gold:        #C9963A;
-      --gold-light:  #E8C47A;
-      --cream:       #FAF7F2;
-      --sand:        #EDE4D6;
-      --warm-white:  #FEFCF8;
-      --ink:         #1A1410;
-      --muted:       #6B6157;
-      --sage:        #4A7A5A;
-      --rust:        #B85C38;
-      --shadow:      rgba(26,20,16,0.10);
+      --brand:#1e3a5f; --brand2:#2563eb; --gold:#c8972b;
+      --success:#16a34a; --warn:#d97706; --danger:#dc2626;
+      --bg:#f8fafc; --border:#e2e8f0; --text:#111827; --muted:#6b7280;
+      --radius:12px; --shadow:0 2px 12px rgba(0,0,0,.08);
     }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ── topbar ── */
+    .topbar{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+      padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+      gap:.75rem;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+    .tb-brand{display:flex;align-items:center;gap:.75rem}
+    .tb-logo{width:38px;height:38px;border-radius:50%;object-fit:contain;border:1.5px solid rgba(255,255,255,.4)}
+    .tb-brand h1{font-size:.95rem;font-weight:700}
+    .tb-brand p{font-size:.72rem;opacity:.8}
+    .tb-actions{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+    .btn-tb{padding:.38rem .9rem;border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;text-decoration:none}
+    .btn-tb-ghost{background:rgba(255,255,255,.18);color:#fff}
+    .btn-tb-white{background:#fff;color:var(--brand)}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--cream);
-      color: var(--ink);
-      min-height: 100vh;
-      overflow-x: hidden;
+    /* ── layout ── */
+    .layout{display:flex;min-height:calc(100vh - 56px)}
+    .sidebar{width:250px;background:#fff;border-right:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
+    .main{flex:1;padding:1.5rem;overflow-y:auto;max-width:1100px}
+
+    /* ── sidebar ── */
+    .stu-picker-wrap{padding:.85rem;border-bottom:1px solid var(--border)}
+    .stu-picker-wrap label{font-size:.73rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:.35rem}
+    .stu-picker-wrap select{width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;outline:none;background:#fff}
+    .stu-picker-wrap select:focus{border-color:var(--brand2)}
+
+    .stu-card{padding:1.1rem;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#eff6ff,#f0fdf4);display:none}
+    .stu-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));
+      color:#fff;font-size:1.1rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem}
+    .stu-name{font-size:.95rem;font-weight:700;margin-bottom:.1rem}
+    .stu-meta{font-size:.75rem;color:var(--muted)}
+    .balance-pill{display:inline-block;margin-top:.4rem;padding:.2rem .65rem;border-radius:9999px;font-size:.73rem;font-weight:700}
+    .pill-ok{background:#dcfce7;color:#166534}
+    .pill-owed{background:#fee2e2;color:#991b1b}
+
+    .sfp-nav{padding:.5rem 0;flex:1}
+    .nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1.1rem;cursor:pointer;
+      font-size:.85rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+    .nav-item:hover{background:var(--bg);color:var(--brand)}
+    .nav-item.active{background:#eff6ff;color:var(--brand);border-left-color:var(--brand2);font-weight:600}
+    .nav-badge{background:var(--danger);color:#fff;font-size:.63rem;font-weight:700;border-radius:9999px;padding:.1rem .4rem;margin-left:auto}
+
+    /* ── cards & tables ── */
+    .card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.1rem}
+    .card-hdr{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
+    .card-hdr h3{font-size:.92rem;font-weight:700;color:var(--brand)}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:.75rem;margin-bottom:1.1rem}
+    .stat-card{background:#fff;border-radius:var(--radius);padding:.9rem 1rem;box-shadow:var(--shadow);border-left:4px solid var(--brand2)}
+    .stat-val{font-size:1.35rem;font-weight:700;margin-bottom:.1rem}
+    .stat-lbl{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase}
+
+    table{width:100%;border-collapse:collapse;font-size:.83rem}
+    th{padding:.55rem .9rem;text-align:left;font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid var(--border)}
+    td{padding:.6rem .9rem;border-bottom:1px solid #f3f4f6}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#fafafa}
+
+    /* ── badges ── */
+    .badge{display:inline-block;border-radius:9999px;padding:.18rem .6rem;font-size:.72rem;font-weight:700}
+    .b-paid{background:#dcfce7;color:#166534}
+    .b-partial{background:#fef3c7;color:#92400e}
+    .b-unpaid{background:#fee2e2;color:#991b1b}
+    .b-waived{background:#f3f4f6;color:var(--muted)}
+    .b-charge{background:#eff6ff;color:#1d4ed8}
+    .b-payment{background:#f0fdf4;color:#166534}
+    .b-adj{background:#faf5ff;color:#7c3aed}
+
+    /* ── buttons ── */
+    .btn{display:inline-flex;align-items:center;gap:.3rem;padding:.42rem .9rem;border:none;border-radius:8px;
+      cursor:pointer;font-size:.8rem;font-weight:600;transition:opacity .15s;text-decoration:none}
+    .btn:hover{opacity:.85}
+    .btn-primary{background:var(--brand);color:#fff}
+    .btn-success{background:var(--success);color:#fff}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-secondary{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
+    .btn-warning{background:var(--warn);color:#fff}
+    .btn-ghost{background:transparent;color:var(--brand2);border:1.5px solid var(--brand2)}
+    .btn-sm{padding:.28rem .6rem;font-size:.76rem}
+
+    /* ── forms ── */
+    .fg{margin-bottom:.75rem}
+    .fg label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.28rem}
+    .fg input,.fg select,.fg textarea{width:100%;padding:.5rem .8rem;border:1.5px solid var(--border);
+      border-radius:8px;font-size:.875rem;outline:none;font-family:inherit}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--brand2)}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+
+    /* ── modal ── */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;place-items:center;padding:1rem}
+    .modal.open{display:grid}
+    .modal-box{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;
+      overflow-y:auto;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+    .modal-box h3{font-size:1rem;font-weight:700;color:var(--brand);margin-bottom:1rem}
+    .modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
+
+    /* ── misc ── */
+    .empty{text-align:center;padding:3rem 1rem;color:var(--muted)}
+    .empty-ico{font-size:2.5rem;margin-bottom:.5rem}
+    .loading{text-align:center;padding:2rem;color:var(--muted)}
+    .section-title{font-size:1.05rem;font-weight:700;color:var(--brand);margin-bottom:1rem}
+    .viewonly-banner{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.6rem 1rem;
+      margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem}
+
+    .toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.4rem}
+    .toast{background:#1e293b;color:#fff;padding:.6rem 1rem;border-radius:9px;font-size:.83rem;font-weight:500;
+      animation:toastIn .2s ease}
+    @keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    .ledger-debit{color:var(--danger);font-weight:600}
+    .ledger-credit{color:var(--success);font-weight:600}
+    .balance-row{font-weight:700}
+
+    /* ── parent portal specific ── */
+    .parent-login-wrap{max-width:480px;margin:3rem auto;padding:0 1rem}
+    .parent-login-card{background:#fff;border-radius:16px;padding:2rem;box-shadow:var(--shadow)}
+    .parent-login-card h2{font-size:1.1rem;font-weight:800;color:var(--brand);margin-bottom:.35rem}
+    .parent-login-card p{font-size:.85rem;color:var(--muted);margin-bottom:1.25rem}
+
+    @media(max-width:680px){
+      .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+      .layout{flex-direction:column}
+      .frow{grid-template-columns:1fr}
     }
-
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        radial-gradient(ellipse 75% 50% at 85% -5%,  rgba(201,150,58,0.09)  0%, transparent 55%),
-        radial-gradient(ellipse 60% 45% at -8% 85%,  rgba(123,29,29,0.07)   0%, transparent 50%);
-      pointer-events: none; z-index: 0;
-    }
-
-    /* ══════════════════════════════════════════════
-       HEADER
-    ══════════════════════════════════════════════ */
-    header {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(250,247,242,0.94);
-      backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--sand);
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 0 2.5rem; height: 66px;
-    }
-
-    .logo { display: flex; align-items: center; gap: 0.85rem; text-decoration: none; }
-
-    .logo-crest {
-      width: 38px; height: 38px;
-      background: var(--maroon);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 8px rgba(123,29,29,0.25);
-      flex-shrink: 0;
-    }
-
-    .logo-crest svg { width: 20px; height: 20px; fill: var(--gold); }
-
-    .logo-text { line-height: 1.15; }
-    .logo-text .school   { font-family: 'EB Garamond', serif; font-size: 1rem; font-weight: 700; color: var(--maroon); display: block; }
-    .logo-text .location { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); display: block; }
-
-    .header-right { display: flex; align-items: center; gap: 1rem; }
-
-    .notif-btn {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 1.5px solid var(--sand); background: var(--warm-white);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      position: relative; transition: border-color 0.2s;
-    }
-    .notif-btn:hover { border-color: var(--gold); }
-
-    .notif-dot {
-      position: absolute; top: 6px; right: 6px;
-      width: 7px; height: 7px;
-      background: var(--rust); border-radius: 50%;
-      border: 1.5px solid var(--cream);
-    }
-
-    .parent-chip {
-      display: flex; align-items: center; gap: 0.55rem;
-      background: var(--warm-white);
-      border: 1.5px solid var(--sand); border-radius: 100px;
-      padding: 0.28rem 0.85rem 0.28rem 0.35rem;
-      cursor: default; transition: border-color 0.2s;
-    }
-
-    .parent-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: var(--maroon); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.65rem; font-weight: 700;
-    }
-
-    .parent-name { font-size: 0.80rem; font-weight: 600; color: var(--ink); }
-
-    .logout-btn {
-      display: flex; align-items: center; gap: 0.4rem;
-      padding: 0.42rem 0.9rem;
-      border: 1.5px solid var(--sand); border-radius: 8px;
-      background: var(--warm-white); color: var(--muted);
-      font-size: 0.78rem; font-weight: 600;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer; transition: all 0.2s;
-    }
-    .logout-btn:hover { border-color: var(--maroon); color: var(--maroon); }
-
-    /* ══════════════════════════════════════════════
-       SESSION GUARD OVERLAY
-    ══════════════════════════════════════════════ */
-    #sessionGuard {
-      display: none;
-      position: fixed; inset: 0; z-index: 999;
-      background: var(--cream);
-      flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center; gap: 1rem;
-    }
-    #sessionGuard h2 { font-family: 'EB Garamond', serif; font-size: 1.5rem; color: var(--maroon); }
-    #sessionGuard p  { color: var(--muted); font-size: 0.9rem; }
-    #sessionGuard a  {
-      display: inline-block; margin-top: 0.5rem;
-      padding: 0.65rem 1.5rem; border-radius: 8px;
-      background: var(--maroon); color: #fff;
-      font-weight: 600; text-decoration: none; font-size: 0.88rem;
-      transition: background 0.2s;
-    }
-    #sessionGuard a:hover { background: var(--maroon-dark); }
-
-    /* ══════════════════════════════════════════════
-       MAIN
-    ══════════════════════════════════════════════ */
-    main {
-      position: relative; z-index: 1;
-      max-width: 1180px; margin: 0 auto;
-      padding: 2.5rem 2rem 4rem;
-    }
-
-    .page-header { margin-bottom: 2.2rem; animation: fadeUp 0.45s ease both; }
-
-    .breadcrumb { font-size: 0.75rem; color: #999; margin-bottom: 0.45rem; letter-spacing: 0.03em; }
-    .breadcrumb a { color: var(--gold); text-decoration: none; }
-
-    .page-header h1 {
-      font-family: 'EB Garamond', serif;
-      font-size: 2rem; font-weight: 700;
-      letter-spacing: -0.02em; line-height: 1.2;
-    }
-
-    .page-header p { margin-top: 0.35rem; font-size: 0.88rem; color: var(--muted); font-weight: 300; }
-
-    .term-badge {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.3rem 0.85rem; border-radius: 100px;
-      background: rgba(123,29,29,0.08); color: var(--maroon);
-      font-size: 0.75rem; font-weight: 700; margin-top: 0.6rem;
-      letter-spacing: 0.04em;
-    }
-
-    /* ── Children tabs ── */
-    .children-tabs {
-      display: flex; gap: 0.65rem; margin-bottom: 2rem;
-      animation: fadeUp 0.45s 0.07s ease both;
-      overflow-x: auto; padding-bottom: 2px;
-    }
-
-    .child-tab {
-      display: flex; align-items: center; gap: 0.55rem;
-      padding: 0.52rem 1.1rem; border-radius: 100px;
-      border: 1.5px solid var(--sand); background: var(--warm-white);
-      cursor: pointer; font-size: 0.84rem; font-weight: 500;
-      transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
-    }
-    .child-tab:hover { border-color: var(--gold-light); }
-    .child-tab.active { background: var(--maroon); border-color: var(--maroon); color: #fff; }
-
-    .tab-avatar {
-      width: 22px; height: 22px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.62rem; font-weight: 700;
-    }
-    .child-tab.active .tab-avatar      { background: var(--gold); color: var(--ink); }
-    .child-tab:not(.active) .tab-avatar { background: var(--sand); color: var(--ink); }
-
-    .no-children {
-      padding: 2rem; text-align: center;
-      background: var(--warm-white); border: 1.5px solid var(--sand);
-      border-radius: 16px; color: var(--muted); font-size: 0.88rem;
-    }
-
-    /* ══════════════════════════════════════════════
-       STUDENT OVERVIEW CARDS
-    ══════════════════════════════════════════════ */
-    .student-overview {
-      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 1.15rem; margin-bottom: 2rem;
-      animation: fadeUp 0.45s 0.11s ease both;
-    }
-
-    .student-card {
-      background: var(--warm-white); border: 1.5px solid var(--sand);
-      border-radius: 16px; padding: 1.35rem 1.45rem;
-      position: relative; overflow: hidden;
-    }
-    .student-card.wide { grid-column: span 2; }
-    .student-card::after {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--maroon), var(--maroon-mid));
-      opacity: 0; transition: opacity 0.2s;
-    }
-    .student-card:hover::after { opacity: 1; }
-
-    .card-label {
-      font-size: 0.70rem; font-weight: 700;
-      letter-spacing: 0.09em; text-transform: uppercase;
-      color: #aaa; margin-bottom: 0.45rem;
-    }
-
-    .card-value {
-      font-family: 'EB Garamond', serif;
-      font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1;
-    }
-
-    .card-sub { font-size: 0.76rem; color: #999; margin-top: 0.3rem; }
-
-    .card-badge {
-      display: inline-block; margin-top: 0.45rem;
-      padding: 0.18rem 0.65rem; border-radius: 100px;
-      font-size: 0.71rem; font-weight: 700;
-    }
-    .badge-maroon { background: rgba(123,29,29,0.10); color: var(--maroon); }
-    .badge-green  { background: rgba(74,122,90,0.12);  color: var(--sage); }
-    .badge-gold   { background: rgba(201,150,58,0.12); color: #9A700A; }
-    .badge-rust   { background: rgba(184,92,56,0.12);  color: var(--rust); }
-
-    .student-info { display: flex; align-items: center; gap: 1rem; }
-
-    .big-avatar {
-      width: 54px; height: 54px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--maroon), var(--maroon-mid));
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'EB Garamond', serif; font-size: 1.35rem; font-weight: 700;
-      color: var(--gold-light); flex-shrink: 0;
-    }
-
-    .student-details h2 {
-      font-family: 'EB Garamond', serif; font-size: 1.15rem;
-      font-weight: 700; margin-bottom: 0.15rem;
-    }
-    .student-details .meta { font-size: 0.78rem; color: var(--muted); }
-
-    .student-id-chip {
-      display: inline-block; margin-top: 0.4rem;
-      padding: 0.18rem 0.6rem; border-radius: 6px;
-      background: rgba(201,150,58,0.12); color: #9A700A;
-      font-size: 0.70rem; font-weight: 700; letter-spacing: 0.05em;
-    }
-
-    /* ══════════════════════════════════════════════
-       ACTION ROW
-    ══════════════════════════════════════════════ */
-    .action-row {
-      display: flex; gap: 0.7rem; margin-bottom: 2rem;
-      flex-wrap: wrap; animation: fadeUp 0.45s 0.15s ease both;
-    }
-
-    .cta-btn {
-      display: inline-flex; align-items: center; gap: 0.55rem;
-      padding: 0.62rem 1.3rem; border-radius: 9px;
-      font-size: 0.84rem; font-weight: 600;
-      font-family: 'DM Sans', sans-serif;
-      text-decoration: none; transition: all 0.2s;
-      border: none; cursor: pointer;
-    }
-    .cta-primary { background: var(--maroon); color: #fff; }
-    .cta-primary:hover { background: var(--maroon-dark); transform: translateY(-1px); box-shadow: 0 5px 16px rgba(123,29,29,0.22); }
-    .cta-secondary { background: transparent; color: var(--ink); border: 1.5px solid var(--sand); }
-    .cta-secondary:hover { border-color: var(--maroon); color: var(--maroon); }
-    .cta-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
-
-    /* ══════════════════════════════════════════════
-       SECTION TITLES
-    ══════════════════════════════════════════════ */
-    .section-title {
-      font-family: 'EB Garamond', serif; font-size: 1.2rem; font-weight: 700;
-      margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.75rem;
-    }
-    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--sand); }
-
-    /* ══════════════════════════════════════════════
-       SUBJECTS GRID
-    ══════════════════════════════════════════════ */
-    .subjects-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 1rem; margin-bottom: 2.5rem;
-      animation: fadeUp 0.45s 0.17s ease both;
-    }
-
-    .subject-card {
-      background: var(--warm-white); border: 1.5px solid var(--sand);
-      border-radius: 13px; padding: 1.2rem 1.3rem;
-      cursor: pointer; transition: all 0.22s;
-      text-decoration: none; color: inherit;
-      display: block; position: relative; overflow: hidden;
-    }
-    .subject-card:hover { border-color: var(--gold-light); transform: translateY(-2px); box-shadow: 0 8px 24px var(--shadow); }
-    .subject-card:hover .view-link { opacity: 1; }
-
-    .subject-icon  { font-size: 1.45rem; margin-bottom: 0.7rem; }
-    .subject-name  { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.2rem; }
-    .subject-teacher { font-size: 0.72rem; color: #aaa; margin-bottom: 0.8rem; }
-
-    .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
-
-    .score-pct { font-family: 'EB Garamond', serif; font-size: 1.4rem; font-weight: 700; }
-
-    .score-grade { font-size: 0.75rem; font-weight: 800; padding: 0.15rem 0.52rem; border-radius: 5px; }
-    .grade-a { background: rgba(74,122,90,0.14);  color: var(--sage); }
-    .grade-b { background: rgba(201,150,58,0.14); color: #9A700A; }
-    .grade-c { background: rgba(184,92,56,0.14);  color: var(--rust); }
-    .grade-f { background: rgba(160,0,0,0.10);    color: #900; }
-
-    .progress-bar  { height: 4px; border-radius: 100px; background: var(--sand); overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 100px; transition: width 0.8s ease; }
-    .fill-green { background: linear-gradient(90deg, var(--sage), #7FC88A); }
-    .fill-gold  { background: linear-gradient(90deg, #9A700A, var(--gold-light)); }
-    .fill-rust  { background: linear-gradient(90deg, var(--rust), #E07555); }
-
-    .view-link {
-      position: absolute; bottom: 0.9rem; right: 1rem;
-      font-size: 0.68rem; font-weight: 700; color: var(--gold);
-      opacity: 0; transition: opacity 0.2s;
-      letter-spacing: 0.05em; text-transform: uppercase;
-    }
-
-    /* ══════════════════════════════════════════════
-       BOTTOM PANELS
-    ══════════════════════════════════════════════ */
-    .bottom-grid {
-      display: grid; grid-template-columns: 1.4fr 1fr;
-      gap: 1.4rem; animation: fadeUp 0.45s 0.22s ease both;
-    }
-
-    .panel {
-      background: var(--warm-white); border: 1.5px solid var(--sand);
-      border-radius: 16px; padding: 1.45rem 1.55rem;
-    }
-
-    .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.15rem; }
-    .panel-title  { font-family: 'EB Garamond', serif; font-size: 1.05rem; font-weight: 700; }
-    .panel-link   { font-size: 0.76rem; color: var(--gold); text-decoration: none; font-weight: 600; }
-
-    .activity-item {
-      display: flex; align-items: flex-start; gap: 0.85rem;
-      padding: 0.8rem 0; border-bottom: 1px solid var(--sand);
-    }
-    .activity-item:last-child { border-bottom: none; }
-
-    .activity-dot  { width: 7px; height: 7px; border-radius: 50%; margin-top: 0.42rem; flex-shrink: 0; }
-    .dot-green { background: var(--sage); }
-    .dot-gold  { background: var(--gold); }
-    .dot-rust  { background: var(--rust); }
-
-    .activity-content { flex: 1; }
-    .activity-title { font-size: 0.83rem; font-weight: 500; margin-bottom: 0.12rem; }
-    .activity-meta  { font-size: 0.72rem; color: #aaa; }
-    .activity-score { font-family: 'EB Garamond', serif; font-size: 1rem; font-weight: 700; flex-shrink: 0; }
-
-    /* Attendance */
-    .att-summary { display: flex; gap: 1.5rem; margin-bottom: 1rem; align-items: flex-end; }
-
-    .att-num { font-family: 'EB Garamond', serif; font-size: 1.7rem; font-weight: 700; line-height: 1; }
-
-    .attendance-grid {
-      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 0.75rem;
-    }
-
-    .att-day-label {
-      font-size: 0.58rem; font-weight: 700; letter-spacing: 0.05em;
-      text-transform: uppercase; color: #bbb; text-align: center; margin-bottom: 3px;
-    }
-
-    .att-cell    { aspect-ratio: 1; border-radius: 4px; background: var(--sand); }
-    .att-present { background: var(--sage);  opacity: 0.80; }
-    .att-absent  { background: var(--rust);  opacity: 0.70; }
-    .att-late    { background: var(--gold);  opacity: 0.70; }
-    .att-holiday { background: #ddd;         opacity: 0.40; }
-    .att-future  { background: var(--sand); }
-
-    .att-legend { display: flex; gap: 0.9rem; margin-top: 0.9rem; flex-wrap: wrap; }
-    .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.70rem; color: #888; }
-    .legend-dot  { width: 8px; height: 8px; border-radius: 2px; }
-
-    /* ══════════════════════════════════════════════
-       FOOTER & ANIMATIONS
-    ══════════════════════════════════════════════ */
-    .portal-footer {
-      text-align: center; margin-top: 3rem;
-      font-size: 0.70rem; color: #bbb; position: relative; z-index: 1;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 900px) {
-      .student-overview { grid-template-columns: 1fr 1fr; }
-      .student-card.wide { grid-column: span 2; }
-      .subjects-grid { grid-template-columns: 1fr 1fr; }
-      .bottom-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 600px) {
-      header { padding: 0 1.2rem; }
-      .logo-text .school { font-size: 0.88rem; }
-      .logo-text .location { display: none; }
-      main { padding: 1.5rem 1rem 3rem; }
-      .student-overview { grid-template-columns: 1fr; }
-      .student-card.wide { grid-column: span 1; }
-      .subjects-grid { grid-template-columns: 1fr; }
+    @media print{
+      .topbar,.sidebar,.no-print{display:none!important}
+      .main{padding:0;max-width:100%}
+      .layout{display:block}
     }
   </style>
 </head>
 <body>
 
-<!-- Session guard overlay -->
-<div id="sessionGuard">
-  <div style="font-size:2.5rem">🔒</div>
-  <h2>Access Restricted</h2>
-  <p>You must be logged in as a Parent / Guardian to view this portal.</p>
-  <a href="login.html">Go to Login</a>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-brand">
+    <img class="tb-logo" src="images/sahaco logo.jpg" alt="SAHARCO" onerror="this.style.display='none'">
+    <div>
+      <h1 id="top-school-name">Sacred Heart College Eziukwu Aba</h1>
+      <p id="top-role-label">Student Finance Portal</p>
+    </div>
+  </div>
+  <div class="tb-actions no-print">
+    <a href="dashboard.html" class="btn-tb btn-tb-ghost">← Dashboard</a>
+    <button class="btn-tb btn-tb-white" onclick="window.print()">🖨 Print</button>
+    <button class="btn-tb btn-tb-ghost" id="btn-export" style="display:none" onclick="doExport()">⬇ Export CSV</button>
+  </div>
 </div>
 
-<!-- ══════════════ HEADER ══════════════ -->
-<header>
-  <a class="logo" href="login.html">
-    <div class="logo-crest">
-      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18 4h4v12h12v4H22v16h-4V20H6v-4h12V4z"/>
-        <path d="M20 32 Q14 27 12 22 Q10 17 14 14.5 Q17 13 20 16 Q23 13 26 14.5 Q30 17 28 22 Q26 27 20 32z" opacity="0.5"/>
-      </svg>
-    </div>
-    <div class="logo-text">
-      <span class="school">Sacred Heart College</span>
-      <span class="location">Eziukwu, Aba</span>
-    </div>
-  </a>
+<!-- LAYOUT -->
+<div class="layout">
 
-  <div class="header-right">
-    <button class="notif-btn" title="Notifications">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      <span class="notif-dot"></span>
-    </button>
-
-    <div class="parent-chip">
-      <div class="parent-avatar" id="headerInitials">—</div>
-      <span class="parent-name" id="headerName">Parent</span>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="stu-picker-wrap no-print" id="picker-wrap">
+      <label>Select Student</label>
+      <select id="stu-picker" onchange="selectStudent(this.value)">
+        <option value="">Loading…</option>
+      </select>
     </div>
 
-    <button class="logout-btn" onclick="logout()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/>
-        <line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      Sign Out
-    </button>
-  </div>
-</header>
-
-<!-- ══════════════ MAIN ══════════════ -->
-<main>
-
-  <div class="page-header">
-    <div class="breadcrumb"><a href="login.html">Home</a> › Parent Portal</div>
-    <h1>Academic Performance</h1>
-    <p id="pageSubtitle">Monitor your child's progress, attendance, and results.</p>
-    <div class="term-badge">📅 2024 / 2025 Academic Session — Second Term</div>
-  </div>
-
-  <div class="children-tabs" id="childrenTabs"></div>
-
-  <div class="student-overview" id="studentOverview"></div>
-
-  <div class="action-row">
-    <a href="checkResult.html" class="cta-btn cta-primary" id="viewResultsBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-        <rect x="9" y="3" width="6" height="4" rx="1"/>
-        <path d="M9 12h6M9 16h4"/>
-      </svg>
-      View Full Results
-    </a>
-    <button class="cta-btn cta-secondary" onclick="window.print()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="6 9 6 2 18 2 18 9"/>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-        <rect x="6" y="14" width="12" height="8"/>
-      </svg>
-      Print Report
-    </button>
-    <button class="cta-btn cta-secondary">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-        <polyline points="22,6 12,13 2,6"/>
-      </svg>
-      Message Teacher
-    </button>
-  </div>
-
-  <div class="section-title">Subject Performance</div>
-  <div class="subjects-grid" id="subjectsGrid"></div>
-
-  <div class="bottom-grid">
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Recent Assessments</span>
-        <a href="checkResult.html" class="panel-link" id="seeAllLink">See all →</a>
-      </div>
-      <div id="activityList"></div>
+    <div class="stu-card" id="stu-card">
+      <div class="stu-avatar" id="stu-avatar">—</div>
+      <div class="stu-name"  id="stu-name">—</div>
+      <div class="stu-meta"  id="stu-meta">—</div>
+      <div id="stu-balance"></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Attendance — March 2025</span>
-      </div>
-      <div class="att-summary">
-        <div>
-          <div class="card-label">Present</div>
-          <div class="att-num" id="presentDays">—</div>
-        </div>
-        <div>
-          <div class="card-label">Absent</div>
-          <div class="att-num" style="color:var(--rust)" id="absentDays">—</div>
-        </div>
-        <div>
-          <div class="card-label">Late</div>
-          <div class="att-num" style="color:var(--gold)" id="lateDays">—</div>
-        </div>
-      </div>
-      <div class="attendance-grid" id="attGrid">
-        <div class="att-day-label">M</div>
-        <div class="att-day-label">T</div>
-        <div class="att-day-label">W</div>
-        <div class="att-day-label">T</div>
-        <div class="att-day-label">F</div>
-        <div class="att-day-label">S</div>
-        <div class="att-day-label">S</div>
-      </div>
-      <div class="att-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--sage)"></div>Present</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--rust)"></div>Absent</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Late</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#ddd"></div>Holiday</div>
-      </div>
-    </div>
-  </div>
+    <nav class="sfp-nav" id="sfp-nav">
+      <div class="nav-item active" data-view="overview"   onclick="switchView('overview')"><span>📊</span> Overview</div>
+      <div class="nav-item"        data-view="charges"    onclick="switchView('charges')"><span>⚡</span> Charges <span id="badge-unpaid" class="nav-badge" style="display:none"></span></div>
+      <div class="nav-item"        data-view="payments"   onclick="switchView('payments')"><span>💳</span> Payments</div>
+      <div class="nav-item"        data-view="levies"     onclick="switchView('levies')"><span>🎯</span> Levies</div>
+      <div class="nav-item"        data-view="ledger"     onclick="switchView('ledger')"><span>📒</span> Ledger</div>
+      <!-- Staff/Admin only below -->
+      <div class="nav-item edit-only" data-view="bursar"  onclick="switchView('bursar')"><span>⚙️</span> Bursar Tools</div>
+      <div class="nav-item edit-only" data-view="class"   onclick="switchView('class')"><span>🏫</span> Class Finance</div>
+    </nav>
+  </aside>
 
-</main>
-
-<div class="portal-footer">
-  © 2025 Sacred Heart College Eziukwu, Aba &nbsp;|&nbsp; All rights reserved &nbsp;|&nbsp; ICT Department
+  <!-- MAIN -->
+  <main class="main" id="sfp-main">
+    <div class="empty"><div class="empty-ico">👈</div><p>Select a student to view their financial records.</p></div>
+  </main>
 </div>
 
-<!-- auth-bridge.js exposes window.SHC_Auth backed by auth.js cookie session -->
-<script src="auth-bridge.js"></script>
+<!-- MODAL -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
 <script>
+/* ═══════════════════════════════════════════════════════════
+   STUDENT FINANCE PORTAL  v3
+═══════════════════════════════════════════════════════════ */
+const API      = window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api';
+const getToken = () => sessionStorage.getItem('shc_token');
+
+const $ = id => document.getElementById(id);
+const fmt = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
+const badge = (s) => {
+  const m = {Paid:'b-paid',Partial:'b-partial',Unpaid:'b-unpaid',Waived:'b-waived',
+             charge:'b-charge',payment:'b-payment',adjustment:'b-adj',refund:'b-adj'};
+  return `<span class="badge ${m[s]||'b-unpaid'}">${s}</span>`;
+};
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeft = `3px solid ${type==='success'?'#22c55e':type==='error'?'#ef4444':type==='warning'?'#f59e0b':'#3b82f6'}`;
+  el.textContent = msg;
+  $('toast-wrap').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+function showModal(html){ $('modal-box').innerHTML=html; $('modal').classList.add('open'); }
+function closeModal(){ $('modal').classList.remove('open'); }
+
+/* ── State ── */
+let _student=null, _view='overview', _role='', _wardId=null, _info={};
+const canEdit  = ()=>['Admin','Bursar'].includes(_role);
+const canAdmin = ()=>_role==='Admin';
+const isParent = ()=>_role==='Parent';
 
 /* ═══════════════════════════════════════════════════════════
-   ACADEMIC DATA  —  keyed by studentId
-   In production: replace with a fetch() from your backend API.
+   API HELPERS
 ═══════════════════════════════════════════════════════════ */
-const ACADEMIC_DATA = {
-  'SHC/001': {
-    avg: 74, rank: '12th / 40', attendance: '92%', trend: '−0.1 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:78, grade:'B', color:'gold'  },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:72, grade:'B', color:'gold'  },
-      { icon:'🔬', name:'Biology',          teacher:'Mrs Ifeoma Okeke', score:80, grade:'A', color:'green' },
-      { icon:'⚗️', name:'Chemistry',        teacher:'Dr Chibuike Obi',  score:65, grade:'C', color:'rust'  },
-      { icon:'🌍', name:'Geography',        teacher:'Mr Samuel Nnaji',  score:74, grade:'B', color:'gold'  },
-      { icon:'💻', name:'Computer Studies', teacher:'Mrs Adaora Nze',   score:88, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Mathematics — CA Test 2',    date:'Mar 18, 2025', score:'78/100', dot:'gold'  },
-      { title:'Chemistry — Practical',      date:'Mar 14, 2025', score:'65/100', dot:'rust'  },
-      { title:'English — Essay',            date:'Mar 11, 2025', score:'72/100', dot:'gold'  },
-      { title:'Computer Studies — Project', date:'Mar 7, 2025',  score:'88/100', dot:'green' },
-      { title:'Biology — Quiz 4',           date:'Mar 4, 2025',  score:'80/100', dot:'green' },
-    ],
-    att:{ present:17, absent:2, late:2,
-      cells:['present','holiday','present','present','absent','holiday','holiday',
-             'present','present','present','present','late','holiday','holiday',
-             'present','absent','present','present','late','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
-  'SHC/002': {
-    avg: 85, rank: '3rd / 38', attendance: '97%', trend: '+0.4 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:90, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:88, grade:'A', color:'green' },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:84, grade:'A', color:'green' },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:79, grade:'B', color:'gold'  },
-      { icon:'🎨', name:'Fine Arts',        teacher:'Mr Chibuike Obi',  score:93, grade:'A', color:'green' },
-      { icon:'🎵', name:'Music',            teacher:'Mrs Adaora Nze',   score:76, grade:'B', color:'gold'  },
-    ],
-    activity: [
-      { title:'Fine Arts — Portfolio',       date:'Mar 20, 2025', score:'93/100', dot:'green' },
-      { title:'Mathematics — Mid-Term Test', date:'Mar 17, 2025', score:'90/100', dot:'green' },
-      { title:'English — Comprehension',     date:'Mar 13, 2025', score:'88/100', dot:'green' },
-      { title:'Social Studies — Assignment', date:'Mar 10, 2025', score:'79/100', dot:'gold'  },
-      { title:'Music — Practical',           date:'Mar 6, 2025',  score:'76/100', dot:'gold'  },
-    ],
-    att:{ present:20, absent:0, late:1,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','present','present','late','holiday','holiday',
-             'present','present','present','present','present','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
-  'SHC/003': {
-    avg: 69, rank: '21st / 35', attendance: '88%', trend: '+0.1 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:64, grade:'C', color:'rust'  },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:71, grade:'B', color:'gold'  },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:75, grade:'B', color:'gold'  },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:68, grade:'C', color:'rust'  },
-      { icon:'🎨', name:'Creative Arts',    teacher:'Mr Chibuike Obi',  score:80, grade:'A', color:'green' },
-      { icon:'📏', name:'Basic Technology', teacher:'Mrs Adaora Nze',   score:55, grade:'C', color:'rust'  },
-    ],
-    activity: [
-      { title:'Creative Arts — Project',    date:'Mar 19, 2025', score:'80/100', dot:'green' },
-      { title:'Basic Science — Quiz 3',     date:'Mar 15, 2025', score:'75/100', dot:'gold'  },
-      { title:'Mathematics — CA Test',      date:'Mar 12, 2025', score:'64/100', dot:'rust'  },
-      { title:'English — Composition',      date:'Mar 8, 2025',  score:'71/100', dot:'gold'  },
-      { title:'Basic Technology — Drawing', date:'Mar 5, 2025',  score:'55/100', dot:'rust'  },
-    ],
-    att:{ present:15, absent:3, late:3,
-      cells:['present','holiday','absent','present','present','holiday','holiday',
-             'present','late','present','absent','present','holiday','holiday',
-             'present','present','present','present','late','holiday','holiday',
-             'late','present','absent','present','future','holiday','holiday'] }
-  },
-  'SHC/004': {
-    avg: 91, rank: '1st / 42', attendance: '99%', trend: '+0.6 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mrs Adaora Nze',   score:95, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:92, grade:'A', color:'green' },
-      { icon:'⚗️', name:'Chemistry',        teacher:'Dr Chibuike Obi',  score:89, grade:'A', color:'green' },
-      { icon:'🔬', name:'Biology',          teacher:'Mrs Ifeoma Okeke', score:94, grade:'A', color:'green' },
-      { icon:'🧪', name:'Physics',          teacher:'Mr Emeka Nwosu',   score:88, grade:'A', color:'green' },
-      { icon:'🌍', name:'Geography',        teacher:'Mr Samuel Nnaji',  score:87, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Biology — Mid-Term Exam',    date:'Mar 21, 2025', score:'94/100', dot:'green' },
-      { title:'Mathematics — Test 3',       date:'Mar 18, 2025', score:'95/100', dot:'green' },
-      { title:'Chemistry — Lab Practical',  date:'Mar 14, 2025', score:'89/100', dot:'green' },
-      { title:'English — Oral & Written',   date:'Mar 11, 2025', score:'92/100', dot:'green' },
-      { title:'Physics — Assignment',       date:'Mar 7, 2025',  score:'88/100', dot:'green' },
-    ],
-    att:{ present:21, absent:0, late:0,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','present','present','present','holiday','holiday',
-             'present','present','present','present','present','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
-  'SHC/005': {
-    avg: 71, rank: '15th / 36', attendance: '91%', trend: '0.0 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:68, grade:'C', color:'rust'  },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:74, grade:'B', color:'gold'  },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:77, grade:'B', color:'gold'  },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:70, grade:'B', color:'gold'  },
-      { icon:'🎨', name:'Creative Arts',    teacher:'Mr Chibuike Obi',  score:82, grade:'A', color:'green' },
-      { icon:'📏', name:'Basic Technology', teacher:'Mrs Adaora Nze',   score:65, grade:'C', color:'rust'  },
-    ],
-    activity: [
-      { title:'Creative Arts — Drawing',    date:'Mar 19, 2025', score:'82/100', dot:'green' },
-      { title:'Basic Science — Test',       date:'Mar 15, 2025', score:'77/100', dot:'gold'  },
-      { title:'English — Reading',          date:'Mar 11, 2025', score:'74/100', dot:'gold'  },
-      { title:'Mathematics — CA 2',         date:'Mar 8, 2025',  score:'68/100', dot:'rust'  },
-      { title:'Social Studies — Quiz',      date:'Mar 5, 2025',  score:'70/100', dot:'gold'  },
-    ],
-    att:{ present:16, absent:2, late:3,
-      cells:['present','holiday','present','absent','present','holiday','holiday',
-             'late','present','present','present','present','holiday','holiday',
-             'present','absent','present','late','present','holiday','holiday',
-             'present','late','present','present','future','holiday','holiday'] }
-  },
-  'SHC/006': {
-    avg: 83, rank: '5th / 34', attendance: '96%', trend: '+0.3 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:86, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:84, grade:'A', color:'green' },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:80, grade:'A', color:'green' },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:82, grade:'A', color:'green' },
-      { icon:'🎨', name:'Fine Arts',        teacher:'Mr Chibuike Obi',  score:89, grade:'A', color:'green' },
-      { icon:'🎵', name:'Music',            teacher:'Mrs Adaora Nze',   score:75, grade:'B', color:'gold'  },
-    ],
-    activity: [
-      { title:'Fine Arts — Portfolio',      date:'Mar 20, 2025', score:'89/100', dot:'green' },
-      { title:'Mathematics — CA Test',      date:'Mar 16, 2025', score:'86/100', dot:'green' },
-      { title:'Basic Science — Practical',  date:'Mar 12, 2025', score:'80/100', dot:'green' },
-      { title:'English — Essay',            date:'Mar 9, 2025',  score:'84/100', dot:'green' },
-      { title:'Music — Practical',          date:'Mar 5, 2025',  score:'75/100', dot:'gold'  },
-    ],
-    att:{ present:19, absent:1, late:1,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','present','absent','present','holiday','holiday',
-             'present','present','present','late','present','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
-  'SHC/007': {
-    avg: 79, rank: '8th / 40', attendance: '95%', trend: '+0.2 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:82, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:78, grade:'B', color:'gold'  },
-      { icon:'🔬', name:'Biology',          teacher:'Mrs Ifeoma Okeke', score:75, grade:'B', color:'gold'  },
-      { icon:'⚗️', name:'Chemistry',        teacher:'Dr Chibuike Obi',  score:71, grade:'B', color:'gold'  },
-      { icon:'🌍', name:'Geography',        teacher:'Mr Samuel Nnaji',  score:83, grade:'A', color:'green' },
-      { icon:'💻', name:'Computer Studies', teacher:'Mrs Adaora Nze',   score:86, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Geography — Field Report',   date:'Mar 20, 2025', score:'83/100', dot:'green' },
-      { title:'Mathematics — Test 3',       date:'Mar 17, 2025', score:'82/100', dot:'green' },
-      { title:'English — Composition',      date:'Mar 13, 2025', score:'78/100', dot:'gold'  },
-      { title:'Computer Studies — Quiz',    date:'Mar 9, 2025',  score:'86/100', dot:'green' },
-      { title:'Chemistry — Lab Report',     date:'Mar 5, 2025',  score:'71/100', dot:'gold'  },
-    ],
-    att:{ present:18, absent:1, late:2,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','late','present','present','holiday','holiday',
-             'present','present','present','absent','present','holiday','holiday',
-             'present','late','present','present','future','holiday','holiday'] }
-  },
-  'SHC/008': {
-    avg: 87, rank: '2nd / 33', attendance: '98%', trend: '+0.5 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:91, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:89, grade:'A', color:'green' },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:85, grade:'A', color:'green' },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:82, grade:'A', color:'green' },
-      { icon:'🎨', name:'Creative Arts',    teacher:'Mr Chibuike Obi',  score:94, grade:'A', color:'green' },
-      { icon:'🎵', name:'Music',            teacher:'Mrs Adaora Nze',   score:80, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Creative Arts — Final Piece',date:'Mar 21, 2025', score:'94/100', dot:'green' },
-      { title:'Mathematics — CA Test 2',    date:'Mar 17, 2025', score:'91/100', dot:'green' },
-      { title:'English — Reading/Writing',  date:'Mar 13, 2025', score:'89/100', dot:'green' },
-      { title:'Basic Science — Test',       date:'Mar 10, 2025', score:'85/100', dot:'green' },
-      { title:'Music — Choir Recital',      date:'Mar 6, 2025',  score:'80/100', dot:'green' },
-    ],
-    att:{ present:20, absent:0, late:1,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','present','present','late','holiday','holiday',
-             'present','present','present','present','present','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
-  'SHC/009': {
-    avg: 76, rank: '10th / 40', attendance: '93%', trend: '+0.2 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:80, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:75, grade:'B', color:'gold'  },
-      { icon:'🔬', name:'Biology',          teacher:'Mrs Ifeoma Okeke', score:77, grade:'B', color:'gold'  },
-      { icon:'⚗️', name:'Chemistry',        teacher:'Dr Chibuike Obi',  score:68, grade:'C', color:'rust'  },
-      { icon:'🌍', name:'Geography',        teacher:'Mr Samuel Nnaji',  score:79, grade:'B', color:'gold'  },
-      { icon:'💻', name:'Computer Studies', teacher:'Mrs Adaora Nze',   score:84, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Computer Studies — Project', date:'Mar 20, 2025', score:'84/100', dot:'green' },
-      { title:'Mathematics — Mid-Term',     date:'Mar 17, 2025', score:'80/100', dot:'green' },
-      { title:'Geography — Assignment',     date:'Mar 13, 2025', score:'79/100', dot:'gold'  },
-      { title:'English — Oral Test',        date:'Mar 9, 2025',  score:'75/100', dot:'gold'  },
-      { title:'Chemistry — Lab',            date:'Mar 5, 2025',  score:'68/100', dot:'rust'  },
-    ],
-    att:{ present:17, absent:2, late:2,
-      cells:['present','holiday','present','present','absent','holiday','holiday',
-             'present','late','present','present','present','holiday','holiday',
-             'present','present','present','absent','present','holiday','holiday',
-             'present','late','present','present','future','holiday','holiday'] }
-  },
-  'SHC/010': {
-    avg: 88, rank: '2nd / 36', attendance: '97%', trend: '+0.4 this term',
-    subjects: [
-      { icon:'📐', name:'Mathematics',      teacher:'Mr Emeka Nwosu',   score:92, grade:'A', color:'green' },
-      { icon:'📖', name:'English Language', teacher:'Mrs Ngozi Eze',    score:90, grade:'A', color:'green' },
-      { icon:'🌱', name:'Basic Science',    teacher:'Mrs Ifeoma Okeke', score:86, grade:'A', color:'green' },
-      { icon:'🌍', name:'Social Studies',   teacher:'Mr Samuel Nnaji',  score:85, grade:'A', color:'green' },
-      { icon:'🎨', name:'Fine Arts',        teacher:'Mr Chibuike Obi',  score:91, grade:'A', color:'green' },
-      { icon:'📏', name:'Basic Technology', teacher:'Mrs Adaora Nze',   score:80, grade:'A', color:'green' },
-    ],
-    activity: [
-      { title:'Fine Arts — Portfolio',      date:'Mar 21, 2025', score:'91/100', dot:'green' },
-      { title:'Mathematics — CA Test 2',    date:'Mar 18, 2025', score:'92/100', dot:'green' },
-      { title:'English — Essay',            date:'Mar 13, 2025', score:'90/100', dot:'green' },
-      { title:'Social Studies — Quiz',      date:'Mar 10, 2025', score:'85/100', dot:'gold'  },
-      { title:'Basic Science — Practical',  date:'Mar 6, 2025',  score:'86/100', dot:'green' },
-    ],
-    att:{ present:20, absent:0, late:1,
-      cells:['present','holiday','present','present','present','holiday','holiday',
-             'present','present','present','present','late','holiday','holiday',
-             'present','present','present','present','present','holiday','holiday',
-             'present','present','present','present','future','holiday','holiday'] }
-  },
+async function api(path, opts={}) {
+  const headers = { 'Content-Type':'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const r = await fetch(API + path, {
+    ...opts, credentials:'include', headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await r.json().catch(()=>({success:false,message:'Invalid JSON'}));
+  if (!data.success) throw new Error(data.message || `HTTP ${r.status}`);
+  return data;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════ */
+async function boot() {
+  const token = getToken();
+  const session = JSON.parse(sessionStorage.getItem('shc_session')||'null');
+  _role   = session?.role   || '';
+  _wardId = session?.wardId || session?.ward_id || null;
+
+  /* ── Parent login form (no token) ── */
+  if (!token || !_role) {
+    showParentLoginForm();
+    return;
+  }
+
+  /* ── Role badge in topbar ── */
+  const roleColor = {Admin:'#dc2626',Bursar:'#7c3aed',Teacher:'#2563eb',Staff:'#0891b2',Parent:'#16a34a'}[_role]||'#6b7280';
+  $('top-role-label').innerHTML = `Student Finance Portal &nbsp;<span style="background:${roleColor};color:#fff;border-radius:5px;padding:.1rem .5rem;font-size:.68rem;font-weight:700;">${_role}</span>`;
+
+  /* ── Hide edit-only UI for view-only roles ── */
+  if (!canEdit()) {
+    const s = document.createElement('style');
+    s.textContent = '.edit-only{display:none!important}';
+    document.head.appendChild(s);
+  }
+
+  /* ── Load school info ── */
+  const si = await api('/admin/').catch(()=>null);
+  _info = si?.data || { school_name:'Sacred Heart College Eziukwu Aba',
+    current_term: session?.term||'', current_session: session?.session||'' };
+  $('top-school-name').textContent = _info.school_name || 'Sacred Heart College Eziukwu Aba';
+
+  /* ── Parent: show only their ward ── */
+  if (isParent()) {
+    $('picker-wrap').style.display = 'none';
+    const ward = _wardId || new URLSearchParams(location.search).get('studentId');
+    if (ward) { selectStudent(decodeURIComponent(ward)); }
+    else { $('sfp-main').innerHTML = `<div class="empty"><div class="empty-ico">🔒</div><p>No ward linked. Contact the school administrator.</p></div>`; }
+    return;
+  }
+
+  /* ── Staff: load all students into picker ── */
+  try {
+    const resp = await api('/students');
+    const list = (resp.data||[]).sort((a,b)=>a.name.localeCompare(b.name));
+    $('stu-picker').innerHTML = '<option value="">— Select a student —</option>' +
+      list.map(s=>`<option value="${s.id}">${s.name} — ${s.class||s.class_name||''} ${s.arm||''} (${s.id})</option>`).join('');
+
+    /* auto-select from URL */
+    const pid = decodeURIComponent(new URLSearchParams(location.search).get('studentId')||'').trim();
+    if (pid) {
+      const match = list.find(s=>s.id===pid||s.id?.toLowerCase()===pid.toLowerCase());
+      const id = match?.id || pid;
+      $('stu-picker').value = id;
+      selectStudent(id);
+    }
+    $('btn-export').style.display = '';
+  } catch(e) { toast('Failed to load students: '+e.message,'error'); }
+}
+
+/* ── Parent login form (no session) ── */
+function showParentLoginForm() {
+  $('picker-wrap').style.display = 'none';
+  document.querySelector('.layout').innerHTML = `
+    <div class="parent-login-wrap">
+      <div class="parent-login-card">
+        <h2>👨‍👩‍👧 Parent / Guardian Portal</h2>
+        <p>Enter your child's Student ID and your registered phone number to view their financial records.</p>
+        <div class="fg"><label>Student ID</label>
+          <input id="pl-sid" type="text" placeholder="e.g. SAHARCO/20250115/0001"
+            style="font-family:monospace;text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter')parentLogin()">
+        </div>
+        <div class="fg"><label>Your Phone Number</label>
+          <input id="pl-phone" type="tel" placeholder="e.g. 08012345678"
+            onkeydown="if(event.key==='Enter')parentLogin()">
+        </div>
+        <div id="pl-err" style="color:var(--danger);font-size:.8rem;min-height:1rem;margin-bottom:.5rem"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.65rem"
+          onclick="parentLogin()">View Financial Records →</button>
+        <div style="text-align:center;margin-top:1rem;font-size:.8rem;color:var(--muted)">
+          <a href="login.html" style="color:var(--brand2)">Staff login →</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.parentLogin = async function() {
+  const sid   = ($('pl-sid')?.value||'').trim().toUpperCase();
+  const phone = ($('pl-phone')?.value||'').trim();
+  const errEl = $('pl-err');
+  if (!sid)   { errEl.textContent='Please enter the Student ID.';   return; }
+  if (!phone) { errEl.textContent='Please enter the phone number.'; return; }
+  errEl.textContent = 'Verifying…';
+  try {
+    const resp = await api('/students/parent-verify/'+encodeURIComponent(sid));
+    const student = resp.data || resp;
+    const stored = (student.phone||student.parent_phone||'').replace(/\s/g,'').replace(/^(\+234|234)/,'0');
+    const entered = phone.replace(/\s/g,'').replace(/^(\+234|234)/,'0');
+    if (!stored || entered.slice(-8) !== stored.slice(-8)) {
+      errEl.textContent = 'Phone does not match our records. Contact the school.'; return;
+    }
+    errEl.textContent = '';
+    _role   = 'Parent';
+    _wardId = sid;
+    // Restore layout
+    location.reload(); // simplest — boot will find the pre-set sid via URL
+  } catch(e) { errEl.textContent = e.message; }
 };
 
 /* ═══════════════════════════════════════════════════════════
-   HELPERS
+   SELECT STUDENT
 ═══════════════════════════════════════════════════════════ */
-function initials(name) {
-  return name.trim().split(/\s+/).map(w => w[0].toUpperCase()).slice(0, 2).join('');
+async function selectStudent(id) {
+  if (!id) { _student=null; $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">👈</div><p>Select a student.</p></div>'; return; }
+  try {
+    const resp = await api('/students/'+encodeURIComponent(id)).catch(async ()=>{
+      const s = await api('/student-finance/summary?sid='+encodeURIComponent(id)).catch(()=>null);
+      return { data: s?.data?.student || { id, name: id } };
+    });
+    _student = resp.data || resp;
+
+    /* sidebar card */
+    const initials = (_student.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    $('stu-avatar').textContent = initials;
+    $('stu-name').textContent   = _student.name;
+    $('stu-meta').textContent   = `${_student.class_name||_student.class||''} ${_student.arm||''} · ${_student.id}`;
+    $('stu-card').style.display = '';
+
+    /* URL update */
+    const url = new URL(location.href);
+    url.searchParams.set('studentId', id);
+    history.replaceState(null,'',url);
+
+    loadBalance();
+    switchView(_view);
+  } catch(e) { toast('Error: '+e.message,'error'); }
 }
-function gradeClass(g) { return {A:'grade-a',B:'grade-b',C:'grade-c'}[g] || 'grade-f'; }
-function fillClass(c)  { return {green:'fill-green',gold:'fill-gold'}[c]  || 'fill-rust'; }
-function scoreColor(c) { return {green:'var(--sage)',gold:'#9A700A'}[c]   || 'var(--rust)'; }
-function dotColor(d)   { return {green:'var(--sage)',gold:'#9A700A'}[d]   || 'var(--rust)'; }
+
+async function loadBalance() {
+  if (!_student) return;
+  try {
+    const r = await api('/student-finance/summary?sid='+encodeURIComponent(_student.id));
+    const bal = parseFloat(r.data?.ledger?.balance||0);
+    $('stu-balance').innerHTML = `<span class="balance-pill ${bal>0?'pill-owed':'pill-ok'}">${bal>0?'⚠ Owes '+fmt(bal):'✓ Account Clear'}</span>`;
+    const n = r.data?.unpaid?.totalCount||0;
+    const b = $('badge-unpaid');
+    b.textContent = n; b.style.display = n>0?'':'none';
+  } catch(e){}
+}
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER
+   NAVIGATION
 ═══════════════════════════════════════════════════════════ */
-function render(child) {
-  const ac = ACADEMIC_DATA[child.studentId] || null;
-  const ni = initials(child.name);
-  const rankNum = ac ? parseInt(ac.rank) : 99;
+function switchView(v) {
+  _view = v;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
+  if (!_student && v!=='class') { $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">👈</div><p>Select a student first.</p></div>'; return; }
+  $('sfp-main').innerHTML = '<div class="loading">Loading…</div>';
+  const map = {overview:renderOverview,charges:renderCharges,payments:renderPayments,
+               levies:renderLevies,ledger:renderLedger,bursar:renderBursar,class:renderClassFinance};
+  (map[v] || renderOverview)();
+}
 
-  /* Overview */
-  document.getElementById('studentOverview').innerHTML = `
-    <div class="student-card wide">
-      <div class="student-info">
-        <div class="big-avatar">${ni}</div>
-        <div class="student-details">
-          <h2>${child.name}</h2>
-          <div class="meta">${child.class} ${child.arm} &nbsp;·&nbsp; ${child.gender === 'M' ? 'Male' : 'Female'}</div>
-          <span class="student-id-chip">${child.studentId}</span>
-          <span class="card-badge badge-maroon" style="margin-left:0.4rem">Active Student</span>
+/* ═══════════════════════════════════════════════════════════
+   VIEW — OVERVIEW
+═══════════════════════════════════════════════════════════ */
+async function renderOverview() {
+  const main = $('sfp-main'); const sid = encodeURIComponent(_student.id);
+  try {
+    const [sumR, charR, levR] = await Promise.all([
+      api('/student-finance/summary?sid='+sid),
+      api('/student-finance/charges?sid='+sid),
+      api('/student-finance/levies?sid='+sid),
+    ]);
+    const sum = sumR.data; const ledger = sum.ledger||{}; const unpaid = sum.unpaid||{};
+    const charges=charR.data||[]; const levies=levR.data||[];
+    const bal = parseFloat(ledger.balance||0);
+    const pct = ledger.totalCharged>0 ? Math.min(100,Math.round(ledger.totalPaid/ledger.totalCharged*100)) : 0;
+
+    main.innerHTML = `
+      <div class="section-title">📊 Overview — ${_student.name}</div>
+      ${!canEdit()?'<div class="viewonly-banner">👁 View only — contact Admin or Bursar to record payments.</div>':''}
+
+      <div class="stat-grid">
+        ${[['Total Charged',fmt(ledger.totalCharged||0),'#1e3a5f'],
+           ['Total Paid',fmt(ledger.totalPaid||0),'#16a34a'],
+           ['Balance Due',fmt(bal),bal>0?'#dc2626':'#16a34a'],
+           ['Unpaid Items',(unpaid.totalCount||0),unpaid.totalCount>0?'#dc2626':'#16a34a']
+          ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}">
+          <div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
+      </div>
+
+      <div class="card"><div class="card-hdr"><h3>Payment Progress</h3><span style="font-size:.82rem;color:var(--muted)">${pct}% paid</span></div>
+        <div style="padding:1rem 1.2rem">
+          <div style="height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${pct>=100?'#16a34a':'#2563eb'};border-radius:6px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:.35rem">
+            <span>Paid: ${fmt(ledger.totalPaid||0)}</span><span>Total: ${fmt(ledger.totalCharged||0)}</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="student-card">
-      <div class="card-label">Average Score</div>
-      <div class="card-value">${ac ? ac.avg + '%' : '—'}</div>
-      <div class="card-sub">${ac ? ac.trend : ''}</div>
-    </div>
-    <div class="student-card">
-      <div class="card-label">Class Position</div>
-      <div class="card-value" style="font-size:1.4rem">${ac ? ac.rank : '—'}</div>
-      <span class="card-badge ${rankNum <= 5 ? 'badge-green' : 'badge-gold'}">
-        ${rankNum <= 5 ? 'Top performer' : 'Good standing'}
-      </span>
-    </div>
-    <div class="student-card">
-      <div class="card-label">Attendance</div>
-      <div class="card-value">${ac ? ac.attendance : '—'}</div>
-      <span class="card-badge ${ac && parseInt(ac.attendance) >= 95 ? 'badge-green' : 'badge-gold'}">
-        ${ac && parseInt(ac.attendance) >= 95 ? 'Excellent' : 'Good'}
-      </span>
-    </div>
-  `;
 
-  /* Update View Full Results link */
-  const resultUrl = `checkResult.html?student=${encodeURIComponent(child.name)}&id=${child.studentId}`;
-  document.getElementById('viewResultsBtn').href = resultUrl;
-  document.getElementById('seeAllLink').href     = resultUrl;
+      ${unpaid.totalCount>0?`
+      <div class="card" style="border-top:3px solid var(--danger)">
+        <div class="card-hdr" style="background:#fff5f5">
+          <h3 style="color:var(--danger)">⚠ ${unpaid.totalCount} Outstanding — ${fmt(unpaid.totalAmount||0)}</h3>
+          ${canEdit()?`<button class="btn btn-success btn-sm" onclick="openPayAllModal()">💳 Pay All Outstanding</button>`:''}
+        </div>
+        <table>
+          <thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Status</th>${canEdit()?'<th></th>':''}</tr></thead>
+          <tbody>${charges.filter(c=>c.status!=='Paid').slice(0,5).map(c=>`
+            <tr><td><strong>${c.fee_type}</strong></td><td>${c.term}</td>
+            <td style="color:var(--danger);font-weight:700">${fmt(c.amount)}</td>
+            <td>${badge(c.status)}</td>
+            ${canEdit()?`<td><button class="btn btn-success btn-sm" onclick="openPayModal('${c.id}','${c.fee_type.replace(/'/g,"\\'")}',${c.amount},'${c.term}')">💳 Pay</button></td>`:''}</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`:
+      `<div class="card"><div style="padding:1.25rem;text-align:center;color:var(--success);font-weight:600">✅ All charges settled</div></div>`}
 
-  if (!ac) {
-    document.getElementById('subjectsGrid').innerHTML =
-      '<div class="no-children" style="grid-column:1/-1">No academic data available yet. Please check back later.</div>';
-    document.getElementById('activityList').innerHTML = '';
-    ['presentDays','absentDays','lateDays'].forEach(id => document.getElementById(id).textContent = '—');
-    return;
-  }
-
-  /* Subjects */
-  document.getElementById('subjectsGrid').innerHTML = ac.subjects.map(sub => `
-    <a href="checkResult.html?subject=${encodeURIComponent(sub.name)}&student=${encodeURIComponent(child.name)}&id=${child.studentId}"
-       class="subject-card">
-      <div class="subject-icon">${sub.icon}</div>
-      <div class="subject-name">${sub.name}</div>
-      <div class="subject-teacher">${sub.teacher}</div>
-      <div class="score-row">
-        <span class="score-pct" style="color:${scoreColor(sub.color)}">${sub.score}%</span>
-        <span class="score-grade ${gradeClass(sub.grade)}">${sub.grade}</span>
-      </div>
-      <div class="progress-bar">
-        <div class="progress-fill ${fillClass(sub.color)}" style="width:${sub.score}%"></div>
-      </div>
-      <span class="view-link">View Results →</span>
-    </a>
-  `).join('');
-
-  /* Activity */
-  document.getElementById('activityList').innerHTML = ac.activity.map(a => `
-    <div class="activity-item">
-      <div class="activity-dot dot-${a.dot}"></div>
-      <div class="activity-content">
-        <div class="activity-title">${a.title}</div>
-        <div class="activity-meta">${a.date}</div>
-      </div>
-      <div class="activity-score" style="color:${dotColor(a.dot)}">${a.score}</div>
-    </div>
-  `).join('');
-
-  /* Attendance */
-  document.getElementById('presentDays').textContent = ac.att.present;
-  document.getElementById('absentDays').textContent  = ac.att.absent;
-  document.getElementById('lateDays').textContent    = ac.att.late;
-
-  const grid   = document.getElementById('attGrid');
-  const labels = [...grid.querySelectorAll('.att-day-label')];
-  grid.innerHTML = '';
-  labels.forEach(l => grid.appendChild(l));
-  ac.att.cells.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'att-cell att-' + c;
-    grid.appendChild(d);
-  });
-
-  /* Animate bars */
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.progress-fill').forEach(bar => {
-      const w = bar.style.width;
-      bar.style.width = '0';
-      requestAnimationFrame(() => { bar.style.width = w; });
-    });
-  });
+      <div class="card"><div class="card-hdr"><h3>Recent Activity</h3>
+        <button class="btn btn-secondary btn-sm" onclick="switchView('ledger')">Full Ledger →</button></div>
+        ${(sum.recentActivity||[]).length?`<table>
+          <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+          <tbody>${(sum.recentActivity||[]).slice(0,5).reverse().map(e=>`
+            <tr>
+              <td style="font-size:.75rem">${fmtDate(e.created_at)}</td>
+              <td>${e.description}</td><td>${badge(e.entry_type)}</td>
+              <td class="${parseFloat(e.debit||0)>0?'ledger-debit':''}">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+              <td class="${parseFloat(e.credit||0)>0?'ledger-credit':''}">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+              <td class="balance-row" style="color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`:'<div class="empty"><p>No activity yet.</p></div>'}
+      </div>`;
+  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">Error: ${e.message}</p></div>`; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SWITCH CHILD
+   VIEW — CHARGES
 ═══════════════════════════════════════════════════════════ */
-function switchChild(child, tabEl) {
-  document.querySelectorAll('.child-tab').forEach(t => t.classList.remove('active'));
-  tabEl.classList.add('active');
-  render(child);
+async function renderCharges() {
+  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
+  try {
+    const r = await api('/student-finance/charges?sid='+sid);
+    const all = r.data||[];
+    main.innerHTML = `
+      <div class="section-title">⚡ Charges — ${_student.name}</div>
+      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
+      <div class="card"><div class="card-hdr"><h3>All Charges (${all.length})</h3>
+        ${canEdit()?`<button class="btn btn-primary btn-sm" onclick="openAddChargeModal()">+ Add Charge</button>`:''}
+      </div>
+      ${all.length?`<table>
+        <thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${all.map(c=>`<tr>
+          <td><strong>${c.fee_type}</strong></td><td>${c.term}</td>
+          <td style="font-weight:700">${fmt(c.amount)}</td>
+          <td style="font-size:.78rem">${fmtDate(c.payment_date)}</td>
+          <td>${badge(c.status)}</td>
+          <td><div style="display:flex;gap:.25rem;flex-wrap:wrap">
+            ${canEdit()&&c.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="openPayModal('${c.id}','${c.fee_type.replace(/'/g,"\\'")}',${c.amount},'${c.term||''}')">💳 Pay</button>`:''}
+            <button class="btn btn-secondary btn-sm" onclick="printReceipt(${JSON.stringify(c).replace(/"/g,'&quot;')})">🧾</button>
+            ${canAdmin()?`<button class="btn btn-danger btn-sm" onclick="deleteCharge('${c.id}')">🗑</button>`:''}
+          </div></td></tr>`).join('')}
+        </tbody></table>`:
+        '<div class="empty"><div class="empty-ico">⚡</div><p>No charges recorded.</p></div>'}
+      </div>`;
+  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   LOGOUT
+   VIEW — PAYMENTS
 ═══════════════════════════════════════════════════════════ */
-function logout() {
-  if (window.SHC_Auth) SHC_Auth.clearSession();
-  window.location.href = 'login.html';
+async function renderPayments() {
+  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
+  try {
+    const r = await api('/student-finance/payments?sid='+sid);
+    const all = r.data||[];
+    const total = all.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+    main.innerHTML = `
+      <div class="section-title">💳 Payments — ${_student.name}</div>
+      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
+      <div class="stat-grid">
+        <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-val" style="color:#16a34a">${fmt(total)}</div><div class="stat-lbl">Total Paid</div></div>
+        <div class="stat-card"><div class="stat-val">${all.length}</div><div class="stat-lbl">Transactions</div></div>
+      </div>
+      <div class="card"><div class="card-hdr"><h3>Payment Records</h3>
+        ${canEdit()?`<button class="btn btn-primary btn-sm" onclick="openDirectPayModal()">+ Record Payment</button>`:''}
+      </div>
+      ${all.length?`<table>
+        <thead><tr><th>Fee</th><th>Term</th><th>Amount Paid</th><th>Date</th><th>Reference</th><th></th></tr></thead>
+        <tbody>${all.map(p=>`<tr>
+          <td><strong>${p.fee_type}</strong></td><td>${p.term}</td>
+          <td style="color:#16a34a;font-weight:700">${fmt(p.amount)}</td>
+          <td style="font-size:.78rem">${fmtDate(p.payment_date)}</td>
+          <td style="font-size:.78rem;color:var(--muted)">${p.reference||'—'}</td>
+          <td><button class="btn btn-secondary btn-sm" onclick="printReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾</button></td>
+        </tr>`).join('')}</tbody></table>`:
+        '<div class="empty"><div class="empty-ico">💳</div><p>No payments recorded yet.</p></div>'}
+      </div>`;
+  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   INIT
+   VIEW — LEVIES
 ═══════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+async function renderLevies() {
+  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
+  try {
+    const r = await api('/student-finance/levies?sid='+sid);
+    const all = r.data||[];
+    main.innerHTML = `
+      <div class="section-title">🎯 Levies — ${_student.name}</div>
+      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
+      <div class="card"><div class="card-hdr"><h3>Levies (${all.length})</h3></div>
+      ${all.length?`<table>
+        <thead><tr><th>Levy</th><th>Category</th><th>Due Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>${all.map(l=>`<tr>
+          <td><strong>${l.levy_name}</strong></td>
+          <td><span style="background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:.15rem .5rem;font-size:.72rem">${l.category||'—'}</span></td>
+          <td style="font-size:.78rem">${fmtDate(l.due_date)}</td>
+          <td style="font-weight:700">${fmt(l.amount_paid)}</td>
+          <td>${badge(l.status)}</td>
+          <td>${canEdit()&&l.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="openLevyPayModal('${l.id}','${l.levy_name.replace(/'/g,"\\'")}',${l.amount_paid})">💳 Pay</button>`:''}
+          </td></tr>`).join('')}</tbody></table>`:
+        '<div class="empty"><div class="empty-ico">🎯</div><p>No levies assigned.</p></div>'}
+      </div>`;
+  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
+}
 
-  const session = window.SHC_Auth ? SHC_Auth.getSession() : null;
+/* ═══════════════════════════════════════════════════════════
+   VIEW — LEDGER
+═══════════════════════════════════════════════════════════ */
+async function renderLedger() {
+  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
+  try {
+    const r = await api('/student-finance/ledger?sid='+sid);
+    const entries = r.data||[];
+    const charged = parseFloat(r.totalCharged||0);
+    const paid    = parseFloat(r.totalPaid||0);
+    const bal     = parseFloat(r.balance||0);
+    main.innerHTML = `
+      <div class="section-title">📒 Full Ledger — ${_student.name}</div>
+      <div class="stat-grid">
+        ${[['Total Debits',fmt(charged),'#dc2626'],['Total Credits',fmt(paid),'#16a34a'],
+           ['Net Balance',fmt(bal),bal>0?'#dc2626':'#16a34a'],['Entries',entries.length,'#2563eb']
+          ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
+      </div>
+      <div class="card"><div class="card-hdr"><h3>Ledger Entries</h3></div>
+      ${entries.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Term</th>
+          <th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead>
+        <tbody>
+          ${entries.map(e=>`<tr>
+            <td style="font-size:.75rem;white-space:nowrap">${fmtDate(e.created_at)}</td>
+            <td>${badge(e.entry_type)}</td><td>${e.description}</td>
+            <td style="font-size:.75rem">${e.term||''}</td>
+            <td class="ledger-debit" style="text-align:right">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+            <td class="ledger-credit" style="text-align:right">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+            <td class="balance-row" style="text-align:right;color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td>
+          </tr>`).join('')}
+          <tr style="background:#f9fafb;font-weight:700;border-top:2px solid var(--border)">
+            <td colspan="4" style="text-align:right">TOTALS</td>
+            <td class="ledger-debit" style="text-align:right">${fmt(charged)}</td>
+            <td class="ledger-credit" style="text-align:right">${fmt(paid)}</td>
+            <td style="text-align:right;color:${bal>0?'var(--danger)':'var(--success)'}">${fmt(bal)}</td>
+          </tr>
+        </tbody></table></div>`:
+        '<div class="empty"><p>No ledger entries yet.</p></div>'}
+      </div>`;
+  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
+}
 
-  /* Guard: must be logged-in Parent */
-  if (!session || session.role !== 'Parent') {
-    document.getElementById('sessionGuard').style.display = 'flex';
-    document.querySelector('header').style.display        = 'none';
-    document.querySelector('main').style.display          = 'none';
-    document.querySelector('.portal-footer').style.display = 'none';
-    return;
+/* ═══════════════════════════════════════════════════════════
+   VIEW — BURSAR TOOLS
+═══════════════════════════════════════════════════════════ */
+function renderBursar() {
+  if (!canEdit()) { $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">🔒</div><p>Access restricted.</p></div>'; return; }
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  $('sfp-main').innerHTML = `
+    <div class="section-title">⚙️ Bursar Tools — ${_student.name}</div>
+
+    <div class="card"><div class="card-hdr"><h3>📋 Assign Fees</h3></div>
+      <div style="padding:1.2rem">
+        <div class="frow" style="margin-bottom:.65rem">
+          <div class="fg" style="margin:0"><label>Term *</label><select id="bt-term">${termOpts}</select></div>
+          <div class="fg" style="margin:0"><label>Session</label><input type="text" id="bt-session" value="${_info.current_session||''}" placeholder="2025/2026"></div>
+        </div>
+        <div id="bt-fee-rows">
+          <div class="fee-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.4rem">
+            <input class="fee-name" type="text" placeholder="Fee name" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
+            <input class="fee-amt"  type="number" placeholder="Amount ₦" min="0" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
+            <button onclick="this.closest('.fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.48rem .75rem;cursor:pointer;font-weight:700">✕</button>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addFeeRow()" style="margin-bottom:.75rem">+ Add Row</button>
+        <div><button class="btn btn-primary" onclick="submitBulkFees()">💾 Assign All Fees</button></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-hdr"><h3>💳 Pay All Outstanding</h3></div>
+      <div style="padding:1.2rem">
+        <div class="frow">
+          <div class="fg"><label>Total Amount Paid (₦) *</label><input type="number" id="pa-amount" placeholder="0.00" min="0"></div>
+          <div class="fg"><label>Date *</label><input type="date" id="pa-date" value="${new Date().toISOString().slice(0,10)}"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Payment Method</label>
+            <select id="pa-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
+          </div>
+          <div class="fg"><label>Reference</label><input type="text" id="pa-ref" placeholder="Optional"></div>
+        </div>
+        <button class="btn btn-success" onclick="submitPayAll()">✅ Record Bulk Payment</button>
+      </div>
+    </div>`;
+}
+
+function addFeeRow() {
+  const row = document.createElement('div');
+  row.className = 'fee-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.4rem';
+  row.innerHTML = `<input class="fee-name" type="text" placeholder="Fee name" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
+    <input class="fee-amt" type="number" placeholder="Amount ₦" min="0" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
+    <button onclick="this.closest('.fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.48rem .75rem;cursor:pointer;font-weight:700">✕</button>`;
+  $('bt-fee-rows').appendChild(row);
+}
+
+async function submitBulkFees() {
+  const term = $('bt-term')?.value;
+  const session = $('bt-session')?.value;
+  const rows = [...document.querySelectorAll('.fee-row')];
+  const fees = rows.map(r=>({ name:r.querySelector('.fee-name')?.value?.trim(), amt:parseFloat(r.querySelector('.fee-amt')?.value||0) })).filter(f=>f.name&&f.amt>0);
+  if (!fees.length) { toast('Add at least one fee','warning'); return; }
+  let count=0;
+  for (const f of fees) {
+    try {
+      await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{ method:'POST', body:{ feeType:f.name, amount:f.amt, term, session, status:'Unpaid', date:new Date().toISOString().slice(0,10) }});
+      count++;
+    } catch(e){ toast(`Failed: ${f.name} — ${e.message}`,'error'); }
   }
+  toast(`✅ ${count} fee(s) assigned`,'success');
+  loadBalance();
+}
 
-  /* Header */
-  document.getElementById('headerName').textContent     = session.name;
-  document.getElementById('headerInitials').textContent = initials(session.name);
+async function submitPayAll() {
+  const amount = parseFloat($('pa-amount')?.value||0);
+  const date   = $('pa-date')?.value;
+  const method = $('pa-method')?.value;
+  const ref    = $('pa-ref')?.value||null;
+  if (!amount||!date){ toast('Amount and date required','error'); return; }
+  try {
+    const r = await api('/student-finance/pay-all?sid='+encodeURIComponent(_student.id),{ method:'POST', body:{amount,date,method,reference:ref}});
+    toast(`✅ ${r.data?.cleared||0} charges cleared`,'success');
+    loadBalance(); switchView('overview');
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
 
-  /* Children */
-  const children = session.children || [];
+/* ═══════════════════════════════════════════════════════════
+   VIEW — CLASS FINANCE
+═══════════════════════════════════════════════════════════ */
+async function renderClassFinance() {
+  if (!canEdit()){ $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">🔒</div><p>Access restricted.</p></div>'; return; }
+  $('sfp-main').innerHTML = `
+    <div class="section-title">🏫 Class Finance</div>
+    <div class="card"><div class="card-hdr"><h3>Select Class</h3></div>
+      <div style="padding:1.1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end">
+        <div class="fg" style="flex:1;min-width:160px;margin:0"><label>Class</label>
+          <select id="cf-cls" style="width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem" onchange="populateCfArms()">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:0 0 120px;margin:0"><label>Arm</label>
+          <select id="cf-arm" style="width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem">
+            <option value="">All</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadClassFinance()">📊 Load</button>
+        ${canEdit()?`<button class="btn btn-secondary" onclick="openClassFeeModal()">⚡ Assign Fee to Class</button>`:''}
+      </div>
+    </div>
+    <div id="cf-out"></div>`;
 
-  if (children.length === 0) {
-    document.getElementById('childrenTabs').innerHTML =
-      '<div class="no-children">No children linked to this account. Contact the school office.</div>';
-    return;
-  }
+  try {
+    const r = await api('/classes');
+    const sel = $('cf-cls');
+    (r.data||[]).forEach(c=>{ const o=document.createElement('option'); o.value=c.name; o.textContent=c.name; sel.appendChild(o); });
+  } catch(e){}
+}
 
-  document.getElementById('pageSubtitle').textContent =
-    children.length > 1
-      ? `Viewing records for your ${children.length} children enrolled at Sacred Heart College.`
-      : 'Monitor your child\'s progress, attendance, and results.';
+async function populateCfArms() {
+  const cls = $('cf-cls')?.value; const arm = $('cf-arm');
+  arm.innerHTML = '<option value="">All</option>';
+  if (!cls) return;
+  try {
+    const r = await api('/classes');
+    const c = (r.data||[]).find(x=>x.name===cls);
+    (c?.arms||[]).forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; arm.appendChild(o); });
+  } catch(e){}
+}
 
-  /* Build tabs */
-  const tabsEl = document.getElementById('childrenTabs');
-  children.forEach((child, idx) => {
-    const tab = document.createElement('div');
-    tab.className = 'child-tab' + (idx === 0 ? ' active' : '');
-    tab.innerHTML = `<div class="tab-avatar">${initials(child.name)}</div>${child.name}`;
-    tab.addEventListener('click', () => switchChild(child, tab));
-    tabsEl.appendChild(tab);
-  });
+async function loadClassFinance() {
+  const cls = $('cf-cls')?.value; const arm = $('cf-arm')?.value;
+  const out = $('cf-out');
+  if (!cls){ toast('Select a class first','warning'); return; }
+  out.innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const r = await api('/student-finance/class-summary?class='+encodeURIComponent(cls)+(arm?'&arm='+encodeURIComponent(arm):''));
+    const students = r.data||[];
+    const totalOwed = students.reduce((s,st)=>s+parseFloat(st.balance||0),0);
+    const cleared   = students.filter(s=>parseFloat(s.balance||0)<=0).length;
+    out.innerHTML = `
+      <div class="stat-grid">
+        ${[['Students',students.length,'#1e3a5f'],['Total Owed',fmt(totalOwed),totalOwed>0?'#dc2626':'#16a34a'],
+           ['Fully Paid',cleared,'#16a34a'],['Outstanding',students.length-cleared,students.length-cleared>0?'#dc2626':'#16a34a']
+          ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
+      </div>
+      <div class="card"><div class="card-hdr"><h3>${cls}${arm?' '+arm:''}</h3></div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Name</th><th>ID</th><th>Arm</th><th>Charged</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+          <tbody>${students.map(s=>{const b=parseFloat(s.balance||0);const ok=b<=0;return`<tr>
+            <td style="font-weight:600">${s.name}</td>
+            <td style="font-size:.75rem;font-family:monospace">${s.id}</td>
+            <td>${s.arm||'—'}</td>
+            <td>${fmt(s.totalCharged||0)}</td>
+            <td style="color:#16a34a;font-weight:600">${fmt(s.totalPaid||0)}</td>
+            <td style="color:${ok?'#16a34a':'#dc2626'};font-weight:700">${fmt(b)}</td>
+            <td><span class="badge ${ok?'b-paid':'b-unpaid'}">${ok?'Clear':'Owes'}</span></td>
+            <td><button class="btn btn-secondary btn-sm" onclick="goToStudent('${s.id}')">View →</button></td>
+          </tr>`}).join('')}</tbody>
+        </table></div>
+      </div>`;
+  } catch(e){ out.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
+}
 
-  /* Render first child */
-  render(children[0]);
-});
+function goToStudent(id) {
+  const sel = $('stu-picker');
+  if (sel) sel.value = id;
+  selectStudent(id);
+  switchView('overview');
+}
 
+async function openClassFeeModal() {
+  const cls = $('cf-cls')?.value; const arm = $('cf-arm')?.value;
+  if (!cls){ toast('Select a class first','warning'); return; }
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`<h3>⚡ Assign Fee to ${cls}${arm?' '+arm:''}</h3>
+    <div class="fg"><label>Fee Type *</label><input type="text" id="cbf-type" placeholder="e.g. School Fees"></div>
+    <div class="frow">
+      <div class="fg"><label>Amount (₦) *</label><input type="number" id="cbf-amount" min="0"></div>
+      <div class="fg"><label>Term *</label><select id="cbf-term">${termOpts}</select></div>
+    </div>
+    <div class="fg"><label>Session</label><input type="text" id="cbf-session" value="${_info.current_session||''}" placeholder="2025/2026"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitClassFee('${cls}','${arm||''}')">⚡ Assign</button>
+    </div>`);
+}
+
+async function submitClassFee(cls, arm) {
+  const feeType = $('cbf-type')?.value?.trim();
+  const amount  = parseFloat($('cbf-amount')?.value||0);
+  const term    = $('cbf-term')?.value;
+  const session = $('cbf-session')?.value;
+  if (!feeType||!amount){ toast('Fee type and amount required','error'); return; }
+  try {
+    const r = await api('/fees/bulk-charge',{ method:'POST', body:{ class:cls, arm:arm||undefined, feeType, amount, term, session }});
+    closeModal();
+    toast(`✅ ${r.data?.charged||0} students charged`,'success');
+    loadClassFinance();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PAYMENT MODALS
+═══════════════════════════════════════════════════════════ */
+function openPayModal(id, feeType, amount, term) {
+  showModal(`<h3>💳 Record Payment</h3>
+    <div style="background:#eff6ff;border-radius:8px;padding:.65rem 1rem;margin-bottom:.9rem;font-size:.85rem;color:#1d4ed8">
+      <strong>${feeType}</strong> · Expected: ${fmt(amount)} · ${term}
+    </div>
+    <div class="fg"><label>Amount Paid (₦) *</label><input type="number" id="qp-amount" value="${amount}" min="0"></div>
+    <div class="frow">
+      <div class="fg"><label>Date *</label><input type="date" id="qp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg"><label>Method</label>
+        <select id="qp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option><option>Online</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Reference No.</label><input type="text" id="qp-ref" placeholder="Optional"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="submitPay('${id}','${feeType}',${amount},'${term}')">✅ Record & Receipt</button>
+    </div>`);
+}
+
+async function submitPay(chargeId, feeType, expected, term) {
+  const amt  = parseFloat($('qp-amount')?.value||0);
+  const date = $('qp-date')?.value;
+  const meth = $('qp-method')?.value;
+  const ref  = $('qp-ref')?.value||null;
+  if (!amt||!date){ toast('Amount and date required','error'); return; }
+  try {
+    const r = await api('/student-finance/pay?sid='+encodeURIComponent(_student.id),{
+      method:'POST', body:{ chargeId, amountPaid:amt, date, method:meth, reference:ref }});
+    closeModal();
+    toast('✅ Payment recorded!','success');
+    printReceipt({ ...r.data?.receiptData, method:meth, student_name:_student.name,
+      class_name:_student.class_name||_student.class||'', student_arm:_student.arm||'' });
+    loadBalance(); renderCharges();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+function openPayAllModal() {
+  showModal(`<h3>💳 Pay All Outstanding</h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">
+      Record a single payment to clear all outstanding charges for ${_student.name}.
+    </p>
+    <div class="fg"><label>Total Amount Paid (₦) *</label><input type="number" id="pam-amount" placeholder="0.00" min="0"></div>
+    <div class="frow">
+      <div class="fg"><label>Date *</label><input type="date" id="pam-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg"><label>Method</label>
+        <select id="pam-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Reference</label><input type="text" id="pam-ref" placeholder="Optional"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="submitPayAllModal()">✅ Record Bulk Payment</button>
+    </div>`);
+}
+
+async function submitPayAllModal() {
+  const amount = parseFloat($('pam-amount')?.value||0);
+  const date   = $('pam-date')?.value;
+  const method = $('pam-method')?.value;
+  const ref    = $('pam-ref')?.value||null;
+  if (!amount||!date){ toast('Amount and date required','error'); return; }
+  try {
+    const r = await api('/student-finance/pay-all?sid='+encodeURIComponent(_student.id),{
+      method:'POST', body:{amount,date,method,reference:ref}});
+    closeModal();
+    toast(`✅ ${r.data?.cleared||0} charges cleared`,'success');
+    loadBalance(); renderOverview();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+function openLevyPayModal(id, levyName, amount) {
+  showModal(`<h3>💳 Pay Levy — ${levyName}</h3>
+    <div class="fg"><label>Amount Paid (₦) *</label><input type="number" id="lp-amount" value="${amount}" min="0"></div>
+    <div class="frow">
+      <div class="fg"><label>Date *</label><input type="date" id="lp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="fg"><label>Method</label>
+        <select id="lp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Reference</label><input type="text" id="lp-ref" placeholder="Optional"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="submitLevyPay('${id}','${levyName}',${amount})">✅ Record</button>
+    </div>`);
+}
+
+async function submitLevyPay(id, levyName, expected) {
+  const amt  = parseFloat($('lp-amount')?.value||0);
+  const date = $('lp-date')?.value;
+  const meth = $('lp-method')?.value;
+  const ref  = $('lp-ref')?.value||null;
+  if (!amt||!date){ toast('Amount and date required','error'); return; }
+  try {
+    await api('/levies/payments/'+id,{ method:'PATCH', body:{status:amt>=expected?'Paid':'Partial',amount_paid:amt,reference:ref}});
+    closeModal();
+    toast('✅ Levy payment recorded!','success');
+    loadBalance(); renderLevies();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+function openAddChargeModal() {
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`<h3>⚡ Add Charge</h3>
+    <div class="fg"><label>Fee Type *</label><input type="text" id="ac-type" placeholder="e.g. School Fees"></div>
+    <div class="frow">
+      <div class="fg"><label>Amount (₦) *</label><input type="number" id="ac-amount" min="0"></div>
+      <div class="fg"><label>Due Date</label><input type="date" id="ac-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="fg"><label>Term *</label><select id="ac-term">${termOpts}</select></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddCharge()">+ Add</button>
+    </div>`);
+}
+
+async function submitAddCharge() {
+  const feeType = $('ac-type')?.value?.trim();
+  const amount  = parseFloat($('ac-amount')?.value||0);
+  const date    = $('ac-date')?.value;
+  const term    = $('ac-term')?.value;
+  if (!feeType||!amount){ toast('Fee type and amount required','error'); return; }
+  try {
+    await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{
+      method:'POST', body:{feeType,amount,date,term,status:'Unpaid'}});
+    closeModal();
+    toast('✅ Charge added!','success');
+    loadBalance(); renderCharges();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+function openDirectPayModal() {
+  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
+  showModal(`<h3>➕ Record Direct Payment</h3>
+    <div class="fg"><label>Fee Type *</label><input type="text" id="dp-type" placeholder="e.g. School Fees"></div>
+    <div class="frow">
+      <div class="fg"><label>Amount (₦) *</label><input type="number" id="dp-amount" min="0"></div>
+      <div class="fg"><label>Date *</label><input type="date" id="dp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Term *</label><select id="dp-term">${termOpts}</select></div>
+      <div class="fg"><label>Method</label>
+        <select id="dp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Status</label><select id="dp-status"><option>Paid</option><option>Partial</option><option>Unpaid</option></select></div>
+      <div class="fg"><label>Reference</label><input type="text" id="dp-ref" placeholder="Optional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitDirectPay()">✅ Record & Receipt</button>
+    </div>`);
+}
+
+async function submitDirectPay() {
+  const feeType = $('dp-type')?.value?.trim();
+  const amount  = parseFloat($('dp-amount')?.value||0);
+  const date    = $('dp-date')?.value;
+  const term    = $('dp-term')?.value;
+  const method  = $('dp-method')?.value;
+  const status  = $('dp-status')?.value;
+  const ref     = $('dp-ref')?.value||null;
+  if (!feeType||!amount||!date){ toast('Fee type, amount, date required','error'); return; }
+  try {
+    const r = await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{
+      method:'POST', body:{feeType,amount,date,term,status,reference:ref}});
+    closeModal();
+    toast('✅ Payment recorded!','success');
+    printReceipt({ id:r.data?.id||'RCP'+Date.now(), student_id:_student.id,
+      student_name:_student.name, class_name:_student.class_name||_student.class||'',
+      student_arm:_student.arm||'', fee_type:feeType, amount, payment_date:date,
+      term, status, reference:ref, method });
+    loadBalance(); renderPayments();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+async function deleteCharge(id) {
+  if (!canAdmin()){ toast('Only Admin can delete charges','error'); return; }
+  if (!confirm('Delete this charge?')) return;
+  try {
+    await api('/fees/'+id,{ method:'DELETE' });
+    toast('Deleted','warning');
+    loadBalance(); renderCharges();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RECEIPT GENERATOR
+═══════════════════════════════════════════════════════════ */
+function printReceipt(p) {
+  const school = _info.school_name||'Sacred Heart College Eziukwu Aba';
+  const principal = _info.principal_name||'The Principal';
+  const addr = _info.school_address||'Eziukwu Road, Aba, Abia State';
+  const amt = parseFloat(p.amount||p.amount_paid||0);
+  const rcpNo = 'RCP-'+String(p.id||'').replace(/\D/g,'').slice(-6).padStart(6,'0')+'-'+new Date().getFullYear();
+  const status = p.status||(amt>0?'Paid':'Unpaid');
+  const sc = status==='Paid'?'#16a34a':'#d97706';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt ${rcpNo}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f1f5f9;padding:1.5rem}
+  .rc{background:#fff;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.15)}
+  .hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:1.75rem;text-align:center}
+  .hdr img{width:52px;height:52px;border-radius:50%;object-fit:contain;margin-bottom:.5rem}
+  .hdr h1{font-size:1rem;font-weight:800}.hdr p{font-size:.73rem;opacity:.8;margin-top:.2rem}
+  .strip{display:flex;justify-content:space-between;align-items:center;padding:.65rem 1.5rem;background:${sc}18;border-bottom:2px solid ${sc}44}
+  .rno{font-size:.75rem;color:#6b7280;font-family:monospace;font-weight:600}
+  .st{background:${sc};color:#fff;border-radius:9999px;padding:.2rem .85rem;font-size:.75rem;font-weight:800}
+  .body{padding:1.4rem 1.5rem}
+  .sec{margin-bottom:1rem}
+  .sec-lbl{font-size:.66rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;border-bottom:1px solid #f1f5f9;padding-bottom:.25rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+  .row{display:flex;flex-direction:column;gap:.06rem}
+  .lbl{font-size:.68rem;color:#9ca3af}
+  .val{font-size:.85rem;font-weight:600}
+  .amt-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:1rem 1.2rem;
+    display:flex;justify-content:space-between;align-items:center;margin:.85rem 0}
+  .amt-box .big{font-size:1.7rem;font-weight:800;color:#1e3a5f}
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:.85rem 1.5rem;font-size:.7rem;color:#9ca3af;text-align:center}
+  .no-print{text-align:center;margin-bottom:1rem;display:flex;gap:.5rem;justify-content:center}
+  @media print{body{background:#fff;padding:0}.rc{box-shadow:none;max-width:100%;border-radius:0}.no-print{display:none}}</style>
+  </head><body>
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.5rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:700">🖨 Print</button>
+    <button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;padding:.5rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:700">✕ Close</button>
+  </div>
+  <div class="rc">
+    <div class="hdr">
+      <img src="images/sahaco logo.jpg" onerror="this.style.display='none'">
+      <h1>${school}</h1>
+      <p>Official Payment Receipt · ${addr}</p>
+    </div>
+    <div class="strip"><span class="rno">Receipt: ${rcpNo}</span><span class="st">${status.toUpperCase()}</span></div>
+    <div class="body">
+      <div class="sec"><div class="sec-lbl">Student</div>
+        <div class="grid">
+          <div class="row"><span class="lbl">Name</span><span class="val">${p.student_name||_student?.name||'—'}</span></div>
+          <div class="row"><span class="lbl">Student ID</span><span class="val" style="font-family:monospace;font-size:.78rem">${p.student_id||_student?.id||'—'}</span></div>
+          <div class="row"><span class="lbl">Class</span><span class="val">${(p.class_name||'')+' '+(p.student_arm||'')}</span></div>
+          <div class="row"><span class="lbl">Term</span><span class="val">${p.term||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-lbl">Payment</div>
+        <div class="grid">
+          <div class="row"><span class="lbl">Fee Description</span><span class="val">${p.fee_type}</span></div>
+          <div class="row"><span class="lbl">Date</span><span class="val">${new Date(p.payment_date||Date.now()).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span></div>
+          <div class="row"><span class="lbl">Method</span><span class="val">${p.method||'Cash'}</span></div>
+          <div class="row"><span class="lbl">Reference</span><span class="val">${p.reference||rcpNo}</span></div>
+        </div>
+      </div>
+      <div class="amt-box">
+        <div><div style="font-size:.75rem;color:#6b7280">Amount Paid</div>
+          <div style="font-size:.75rem;color:${sc};margin-top:.15rem">${status==='Paid'?'Fully settled ✓':'Partial payment'}</div>
+        </div>
+        <div class="big">₦${amt.toLocaleString('en-NG',{minimumFractionDigits:2})}</div>
+      </div>
+      <div style="font-size:.7rem;color:#9ca3af;text-align:center">Computer-generated receipt. Contact the school bursar for queries.</div>
+    </div>
+    <div class="footer">Principal: ${principal} · Generated: ${new Date().toLocaleString('en-NG')}</div>
+  </div></body></html>`;
+  const w = window.open('','_blank','width=580,height=760,scrollbars=yes');
+  if (w){ w.document.write(html); w.document.close(); }
+  else toast('Allow popups to print receipts','warning');
+}
+
+function doExport() {
+  if (!_student) return;
+  window.open(API+'/student-finance/export?sid='+encodeURIComponent(_student.id),'_blank');
+}
+
+/* ── Boot ── */
+boot();
 </script>
 </body>
 </html>

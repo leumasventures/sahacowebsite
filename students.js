@@ -762,6 +762,7 @@ function renderStudents(filter = '', filters = {}) {
         ${canManage ? `
           <button onclick="openStudentModal()" style="${btnStyle('primary')}">+ Add Student</button>
           <button onclick="openBulkStudentModal()" style="${btnStyle('info')}">⬆ Bulk Add</button>
+          <button onclick="bulkGraduateDialog()" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:.45rem .9rem;font-size:.875rem;font-weight:600;cursor:pointer;" title="Graduate or archive an entire class at once">🎓 Bulk Graduate</button>
           <button onclick="openParentEmailManager()" style="${btnStyle('secondary')}">📧 Parent Emails</button>
           <button onclick="printStudentList()" style="${btnStyle('secondary')}">🖨 Print</button>
           <button onclick="seedStudentFixtures({count:40,force:false})" style="${btnStyle('secondary')}">🌱 Seed Fixtures</button>
@@ -870,7 +871,8 @@ function studentRow(s, canManage) {
       ${canManage ? `
         <button onclick="editStudent('${s.id}')" style="${btnStyle('secondary','sm')}">✏ Edit</button>
         <button onclick="transferStudent('${s.id}')" style="${btnStyle('secondary','sm')}">🔀</button>
-        <button onclick="deleteStudent('${s.id}')" style="${btnStyle('danger','sm')}">🗑</button>
+        <button onclick="archiveStudentDialog('${s.id}','leave')" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:.25rem .6rem;font-size:.78rem;cursor:pointer;" title="Graduate / Leave / Withdraw — moves to Former Students">🎓 Leave</button>
+        <button onclick="archiveStudentDialog('${s.id}','remove')" style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:.25rem .6rem;font-size:.78rem;cursor:pointer;" title="Move to Former Students archive (requires reason)">📦 Archive</button>
       ` : ''}
     </td>
   </tr>`;
@@ -1188,38 +1190,379 @@ window.confirmTransfer = function (id) {
 /* ══════════════════════════════════════════════════════════════════════════════
    DELETE STUDENT
 ══════════════════════════════════════════════════════════════════════════════ */
-window.deleteStudent = function (id) {
-  if (!priv.canManage()) { denyAccess('Only Admins can delete students.'); return; }
+/* ══════════════════════════════════════════════════════════════════════════════
+   ARCHIVE / REMOVE STUDENT  (replaces hard-delete)
+   mode = 'leave'  → Graduate / Withdraw / Leave (preserves results)
+   mode = 'remove' → Remove from school (admin confirms data handling)
+══════════════════════════════════════════════════════════════════════════════ */
+window.archiveStudentDialog = function(id, mode) {
+  if (!priv.canManage()) { denyAccess('Only Admins can archive students.'); return; }
   const s        = App.data.students.find(st => st.id === id);
-  const resCount = (App.data.results||[]).filter(r => r.studentId === id).length;
+  if (!s) return;
+  const resCount  = (App.data.results || []).filter(r => r.studentId === id).length;
+  const isLeave   = mode === 'leave';
+  const curSession = App.data.schoolInfo?.session || new Date().getFullYear() + '/' + (new Date().getFullYear()+1);
+  const accentColor = isLeave ? '#f59e0b' : '#6b7280';
+
+  const leaveTypes = [
+    { value: 'Graduated',     label: '🎓 Graduated',          desc: 'Completed final year (SS3)' },
+    { value: 'Withdrawn',     label: '🚪 Withdrawn',          desc: 'Parent/guardian withdrew student' },
+    { value: 'Transferred',   label: '🔀 Transferred Out',    desc: 'Moved to another school' },
+    { value: 'Medical Leave', label: '🏥 Medical Leave',      desc: 'Left due to health reasons' },
+    { value: 'Sponsored Away',label: '✈ Sponsored Away',     desc: 'Scholarship / government relocation' },
+    { value: 'Other',         label: '📋 Other',              desc: 'Specify in reason below' },
+  ];
+  const removeTypes = [
+    { value: 'Expelled',       label: '🚫 Expelled',          desc: 'Disciplinary removal' },
+    { value: 'Suspended',      label: '⚠️ Suspended',         desc: 'Temporary — can be restored' },
+    { value: 'Administrative', label: '🗂 Administrative',    desc: 'Data correction / error entry' },
+    { value: 'Deceased',       label: '✝ Deceased',           desc: 'Student passed away' },
+    { value: 'Other',          label: '📋 Other',             desc: 'Specify in reason below' },
+  ];
+  const types = isLeave ? leaveTypes : removeTypes;
 
   showModal(`
-    <div style="text-align:center;padding:.5rem 0 1rem;">
-      <div style="font-size:2.5rem;margin-bottom:.75rem;">🗑️</div>
-      <h3 style="margin:0 0 .5rem;">Delete Student?</h3>
-      <p style="color:#6b7280;margin:0;">
-        Delete <strong>${s.name}</strong> (${s.id})?
-      </p>
-      ${resCount > 0 ? `
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;
-                    padding:.6rem .9rem;margin:.85rem 0 0;font-size:.85rem;color:#991b1b;">
-          ⚠ This will also delete <strong>${resCount} result record${resCount!==1?'s':''}</strong>.
-        </div>` : ''}
-      <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:center;">
-        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
-        <button onclick="confirmDeleteStudent('${id}')" style="${btnStyle('danger')}">Yes, Delete</button>
+    <div style="max-width:500px;">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;">
+        <div style="width:52px;height:52px;border-radius:50%;background:${isLeave?'#fef3c7':'#f3f4f6'};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">
+          ${isLeave ? '🎓' : '📦'}
+        </div>
+        <div>
+          <h3 style="margin:0 0 .15rem;color:#111;">${isLeave ? 'Graduate / Leave School' : 'Move to Former Students'}</h3>
+          <p style="margin:0;font-size:.875rem;color:#6b7280;"><strong>${s.name}</strong> · ${s.class} ${s.arm} · ID: ${s.id}</p>
+        </div>
       </div>
-    </div>`);
+
+      <!-- Destination notice — always prominent -->
+      <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.65rem;">
+        <span style="font-size:1.2rem;flex-shrink:0;">📂</span>
+        <div style="font-size:.85rem;color:#1e3a8a;">
+          <strong>This student will be moved to the Former Students archive.</strong><br>
+          ${resCount > 0
+            ? 'All <strong>' + resCount + ' result record(s)</strong> will be preserved and linked to the archive entry.'
+            : 'No result records are linked to this student.'}
+          The student will no longer appear in active class rolls.
+        </div>
+      </div>
+
+      <!-- Type radios -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.5rem;">
+          ${isLeave ? 'Reason for Leaving' : 'Archive Reason'} <span style="color:#ef4444;">*</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem;">
+          ${types.map((t, i) => `
+            <label style="display:flex;align-items:flex-start;gap:.5rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;padding:.6rem .8rem;cursor:pointer;transition:border-color .15s;" id="atype-label-${i}"
+              onmouseover="this.style.borderColor='#9ca3af'" onmouseout="if(!document.getElementById('atype-${i}').checked)this.style.borderColor='#e5e7eb'">
+              <input type="radio" name="archive-type" id="atype-${i}" value="${t.value}" ${i===0?'checked':''}
+                style="margin-top:2px;accent-color:${accentColor};"
+                onchange="document.querySelectorAll('[id^=atype-label-]').forEach(l=>l.style.borderColor='#e5e7eb');document.getElementById('atype-label-${i}').style.borderColor='${accentColor}';">
+              <div>
+                <div style="font-size:.85rem;font-weight:600;">${t.label}</div>
+                <div style="font-size:.72rem;color:#9ca3af;">${t.desc}</div>
+              </div>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <!-- Required reason notes -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">
+          Detailed Reason <span style="color:#ef4444;">*</span>
+          <span style="font-weight:400;color:#9ca3af;font-size:.75rem;text-transform:none;margin-left:.35rem;">(required)</span>
+        </label>
+        <textarea id="archive-reason-text" rows="3"
+          placeholder="${isLeave ? 'e.g. Completed SS3 final exams. WAEC registered. Left in good standing.' : 'e.g. Repeated disciplinary infractions — ref: Discipline Log #42.'}"
+          style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:.6rem .8rem;font-size:.875rem;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor=this.value.trim()?'#86efac':'#d1d5db'"></textarea>
+        <div id="archive-reason-error" style="display:none;font-size:.78rem;color:#ef4444;margin-top:.25rem;">⚠ A detailed reason is required before archiving.</div>
+      </div>
+
+      <!-- Session & Date -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Academic Session</label>
+          <input id="archive-session" value="${curSession}" placeholder="e.g. 2025/2026"
+            style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:.5rem .8rem;font-size:.875rem;font-family:inherit;outline:none;box-sizing:border-box;"
+            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'">
+        </div>
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Effective Date</label>
+          <input type="date" id="archive-date" value="${new Date().toISOString().split('T')[0]}"
+            style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:.5rem .8rem;font-size:.875rem;font-family:inherit;outline:none;box-sizing:border-box;"
+            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmArchiveStudent('${id}','${mode}')"
+          style="background:${isLeave?'#f59e0b':'#6b7280'};color:#fff;border:none;border-radius:8px;padding:.55rem 1.3rem;font-size:.875rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.4rem;">
+          📂 Move to Former Students
+        </button>
+      </div>
+    </div>
+  `);
+
+  setTimeout(() => {
+    const first = document.getElementById('atype-label-0');
+    if (first) first.style.borderColor = accentColor;
+  }, 50);
 };
 
-window.confirmDeleteStudent = function (id) {
-  const s = App.data.students.find(st => st.id === id);
-  App.data.students = App.data.students.filter(st => st.id !== id);
-  if (App.data.results) App.data.results = App.data.results.filter(r => r.studentId !== id);
+
+window.confirmArchiveStudent = async function(id, mode) {
+  const s          = App.data.students.find(st => st.id === id);
+  if (!s) return;
+  const typeEl     = document.querySelector('input[name="archive-type"]:checked');
+  const reasonText = document.getElementById('archive-reason-text')?.value?.trim() || '';
+  const dateVal    = document.getElementById('archive-date')?.value || new Date().toISOString().split('T')[0];
+  const sessionVal = document.getElementById('archive-session')?.value?.trim() || (App.data.schoolInfo?.session || '');
+  const archiveType = typeEl?.value || (mode === 'leave' ? 'Graduated' : 'Removed');
+
+  // Validate: reason is required
+  if (!reasonText) {
+    const errEl = document.getElementById('archive-reason-error');
+    const ta    = document.getElementById('archive-reason-text');
+    if (errEl) errEl.style.display = 'block';
+    if (ta)    { ta.style.borderColor = '#ef4444'; ta.focus(); }
+    return;
+  }
+
+  const fullReason = [archiveType, reasonText].filter(Boolean).join(' — ');
+
+  const payload = {
+    reason:         fullReason,
+    archive_type:   archiveType,
+    notes:          reasonText,
+    effective_date: dateVal,
+    session:        sessionVal,
+    last_class:     s.class,
+    last_arm:       s.arm,
+    archived_by:    App.currentUser?.username || App.currentUser?.name || 'Admin',
+  };
+
   closeModal();
+
+  try {
+    await Archive.archiveStudent(id, payload);
+    App.data.students = App.data.students.filter(st => st.id !== id);
+    toast(`📂 ${s.name} moved to Former Students as "${archiveType}".`, 'success');
+  } catch(e) {
+    console.warn('[archiveStudent] API error, using local fallback:', e.message);
+    if (!App.data.archivedStudents) App.data.archivedStudents = [];
+    App.data.archivedStudents.push({
+      ...s,
+      archive_type:   archiveType,
+      archive_reason: fullReason,
+      notes:          reasonText,
+      effective_date: dateVal,
+      session:        sessionVal,
+      last_class:     s.class,
+      last_arm:       s.arm,
+      archived_by:    App.currentUser?.username || 'Admin',
+      archived_at:    new Date().toISOString(),
+    });
+    App.data.students = App.data.students.filter(st => st.id !== id);
+    saveAppData?.();
+    toast(`📂 ${s.name} moved to Former Students (saved locally).`, 'success');
+  }
+
   renderStudents(_currentFilter, _currentFilters);
-  toast(`${s?.name||'Student'} deleted.`, 'warning');
 };
+
+/* Keep deleteStudent as alias for backwards compatibility (e.g. bulk actions) */
+window.deleteStudent = function(id) { archiveStudentDialog(id, 'remove'); };
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BULK GRADUATE / ARCHIVE ENTIRE CLASS
+══════════════════════════════════════════════════════════════════════════════ */
+window.bulkGraduateDialog = function() {
+  if (!priv.isAdmin()) { denyAccess('Only Admins can bulk-graduate a class.'); return; }
+  const classOpts  = App.data.classes.map(c => `<option>${c.name}</option>`).join('');
+  const curSession = App.data.schoolInfo?.session || '';
+  const leaveTypes = [
+    { value: 'Graduated',   label: '🎓 Graduated',       desc: 'Completed final year' },
+    { value: 'Withdrawn',   label: '🚪 Withdrawn',        desc: 'Withdrew from school' },
+    { value: 'Transferred', label: '🔀 Transferred Out',  desc: 'Moved to another school' },
+    { value: 'Other',       label: '📋 Other',            desc: 'Specify below' },
+  ];
+
+  showModal(`
+    <div style="max-width:520px;">
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;">
+        <div style="width:52px;height:52px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">🎓</div>
+        <div>
+          <h3 style="margin:0 0 .15rem;color:#111;">Bulk Graduate / Archive Class</h3>
+          <p style="margin:0;font-size:.875rem;color:#6b7280;">Move all students in a class & arm to Former Students at once.</p>
+        </div>
+      </div>
+
+      <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:.85rem 1rem;margin-bottom:1.25rem;font-size:.85rem;color:#1e3a8a;">
+        📂 All matching students will be moved to the <strong>Former Students archive</strong> with the reason you provide. This action can be undone by restoring individual students.
+      </div>
+
+      <!-- Class / Arm / Session -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Class <span style="color:#ef4444;">*</span></label>
+          <select id="bg-class" style="${inputStyle()}" onchange="updateBulkGradArmsAndCount()">${classOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Arm</label>
+          <select id="bg-arm" style="${inputStyle()}" onchange="updateBulkGradCount()"><option value="ALL">— All Arms —</option></select>
+        </div>
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Session</label>
+          <input id="bg-session" value="${curSession}" style="${inputStyle()}" placeholder="2025/2026">
+        </div>
+      </div>
+
+      <div id="bg-count-badge" style="font-size:.85rem;color:#6b7280;margin-bottom:1rem;padding:.5rem .75rem;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;"></div>
+
+      <!-- Departure type -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.5rem;">
+          Archive Type <span style="color:#ef4444;">*</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem;">
+          ${leaveTypes.map((t, i) => `
+            <label style="display:flex;align-items:flex-start;gap:.5rem;background:#f9fafb;border:1.5px solid ${i===0?'#f59e0b':'#e5e7eb'};border-radius:8px;padding:.6rem .8rem;cursor:pointer;" id="bg-type-label-${i}"
+              onclick="document.querySelectorAll('[id^=bg-type-label-]').forEach(l=>l.style.borderColor='#e5e7eb');this.style.borderColor='#f59e0b'">
+              <input type="radio" name="bg-type" value="${t.value}" ${i===0?'checked':''} style="margin-top:2px;accent-color:#f59e0b;">
+              <div>
+                <div style="font-size:.85rem;font-weight:600;">${t.label}</div>
+                <div style="font-size:.72rem;color:#9ca3af;">${t.desc}</div>
+              </div>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <!-- Required reason -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">
+          Reason <span style="color:#ef4444;">*</span>
+          <span style="font-weight:400;color:#9ca3af;font-size:.75rem;text-transform:none;margin-left:.35rem;">(applied to all students in this batch)</span>
+        </label>
+        <textarea id="bg-reason" rows="3"
+          placeholder="e.g. SS3 class completed final examinations for the 2025/2026 session. WAEC candidates registered."
+          style="width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:.6rem .8rem;font-size:.875rem;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor=this.value.trim()?'#86efac':'#d1d5db'"></textarea>
+        <div id="bg-reason-error" style="display:none;font-size:.78rem;color:#ef4444;margin-top:.25rem;">⚠ Please enter a reason before proceeding.</div>
+      </div>
+
+      <!-- Date -->
+      <div style="margin-bottom:1.5rem;">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Effective Date</label>
+        <input type="date" id="bg-date" value="${new Date().toISOString().split('T')[0]}"
+          style="border:1px solid #d1d5db;border-radius:8px;padding:.5rem .8rem;font-size:.875rem;font-family:inherit;outline:none;"
+          onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'">
+      </div>
+
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmBulkGraduate()" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:.55rem 1.3rem;font-size:.875rem;font-weight:700;cursor:pointer;">
+          📂 Archive All Listed Students
+        </button>
+      </div>
+    </div>
+  `);
+  setTimeout(() => updateBulkGradArmsAndCount(), 50);
+};
+
+window.updateBulkGradArmsAndCount = function() {
+  const cls  = document.getElementById('bg-class')?.value;
+  const sel  = document.getElementById('bg-arm');
+  if (!sel || !cls) return;
+  const c    = App.data.classes.find(x => x.name === cls);
+  const arms = c?.arms || ['A'];
+  sel.innerHTML = `<option value="ALL">— All Arms —</option>` + arms.map(a => `<option>${a}</option>`).join('');
+  updateBulkGradCount();
+};
+
+window.updateBulkGradCount = function() {
+  const cls  = document.getElementById('bg-class')?.value;
+  const arm  = document.getElementById('bg-arm')?.value;
+  const badge = document.getElementById('bg-count-badge');
+  if (!badge) return;
+  let students = App.data.students.filter(s => s.class === cls);
+  if (arm !== 'ALL') students = students.filter(s => s.arm === arm);
+  badge.innerHTML = students.length
+    ? `🎓 <strong>${students.length} student(s)</strong> will be archived (${cls}${arm!=='ALL'?' '+arm:' — all arms'}).`
+    : `<span style="color:#ef4444;">No students found for this selection.</span>`;
+};
+
+window.confirmBulkGraduate = async function() {
+  const cls     = document.getElementById('bg-class')?.value;
+  const arm     = document.getElementById('bg-arm')?.value;
+  const session = document.getElementById('bg-session')?.value?.trim() || '';
+  const typeEl  = document.querySelector('input[name="bg-type"]:checked');
+  const reason  = document.getElementById('bg-reason')?.value?.trim() || '';
+  const dateVal = document.getElementById('bg-date')?.value || new Date().toISOString().split('T')[0];
+  const archiveType = typeEl?.value || 'Graduated';
+
+  if (!reason) {
+    const errEl = document.getElementById('bg-reason-error');
+    const ta    = document.getElementById('bg-reason');
+    if (errEl) errEl.style.display = 'block';
+    if (ta)    { ta.style.borderColor = '#ef4444'; ta.focus(); }
+    return;
+  }
+
+  let students = App.data.students.filter(s => s.class === cls);
+  if (arm !== 'ALL') students = students.filter(s => s.arm === arm);
+
+  if (!students.length) { toast('No students found for this class/arm.', 'warning'); return; }
+
+  if (!confirm(`Archive ${students.length} student(s) from ${cls}${arm!=='ALL'?' '+arm:''}?\n\nType: ${archiveType}\nReason: ${reason}\n\nThis will move all of them to Former Students.`)) return;
+
+  closeModal();
+
+  const fullReason = [archiveType, reason].filter(Boolean).join(' — ');
+  let archived = 0;
+
+  for (const s of students) {
+    const payload = {
+      reason:         fullReason,
+      archive_type:   archiveType,
+      notes:          reason,
+      effective_date: dateVal,
+      session,
+      last_class:     s.class,
+      last_arm:       s.arm,
+      archived_by:    App.currentUser?.username || 'Admin',
+    };
+    try {
+      await Archive.archiveStudent(s.id, payload);
+    } catch(e) {
+      if (!App.data.archivedStudents) App.data.archivedStudents = [];
+      App.data.archivedStudents.push({
+        ...s,
+        archive_type:   archiveType,
+        archive_reason: fullReason,
+        notes:          reason,
+        effective_date: dateVal,
+        session,
+        last_class:     s.class,
+        last_arm:       s.arm,
+        archived_by:    App.currentUser?.username || 'Admin',
+        archived_at:    new Date().toISOString(),
+      });
+    }
+    archived++;
+  }
+
+  App.data.students = App.data.students.filter(s => {
+    if (arm === 'ALL') return s.class !== cls;
+    return !(s.class === cls && s.arm === arm);
+  });
+  saveAppData?.();
+  toast(`📂 ${archived} student(s) archived as "${archiveType}".`, 'success');
+  renderStudents(_currentFilter, _currentFilters);
+};
+
 
 
 /* ══════════════════════════════════════════════════════════════════════════════

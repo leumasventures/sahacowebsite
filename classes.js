@@ -720,60 +720,359 @@ function openClassModal(cls = null) {
 async function renderFormerStudents() {
   const section = document.getElementById('former-students');
   if (!section) return;
-  section.innerHTML = `<h2 style="margin:0 0 1.5rem;">Former Students</h2>
+
+  section.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+      <div>
+        <h2 style="margin:0 0 .2rem;color:#1e3a5f;">🎓 Former Students</h2>
+        <p style="margin:0;font-size:.875rem;color:#6b7280;">Students who have left, graduated, or been removed from the school.</p>
+      </div>
+      <button onclick="renderFormerStudents()" style="${btnStyle('secondary')}">🔄 Refresh</button>
+    </div>
     <div id="fs-loading" style="text-align:center;padding:3rem;color:#9ca3af;">Loading…</div>`;
+
   try {
-    const resp    = await Archive.getStudents();
-    const students = resp.data || [];
+    // Merge backend records + any local fallback records
+    let students = [];
+    try {
+      const resp = await Archive.getStudents({ limit: 2000 });
+      students   = resp.data || resp || [];
+    } catch(apiErr) {
+      console.warn('[FormerStudents] API failed:', apiErr.message);
+    }
+    // Also include locally archived students (fallback)
+    const local = (App.data.archivedStudents || []).filter(
+      loc => !students.some(s => s.id === loc.id)
+    );
+    students = [...students, ...local];
+
+    const loadingEl = document.getElementById('fs-loading');
+    if (!loadingEl) return;
+
     if (!students.length) {
-      document.getElementById('fs-loading').innerHTML = `
-        <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-          <div style="font-size:2.5rem;margin-bottom:.5rem;">🎓</div>
-          <p style="margin:0;">No former students in the archive.</p>
+      loadingEl.innerHTML = `
+        <div style="background:#fff;border-radius:14px;padding:4rem;text-align:center;color:#9ca3af;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+          <div style="font-size:3rem;margin-bottom:.75rem;">🎓</div>
+          <h3 style="margin:0 0 .4rem;color:#374151;">No Former Students Yet</h3>
+          <p style="margin:0;font-size:.875rem;">When students graduate, leave, or are removed they will appear here.</p>
         </div>`;
       return;
     }
-    document.getElementById('fs-loading').outerHTML = `
-      <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead><tr style="background:#f9fafb;">
-            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">NAME</th>
-            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ID</th>
-            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">CLASS / ARM</th>
-            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">REASON</th>
-            <th style="padding:.75rem 1rem;text-align:left;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">DATE</th>
-            ${priv.isAdmin() ? `<th style="padding:.75rem 1rem;text-align:center;font-size:.8rem;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;">ACTIONS</th>` : ''}
-          </tr></thead>
-          <tbody>
-            ${students.map(s => `
-              <tr style="border-bottom:1px solid #f3f4f6;">
-                <td style="padding:.65rem 1rem;font-weight:600;">${s.name}</td>
-                <td style="padding:.65rem 1rem;font-size:.82rem;color:#6b7280;">${s.id}</td>
-                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.class_name || s.class || '—'} ${s.arm || ''}</td>
-                <td style="padding:.65rem 1rem;font-size:.82rem;">${s.archive_reason || s.reason || '—'}</td>
-                <td style="padding:.65rem 1rem;font-size:.78rem;color:#9ca3af;">${s.archived_at ? new Date(s.archived_at).toLocaleDateString('en-NG') : '—'}</td>
-                ${priv.isAdmin() ? `
-                  <td style="padding:.65rem 1rem;text-align:center;">
-                    <button onclick="restoreArchivedStudent('${s.id}')" style="${btnStyle('success','sm')}">↩ Restore</button>
-                  </td>` : ''}
-              </tr>`).join('')}
+
+    // ── Summarize by archive type ───────────────────────────────────────────
+    const typeCounts = {};
+    students.forEach(s => {
+      const t = s.archive_type || s.reason || 'Other';
+      typeCounts[t] = (typeCounts[t] || 0) + 1;
+    });
+    const typeColorMap = {
+      'Graduated':      { bg:'#dcfce7', color:'#166534', border:'#86efac' },
+      'Withdrawn':      { bg:'#fef3c7', color:'#92400e', border:'#fcd34d' },
+      'Transferred':    { bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+      'Transferred Out':{ bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+      'Expelled':       { bg:'#fee2e2', color:'#991b1b', border:'#fca5a5' },
+      'Suspended':      { bg:'#ffedd5', color:'#9a3412', border:'#fdba74' },
+      'Medical Leave':  { bg:'#f0fdf4', color:'#15803d', border:'#86efac' },
+      'Deceased':       { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' },
+      'Administrative': { bg:'#ede9fe', color:'#5b21b6', border:'#c4b5fd' },
+    };
+    function typeStyle(type) {
+      const c = typeColorMap[type] || { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' };
+      return `background:${c.bg};color:${c.color};border:1px solid ${c.border};padding:2px 8px;border-radius:5px;font-size:.75rem;font-weight:700;white-space:nowrap;`;
+    }
+
+    const allTypes = ['All', ...Object.keys(typeCounts).sort()];
+
+    loadingEl.outerHTML = `
+      <!-- Stats strip -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.75rem;margin-bottom:1.5rem;">
+        <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid #7c3aed;text-align:center;">
+          <div style="font-size:1.6rem;font-weight:800;color:#7c3aed;">${students.length}</div>
+          <div style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">Total Archived</div>
+        </div>
+        ${Object.entries(typeCounts).map(([type, count]) => {
+          const c = typeColorMap[type] || { color:'#374151', border:'#d1d5db' };
+          return `<div style="background:#fff;border-radius:10px;padding:.9rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${c.border};text-align:center;">
+            <div style="font-size:1.6rem;font-weight:800;color:${c.color};">${count}</div>
+            <div style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">${type}</div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- Search & Filter bar -->
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+        <input id="fs-search" type="search" placeholder="🔍 Search name or ID…"
+          style="border:1px solid #d1d5db;border-radius:8px;padding:.5rem .85rem;font-size:.875rem;flex:1;min-width:180px;outline:none;"
+          oninput="filterFormerStudents()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#d1d5db'">
+        <select id="fs-type-filter" onchange="filterFormerStudents()"
+          style="border:1px solid #d1d5db;border-radius:8px;padding:.5rem .85rem;font-size:.875rem;outline:none;background:#fff;">
+          ${allTypes.map(t => `<option value="${t}">${t === 'All' ? '— All Types —' : t} ${t !== 'All' ? '('+typeCounts[t]+')' : ''}</option>`).join('')}
+        </select>
+        <select id="fs-year-filter" onchange="filterFormerStudents()"
+          style="border:1px solid #d1d5db;border-radius:8px;padding:.5rem .85rem;font-size:.875rem;outline:none;background:#fff;">
+          <option value="">— All Years —</option>
+          ${[...new Set(students.map(s => s.archived_at ? new Date(s.archived_at).getFullYear() : null).filter(Boolean))].sort().reverse()
+              .map(y => `<option value="${y}">${y}</option>`).join('')}
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
+        <table id="fs-table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Student</th>
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Last Class</th>
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Archive Type</th>
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Reason</th>
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Session</th>
+              <th style="padding:.75rem 1rem;text-align:left;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Date</th>
+              ${priv.isAdmin() ? `<th style="padding:.75rem 1rem;text-align:center;font-size:.75rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e5e7eb;">Actions</th>` : ''}
+            </tr>
+          </thead>
+          <tbody id="fs-tbody">
+            ${buildFormerStudentRows(students, priv.isAdmin())}
           </tbody>
         </table>
+        <div id="fs-empty" style="display:none;padding:2.5rem;text-align:center;color:#9ca3af;font-size:.9rem;">No records match your search.</div>
       </div>`;
+
+    // Store for filtering
+    window._fsAllStudents = students;
+
   } catch(e) {
-    section.innerHTML += `<p style="color:#ef4444;padding:1rem;">Error: ${e.message}</p>`;
+    const el = document.getElementById('fs-loading');
+    if (el) el.innerHTML = `<p style="color:#ef4444;padding:1rem;">Error loading archive: ${e.message}</p>`;
   }
 }
 
-window.restoreArchivedStudent = async function(id) {
-  if (!confirmDlg('Restore this student to the active list?')) return;
+function buildFormerStudentRows(students, isAdmin) {
+  if (!students.length) return '';
+  const typeColorMap = {
+    'Graduated':       { bg:'#dcfce7', color:'#166534', border:'#86efac' },
+    'Withdrawn':       { bg:'#fef3c7', color:'#92400e', border:'#fcd34d' },
+    'Transferred':     { bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+    'Transferred Out': { bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+    'Expelled':        { bg:'#fee2e2', color:'#991b1b', border:'#fca5a5' },
+    'Suspended':       { bg:'#ffedd5', color:'#9a3412', border:'#fdba74' },
+    'Medical Leave':   { bg:'#f0fdf4', color:'#15803d', border:'#86efac' },
+    'Deceased':        { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' },
+    'Administrative':  { bg:'#ede9fe', color:'#5b21b6', border:'#c4b5fd' },
+    'Sponsored Away':  { bg:'#fdf4ff', color:'#7e22ce', border:'#d8b4fe' },
+  };
+  function typeStyle(type) {
+    const c = typeColorMap[type] || { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' };
+    return `background:${c.bg};color:${c.color};border:1px solid ${c.border};padding:2px 8px;border-radius:5px;font-size:.75rem;font-weight:700;white-space:nowrap;`;
+  }
+  return students.map(s => {
+    const archiveType = s.archive_type || s.reason || '—';
+    const notes       = s.notes || (s.archive_reason && s.archive_reason.includes(' — ') ? s.archive_reason.split(' — ').slice(1).join(' — ').trim() : '') || s.archive_reason || '';
+    const lastClass   = (s.last_class || s.class_name || s.class || '—') + ' ' + (s.last_arm || s.arm || '');
+    const sessionStr  = s.session || '—';
+    const dateStr     = s.archived_at ? new Date(s.archived_at).toLocaleDateString('en-NG', { day:'2-digit', month:'short', year:'numeric' }) : (s.effective_date || '—');
+    const initials    = (s.name||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const colors      = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2'];
+    const avatarColor = colors[(s.id||'').charCodeAt(0) % colors.length] || '#6b7280';
+
+    return `<tr style="border-bottom:1px solid #f3f4f6;transition:background .15s;" data-name="${(s.name||'').toLowerCase()}" data-id="${(s.id||'').toLowerCase()}" data-type="${archiveType}" data-year="${s.archived_at?new Date(s.archived_at).getFullYear():''}"
+      onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <td style="padding:.7rem 1rem;">
+        <div style="display:flex;align-items:center;gap:.65rem;">
+          <div style="width:34px;height:34px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:700;flex-shrink:0;">${initials}</div>
+          <div>
+            <div style="font-weight:700;font-size:.9rem;color:#111;">${s.name || '—'}</div>
+            <div style="font-size:.72rem;color:#9ca3af;">${s.id || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:.7rem 1rem;font-size:.85rem;color:#374151;white-space:nowrap;">${lastClass.trim()}</td>
+      <td style="padding:.7rem 1rem;"><span style="${typeStyle(archiveType)}">${archiveType}</span></td>
+      <td style="padding:.7rem 1rem;font-size:.82rem;color:#374151;max-width:260px;">
+        ${notes
+          ? `<div style="overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;" title="${notes.replace(/"/g,'&quot;')}">${notes}</div>`
+          : `<span style="color:#d1d5db;font-style:italic;">—</span>`}
+      </td>
+      <td style="padding:.7rem 1rem;font-size:.82rem;color:#6b7280;white-space:nowrap;">${sessionStr}</td>
+      <td style="padding:.7rem 1rem;font-size:.78rem;color:#9ca3af;white-space:nowrap;">${dateStr}</td>
+      ${isAdmin ? `
+        <td style="padding:.7rem 1rem;text-align:center;white-space:nowrap;">
+          <button onclick="viewArchivedStudentDetail('${s.id}')" style="${btnStyle('info','sm')}" title="View full record">👁 View</button>
+          <button onclick="restoreArchivedStudent('${s.id}')" style="${btnStyle('success','sm')}" title="Restore to active class">↩ Restore</button>
+        </td>` : ''}
+    </tr>`;
+  }).join('');
+}
+
+
+window.filterFormerStudents = function() {
+  const q        = (document.getElementById('fs-search')?.value || '').toLowerCase().trim();
+  const typeFilter = document.getElementById('fs-type-filter')?.value || 'All';
+  const yearFilter = document.getElementById('fs-year-filter')?.value || '';
+  const all = window._fsAllStudents || [];
+
+  const filtered = all.filter(s => {
+    const archiveType = s.archive_type || s.reason || '—';
+    const matchQ    = !q || (s.name||'').toLowerCase().includes(q) || (s.id||'').toLowerCase().includes(q);
+    const matchType = typeFilter === 'All' || archiveType === typeFilter;
+    const matchYear = !yearFilter || (s.archived_at && new Date(s.archived_at).getFullYear() == yearFilter);
+    return matchQ && matchType && matchYear;
+  });
+
+  const tbody = document.getElementById('fs-tbody');
+  const empty = document.getElementById('fs-empty');
+  if (tbody) tbody.innerHTML = buildFormerStudentRows(filtered, priv.isAdmin());
+  if (empty) empty.style.display = filtered.length ? 'none' : 'block';
+};
+
+window.viewArchivedStudentDetail = function(id) {
+  const all = window._fsAllStudents || [];
+  const s   = all.find(x => x.id === id);
+  if (!s) return;
+  const archiveType = s.archive_type || s.reason || '—';
+  const notes       = s.notes || (s.archive_reason && s.archive_reason.includes(' — ') ? s.archive_reason.split(' — ').slice(1).join(' — ').trim() : '') || s.archive_reason || '—';
+  const lastClass   = s.last_class || s.class_name || s.class || '—';
+  const lastArm     = s.last_arm   || s.arm || '';
+  const session     = s.session || '—';
+  const resCount    = (App.data.results || []).filter(r => r.studentId === id).length;
+  const terms       = [...new Set((App.data.results || []).filter(r => r.studentId === id).map(r => r.term))];
+
+  const typeColorMap = {
+    'Graduated':       { bg:'#dcfce7', color:'#166534', border:'#86efac' },
+    'Withdrawn':       { bg:'#fef3c7', color:'#92400e', border:'#fcd34d' },
+    'Transferred':     { bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+    'Transferred Out': { bg:'#dbeafe', color:'#1e3a8a', border:'#93c5fd' },
+    'Expelled':        { bg:'#fee2e2', color:'#991b1b', border:'#fca5a5' },
+    'Suspended':       { bg:'#ffedd5', color:'#9a3412', border:'#fdba74' },
+    'Medical Leave':   { bg:'#f0fdf4', color:'#15803d', border:'#86efac' },
+    'Deceased':        { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' },
+    'Administrative':  { bg:'#ede9fe', color:'#5b21b6', border:'#c4b5fd' },
+    'Sponsored Away':  { bg:'#fdf4ff', color:'#7e22ce', border:'#d8b4fe' },
+  };
+  const tc = typeColorMap[archiveType] || { bg:'#f3f4f6', color:'#374151', border:'#d1d5db' };
+
+  showModal(`
+    <div style="max-width:480px;">
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;">
+        <div style="width:52px;height:52px;border-radius:50%;background:${tc.bg};display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border:2px solid ${tc.border};">
+          ${archiveType==='Graduated'?'🎓':archiveType==='Expelled'?'🚫':archiveType==='Deceased'?'✝':'📦'}
+        </div>
+        <div>
+          <h3 style="margin:0 0 .15rem;color:#111;">${s.name || '—'}</h3>
+          <p style="margin:0;font-size:.875rem;color:#6b7280;">${lastClass} ${lastArm} · ID: ${s.id}</p>
+        </div>
+        <span style="margin-left:auto;background:${tc.bg};color:${tc.color};border:1px solid ${tc.border};padding:3px 10px;border-radius:6px;font-size:.78rem;font-weight:700;white-space:nowrap;">${archiveType}</span>
+      </div>
+
+      <div style="background:#fff8f0;border:1.5px solid #fcd34d;border-radius:10px;padding:.85rem 1rem;margin-bottom:1.25rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#92400e;margin-bottom:.35rem;">📋 Archive Reason</div>
+        <div style="font-size:.9rem;color:#374151;line-height:1.55;">${notes !== '—' ? notes : '<em style="color:#9ca3af;">No detailed reason recorded.</em>'}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;font-size:.85rem;margin-bottom:1.25rem;">
+        ${[
+          ['Gender',           s.gender || '—'],
+          ['Academic Session', session],
+          ['Last Class',       (lastClass + ' ' + lastArm).trim()],
+          ['Effective Date',   s.effective_date || '—'],
+          ['Archived By',      s.archived_by || '—'],
+          ['Archived At',      s.archived_at ? new Date(s.archived_at).toLocaleDateString('en-NG',{day:'2-digit',month:'short',year:'numeric'}) : '—'],
+        ].map(([k,v]) => `
+          <div style="background:#f8fafc;border-radius:7px;padding:.6rem .75rem;">
+            <div style="font-size:.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">${k}</div>
+            <div style="font-weight:600;color:#374151;">${v}</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:.75rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#0c4a6e;">
+        📊 <strong>${resCount}</strong> result record(s) on file
+        ${terms.length ? '— Terms: ' + terms.join(', ') : ''}
+        ${resCount === 0 ? '<br><span style="color:#9ca3af;font-size:.78rem;">No academic results linked to this student.</span>' : ''}
+      </div>
+
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Close</button>
+        ${priv.isAdmin() ? `<button onclick="closeModal();restoreArchivedStudent('${s.id}')" style="${btnStyle('success')}">↩ Restore to Active</button>` : ''}
+      </div>
+    </div>`);
+};
+
+window.restoreArchivedStudent = function(id) {
+  const all = window._fsAllStudents || [];
+  const s   = all.find(x => x.id === id);
+  const lastClass = s?.last_class || s?.class_name || s?.class || '';
+  const lastArm   = s?.last_arm   || s?.arm || 'A';
+
+  showModal(`
+    <div style="max-width:420px;">
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;">
+        <div style="width:48px;height:48px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">↩</div>
+        <div>
+          <h3 style="margin:0 0 .15rem;color:#111;">Restore Student</h3>
+          <p style="margin:0;font-size:.875rem;color:#6b7280;">${s?.name || id} will be moved back to active rolls.</p>
+        </div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.85rem;color:#166534;">
+        ✅ The student and all linked result records will be restored. Choose which class &amp; arm to place them in.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Restore to Class</label>
+          <select id="restore-class" style="${inputStyle()}" onchange="updateRestoreArms()">
+            ${(App.data.classes || []).map(c => `<option ${c.name===lastClass?'selected':''}>${c.name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:.8rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.4rem;">Arm</label>
+          <select id="restore-arm" style="${inputStyle()}">
+            ${(() => {
+              const c = (App.data.classes||[]).find(x=>x.name===lastClass);
+              return (c?.arms||['A']).map(a=>`<option ${a===lastArm?'selected':''}>${a}</option>`).join('');
+            })()}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;">
+        <button onclick="closeModal()" style="${btnStyle('secondary')}">Cancel</button>
+        <button onclick="confirmRestoreArchivedStudent('${id}')" style="${btnStyle('success')}">↩ Restore</button>
+      </div>
+    </div>
+  `);
+};
+
+window.updateRestoreArms = function() {
+  const cls = document.getElementById('restore-class')?.value;
+  const sel = document.getElementById('restore-arm');
+  if (!sel || !cls) return;
+  const c = (App.data.classes||[]).find(x=>x.name===cls);
+  sel.innerHTML = (c?.arms||['A']).map(a=>`<option>${a}</option>`).join('');
+};
+
+window.confirmRestoreArchivedStudent = async function(id) {
+  const cls = document.getElementById('restore-class')?.value;
+  const arm = document.getElementById('restore-arm')?.value;
+  closeModal();
   try {
-    await Archive.restoreStudent(id);
-    toast('Student restored!', 'success');
+    await Archive.restoreStudent(id, { class: cls, arm });
+    try {
+      const fresh = await Students.getAll({ limit: 2000 });
+      App.data.students = fresh.data || App.data.students;
+    } catch(_) {
+      const local = App.data.archivedStudents || [];
+      const rec   = local.find(x => x.id === id);
+      if (rec) {
+        const { archive_type, archive_reason, notes, effective_date, session, last_class, last_arm, archived_by, archived_at, ...studentData } = rec;
+        studentData.class = cls || studentData.class;
+        studentData.arm   = arm || studentData.arm;
+        App.data.students.push(studentData);
+        App.data.archivedStudents = local.filter(x => x.id !== id);
+      }
+    }
+    saveAppData?.();
+    toast('✅ Student restored to ' + cls + ' ' + arm + '.', 'success');
     renderFormerStudents();
-    const fresh = await Students.getAll({ limit: 2000 });
-    App.data.students = fresh.data || App.data.students;
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  } catch(e) {
+    toast('Error restoring: ' + e.message, 'error');
+  }
 };
 
 async function renderFormerStaff() {

@@ -384,12 +384,13 @@
 
   <!-- Mobile Nav -->
   <div class="mobile-nav" id="mobile-nav" style="display:none; position:fixed; inset:0; z-index:300; background:var(--maroon-dark); flex-direction:column; align-items:center; justify-content:center; gap:1.5rem;">
-    <button class="mobile-close" id="mobile-close" style="position:absolute; top:1.5rem; right:1.5rem; background:none; border:none; color:white; font-size:2rem;">✕</button>
-    <a href="index.html" style="color:white; font-size:1.6rem;">Home</a>
-    <a href="index.html#about" style="color:white; font-size:1.6rem;">About Us</a>
-    <a href="index.html#faith" style="color:white; font-size:1.6rem;">Mission</a>
-    <a href="#" style="color:white; font-size:1.6rem;">Contact</a>
-    <a href="index.html#admissions" style="color:white; font-size:1.6rem;">Admissions</a>
+    <button class="mobile-close" id="mobile-close" style="position:absolute; top:1.5rem; right:1.5rem; background:none; border:none; color:white; font-size:2rem; cursor:pointer;">✕</button>
+    <a href="index.html"     onclick="closeMobile()" style="font-family:var(--font-serif);font-size:1.6rem;color:rgba(255,255,255,0.8);">Home</a>
+    <a href="about.html"     onclick="closeMobile()" style="font-family:var(--font-serif);font-size:1.6rem;color:rgba(255,255,255,0.8);">About</a>
+    <a href="mission .html"  onclick="closeMobile()" style="font-family:var(--font-serif);font-size:1.6rem;color:rgba(255,255,255,0.8);">Mission</a>
+    <a href="contact.html"   onclick="closeMobile()" style="font-family:var(--font-serif);font-size:1.6rem;color:var(--gold-light);font-weight:700;">Contact</a>
+    <a href="admission.html" onclick="closeMobile()" style="font-family:var(--font-serif);font-size:1.6rem;color:rgba(255,255,255,0.8);">Admissions</a>
+    <a href="login.html"     onclick="closeMobile()" style="background:var(--gold);color:var(--maroon-dark);padding:.6rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;margin-top:.5rem;">Login →</a>
   </div>
 
   <!-- CONTACT HERO -->

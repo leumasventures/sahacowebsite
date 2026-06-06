@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parent Portal Registration — Sacred Heart College</title>
+  <style>
+    :root{
+      --maroon:#7B1D1D;--gold:#C9963A;--gold-pale:#F5E8CC;
+      --brand:#1e3a5f;--brand2:#2563eb;
+      --success:#16a34a;--danger:#dc2626;--warn:#d97706;
+      --bg:#f8f5f0;--border:#e2d8cc;--text:#1C1612;--muted:#6b5f55;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh;
+      display:flex;flex-direction:column}
+
+    /* header */
+    .hdr{background:var(--maroon);color:#fff;padding:1rem 1.5rem;
+      display:flex;align-items:center;gap:.85rem;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+    .hdr img{width:44px;height:44px;border-radius:50%;object-fit:contain;border:2px solid var(--gold)}
+    .hdr h1{font-size:1rem;font-weight:700;line-height:1.3}
+    .hdr p{font-size:.75rem;opacity:.8}
+
+    /* page */
+    .page{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem}
+    .card{background:#fff;border-radius:18px;max-width:520px;width:100%;
+      box-shadow:0 8px 32px rgba(0,0,0,.1);overflow:hidden}
+    .card-top{background:linear-gradient(135deg,var(--maroon),#a32020);
+      padding:1.75rem 1.75rem 1.5rem;color:#fff;text-align:center}
+    .card-top .icon{font-size:2.5rem;margin-bottom:.5rem}
+    .card-top h2{font-size:1.15rem;font-weight:800;margin-bottom:.25rem}
+    .card-top p{font-size:.82rem;opacity:.85;line-height:1.5}
+
+    /* steps indicator */
+    .steps{display:flex;align-items:center;justify-content:center;gap:.25rem;
+      padding:.85rem 1.75rem;border-bottom:1px solid var(--border);background:#fafaf8}
+    .step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);
+      display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+      color:var(--muted);flex-shrink:0;transition:all .25s}
+    .step-dot.done{background:var(--success);border-color:var(--success);color:#fff}
+    .step-dot.active{background:var(--maroon);border-color:var(--maroon);color:#fff}
+    .step-line{flex:1;height:2px;background:var(--border);transition:background .25s}
+    .step-line.done{background:var(--success)}
+
+    /* form */
+    .form-body{padding:1.5rem 1.75rem}
+    .fg{margin-bottom:.9rem}
+    .fg label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.3rem}
+    .fg input,.fg select{width:100%;padding:.56rem .9rem;border:1.5px solid var(--border);
+      border-radius:9px;font-size:.9rem;outline:none;transition:border-color .15s;background:#fff}
+    .fg input:focus,.fg select:focus{border-color:var(--maroon)}
+    .fg .hint{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+    .fg .err{font-size:.75rem;color:var(--danger);margin-top:.2rem;display:none}
+    .fg.invalid input,.fg.invalid select{border-color:var(--danger)}
+    .fg.valid   input,.fg.valid   select{border-color:var(--success)}
+
+    /* password strength */
+    .pass-bar{height:4px;background:#e5e7eb;border-radius:2px;margin-top:.35rem;overflow:hidden}
+    .pass-fill{height:100%;width:0%;border-radius:2px;transition:width .3s,background .3s}
+
+    /* buttons */
+    .btn{display:flex;align-items:center;justify-content:center;gap:.4rem;width:100%;
+      padding:.7rem;border:none;border-radius:10px;font-size:.9rem;font-weight:700;
+      cursor:pointer;transition:opacity .15s;margin-top:.5rem}
+    .btn:hover{opacity:.88}
+    .btn-maroon{background:var(--maroon);color:#fff}
+    .btn-outline{background:#fff;color:var(--maroon);border:2px solid var(--maroon)}
+    .btn-ghost{background:#f3f0ec;color:var(--muted);margin-top:.5rem}
+
+    /* verify box */
+    .verify-box{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;
+      padding:.85rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#1d4ed8}
+    .warn-box{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:10px;
+      padding:.85rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#92400e}
+
+    /* success */
+    .success-page{text-align:center;padding:2rem 1.75rem}
+    .success-page .ico{font-size:3.5rem;margin-bottom:.75rem}
+    .success-page h2{font-size:1.15rem;font-weight:800;color:var(--success);margin-bottom:.5rem}
+    .success-page p{font-size:.875rem;color:var(--muted);line-height:1.7;margin-bottom:1rem}
+    .cred-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;
+      padding:.85rem 1rem;font-size:.85rem;text-align:left;margin-bottom:1.25rem}
+    .cred-box .row{display:flex;justify-content:space-between;padding:.3rem 0;
+      border-bottom:1px solid #bbf7d0}
+    .cred-box .row:last-child{border-bottom:none}
+    .cred-box .lbl{font-weight:600;color:var(--text)}
+    .cred-box .val{font-family:monospace;color:var(--brand);font-weight:600}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <img src="images/sahaco logo.jpg" alt="SAHARCO" onerror="this.style.display='none'">
+  <div>
+    <h1>Sacred Heart College Eziukwu Aba</h1>
+    <p>Parent Portal Registration</p>
+  </div>
+</div>
+
+<div class="page">
+  <div class="card">
+    <div class="card-top">
+      <div class="icon">👨‍👩‍👧</div>
+      <h2>Create Your Parent Portal Account</h2>
+      <p>Verify your child's enrollment and set up your login details to access their school records.</p>
+    </div>
+
+    <!-- Steps indicator -->
+    <div class="steps">
+      <div class="step-dot active" id="step1-dot">1</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step-dot" id="step2-dot">2</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step-dot" id="step3-dot">3</div>
+    </div>
+
+    <!-- ═══ STEP 1: Verify student ═══ -->
+    <div class="form-body" id="step1">
+      <div class="verify-box">
+        🔍 We'll verify your identity by matching your child's Admission Number with your registered phone number.
+      </div>
+
+      <div class="fg" id="fg-sid">
+        <label>Child's Admission Number *</label>
+        <input type="text" id="sid" placeholder="e.g. SAHARCO/20250115/0042"
+          style="font-family:monospace;text-transform:uppercase"
+          oninput="this.value=this.value.toUpperCase()">
+        <div class="hint">Found on the admission letter or ask the school admin office.</div>
+        <div class="err" id="sid-err"></div>
+      </div>
+
+      <div class="fg" id="fg-phone">
+        <label>Your Phone Number *</label>
+        <input type="tel" id="phone" placeholder="e.g. 08012345678">
+        <div class="hint">Must match the number registered with the school at enrollment.</div>
+        <div class="err" id="phone-err"></div>
+      </div>
+
+      <div id="step1-err" style="color:var(--danger);font-size:.82rem;min-height:1rem;margin-bottom:.5rem"></div>
+
+      <button class="btn btn-maroon" onclick="verifyStudent()">
+        <span id="verify-btn-text">Verify & Continue →</span>
+      </button>
+      <a href="login.html" style="display:block;text-align:center;margin-top:.85rem;font-size:.82rem;color:var(--muted)">Already have an account? Sign In</a>
+    </div>
+
+    <!-- ═══ STEP 2: Set up account ═══ -->
+    <div class="form-body" id="step2" style="display:none">
+      <div class="verify-box" id="verified-banner">
+        ✅ Verified: <strong id="verified-name"></strong> — <span id="verified-class"></span>
+      </div>
+
+      <div class="fg">
+        <label>Your Full Name *</label>
+        <input type="text" id="par-name" placeholder="e.g. Mr Emmanuel Okonkwo">
+      </div>
+      <div class="fg">
+        <label>Relationship to Student</label>
+        <select id="par-rel">
+          <option value="Father">Father</option><option value="Mother">Mother</option>
+          <option value="Guardian">Legal Guardian</option>
+          <option value="Uncle">Uncle</option><option value="Aunt">Aunt</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Email Address * <span style="font-size:.72rem;font-weight:400;color:var(--muted)">(this will be your login username)</span></label>
+        <input type="email" id="par-email" placeholder="your@email.com">
+        <div class="hint">You will use this email to log in to the portal.</div>
+      </div>
+
+      <div class="fg">
+        <label>Password *</label>
+        <input type="password" id="par-pass" placeholder="Minimum 6 characters"
+          oninput="strengthCheck(this.value)">
+        <div class="pass-bar"><div class="pass-fill" id="pass-fill"></div></div>
+        <div class="hint" id="pass-label"></div>
+      </div>
+      <div class="fg">
+        <label>Confirm Password *</label>
+        <input type="password" id="par-pass2" placeholder="Re-type password">
+      </div>
+
+      <div id="step2-err" style="color:var(--danger);font-size:.82rem;min-height:1rem;margin-bottom:.5rem"></div>
+
+      <button class="btn btn-maroon" onclick="submitRegister()">
+        <span id="reg-btn-text">Create My Account →</span>
+      </button>
+      <button class="btn btn-ghost" onclick="goBack()">← Go Back</button>
+    </div>
+
+    <!-- ═══ STEP 3: Success ═══ -->
+    <div class="form-body" id="step3" style="display:none">
+      <div class="success-page">
+        <div class="ico">🎉</div>
+        <h2>Account Created!</h2>
+        <p>Your parent portal account has been set up. You can now log in and view <strong id="succ-child"></strong>'s school records.</p>
+        <div class="cred-box">
+          <div class="row"><span class="lbl">Login URL</span><span class="val" id="succ-url" style="font-size:.78rem"></span></div>
+          <div class="row"><span class="lbl">Email</span><span class="val" id="succ-email"></span></div>
+          <div class="row"><span class="lbl">Password</span><span class="val" id="succ-pass"></span></div>
+        </div>
+        <div class="warn-box" style="text-align:left">
+          📌 Save these details. For security, change your password after first login via <strong>Settings → Change Password</strong>.
+        </div>
+        <a href="login.html" style="display:block;background:var(--maroon);color:#fff;padding:.7rem;border-radius:10px;text-align:center;font-weight:700;text-decoration:none;margin-top:.5rem">
+          Log In Now →
+        </a>
+        <button class="btn btn-ghost" onclick="printSlip()" style="margin-top:.5rem;width:100%">🖨 Print Credentials Slip</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api';
+let _student = null;
+
+/* ── Step indicators ── */
+function setStep(n) {
+  [1,2,3].forEach(i=>{
+    const dot = document.getElementById('step'+i+'-dot');
+    dot.className = 'step-dot ' + (i<n?'done':i===n?'active':'');
+    if (i<3) document.getElementById('step-line-'+i).className = 'step-line'+(i<n?' done':'');
+  });
+  document.getElementById('step1').style.display = n===1?'block':'none';
+  document.getElementById('step2').style.display = n===2?'block':'none';
+  document.getElementById('step3').style.display = n===3?'block':'none';
+}
+
+/* ── Step 1: Verify ── */
+async function verifyStudent() {
+  const sid   = document.getElementById('sid').value.trim().toUpperCase();
+  const phone = document.getElementById('phone').value.trim().replace(/\s/g,'');
+  const errEl = document.getElementById('step1-err');
+  const btn   = document.getElementById('verify-btn-text');
+  errEl.textContent='';
+
+  if (!sid)   { errEl.textContent='Please enter your child\'s Admission Number.'; return; }
+  if (!phone) { errEl.textContent='Please enter your phone number.'; return; }
+
+  btn.textContent = 'Verifying…';
+  try {
+    const r    = await fetch(API+'/students/parent-verify/'+encodeURIComponent(sid));
+    const data = await r.json();
+    if (!r.ok||!data.success) { btn.textContent='Verify & Continue →'; errEl.textContent=data.message||'Student not found. Please check the Admission Number.'; return; }
+    const student = data.data;
+    const stored  = (student.phone||student.parent_phone||'').replace(/\s/g,'').replace(/^(\+234|234)/,'0');
+    const entered = phone.replace(/^(\+234|234)/,'0');
+    if (!stored||entered.slice(-8)!==stored.slice(-8)) {
+      btn.textContent='Verify & Continue →';
+      errEl.textContent='Phone number does not match our records. Please contact the school admin office.';
+      return;
+    }
+    _student = student;
+    btn.textContent='Verify & Continue →';
+    document.getElementById('verified-name').textContent  = student.name;
+    document.getElementById('verified-class').textContent = (student.class_name||student.class||'')+(student.arm?' '+student.arm:'');
+    document.getElementById('par-name').value = student.parent||'';
+    setStep(2);
+  } catch(e) {
+    btn.textContent='Verify & Continue →';
+    errEl.textContent='Connection error. Please try again.';
+  }
+}
+
+function goBack() { setStep(1); }
+
+/* ── Password strength ── */
+function strengthCheck(v) {
+  const fill=document.getElementById('pass-fill'), lbl=document.getElementById('pass-label');
+  if (!v) { fill.style.width='0%'; lbl.textContent=''; return; }
+  let s=0;
+  if (v.length>=6)s++; if(v.length>=10)s++;
+  if(/[0-9]/.test(v))s++; if(/[^a-zA-Z0-9]/.test(v))s++;
+  const levels=[['#ef4444','Weak',10],['#f59e0b','Fair',40],['#3b82f6','Good',70],['#16a34a','Strong',100]];
+  const [c,t,p]=levels[Math.min(s,3)];
+  fill.style.width=p+'%'; fill.style.background=c;
+  lbl.style.color=c; lbl.textContent=t;
+}
+
+/* ── Step 2: Register ── */
+async function submitRegister() {
+  const name  = document.getElementById('par-name').value.trim();
+  const rel   = document.getElementById('par-rel').value;
+  const email = document.getElementById('par-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('par-pass').value;
+  const pass2 = document.getElementById('par-pass2').value;
+  const errEl = document.getElementById('step2-err');
+  const btn   = document.getElementById('reg-btn-text');
+  errEl.textContent='';
+
+  if (!name)  { errEl.textContent='Please enter your full name.'; return; }
+  if (!email) { errEl.textContent='Please enter your email address.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent='Please enter a valid email address.'; return; }
+  if (!pass||pass.length<6) { errEl.textContent='Password must be at least 6 characters.'; return; }
+  if (pass!==pass2) { errEl.textContent='Passwords do not match.'; return; }
+
+  btn.textContent='Creating account…';
+  try {
+    const r = await fetch(API+'/users', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name, email, role:'Parent', password:pass,
+        ward_id: _student.id,
+        note: rel+' of '+_student.name
+      })
+    });
+    const data = await r.json();
+    if (!r.ok||!data.success) {
+      btn.textContent='Create My Account →';
+      errEl.textContent = data.message||'Registration failed. Please try again.';
+      return;
+    }
+    // Success
+    btn.textContent='Create My Account →';
+    document.getElementById('succ-child').textContent = _student.name;
+    document.getElementById('succ-url').textContent   = location.origin+'/login.html';
+    document.getElementById('succ-email').textContent = email;
+    document.getElementById('succ-pass').textContent  = pass;
+    setStep(3);
+  } catch(e) {
+    btn.textContent='Create My Account →';
+    errEl.textContent='Connection error. Please try again.';
+  }
+}
+
+function printSlip() {
+  const child = document.getElementById('succ-child').textContent;
+  const email = document.getElementById('succ-email').textContent;
+  const pass  = document.getElementById('succ-pass').textContent;
+  const url   = document.getElementById('succ-url').textContent;
+  const w = window.open('','_blank','width=600,height=450');
+  w.document.write(`<html><head><title>Login Credentials</title>
+  <style>body{font-family:Arial,sans-serif;padding:2rem;font-size:.9rem}
+  .box{border:2px solid #7B1D1D;border-radius:10px;padding:1.25rem;max-width:400px}
+  h2{color:#7B1D1D;margin-bottom:.75rem;font-size:1rem}table{width:100%;border-collapse:collapse}
+  td{padding:.5rem;border:1px solid #e5e7eb}td:first-child{background:#f9fafb;font-weight:600;width:40%}
+  @media print{button{display:none}}</style></head>
+  <body><div class="box"><h2>🏫 Sacred Heart College — Parent Portal</h2>
+  <table>
+    <tr><td>Child</td><td>${child}</td></tr>
+    <tr><td>Login Email</td><td><strong>${email}</strong></td></tr>
+    <tr><td>Password</td><td><strong>${pass}</strong></td></tr>
+    <tr><td>Login URL</td><td style="font-size:.78rem">${url}</td></tr>
+  </table>
+  <p style="font-size:.75rem;color:#d97706;margin-top:.75rem">Change your password after first login.</p>
+  </div><br><button onclick="window.print()" style="background:#7B1D1D;color:#fff;border:none;padding:.5rem 1.25rem;border-radius:8px;cursor:pointer;font-weight:700">🖨 Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+setStep(1);
+</script>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parent–Student Link Manager — SAHARCO</title>
+  <style>
+    :root{
+      --brand:#1e3a5f;--brand2:#2563eb;--gold:#c8972b;
+      --success:#16a34a;--warn:#d97706;--danger:#dc2626;
+      --bg:#f8fafc;--border:#e2e8f0;--text:#111827;--muted:#6b7280;
+      --radius:12px;--shadow:0 2px 12px rgba(0,0,0,.07);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+    /* ── topbar ── */
+    .topbar{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
+      padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+      gap:.75rem;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+    .tb-brand{display:flex;align-items:center;gap:.75rem}
+    .tb-logo{width:36px;height:36px;border-radius:50%;object-fit:contain;border:1.5px solid rgba(255,255,255,.4)}
+    .tb-brand h1{font-size:.95rem;font-weight:700}
+    .tb-brand p{font-size:.72rem;opacity:.8}
+    .btn-tb{padding:.38rem .9rem;border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;text-decoration:none;background:rgba(255,255,255,.18);color:#fff}
+
+    /* ── page ── */
+    .page{max-width:1100px;margin:0 auto;padding:1.75rem 1.25rem}
+    .page-title{font-size:1.2rem;font-weight:800;color:var(--brand);margin-bottom:.35rem}
+    .page-sub{font-size:.875rem;color:var(--muted);margin-bottom:1.75rem}
+
+    /* ── tabs ── */
+    .tabs{display:flex;gap:.25rem;border-bottom:2px solid var(--border);margin-bottom:1.5rem}
+    .tab{padding:.55rem 1.25rem;border:none;background:none;font-size:.875rem;font-weight:600;
+      color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;transition:all .15s}
+    .tab.active{color:var(--brand);border-bottom-color:var(--brand);background:#eff6ff}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+
+    /* ── card ── */
+    .card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.25rem}
+    .card-hdr{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;
+      justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
+    .card-hdr h3{font-size:.95rem;font-weight:700;color:var(--brand)}
+    .card-body{padding:1.25rem}
+
+    /* ── form ── */
+    .fg{margin-bottom:.85rem}
+    .fg label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.3rem}
+    .fg input,.fg select{width:100%;padding:.52rem .85rem;border:1.5px solid var(--border);
+      border-radius:8px;font-size:.875rem;outline:none;background:#fff}
+    .fg input:focus,.fg select:focus{border-color:var(--brand2)}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem}
+
+    /* ── buttons ── */
+    .btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem 1rem;border:none;
+      border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;transition:opacity .15s}
+    .btn:hover{opacity:.85}
+    .btn-primary{background:var(--brand);color:#fff}
+    .btn-success{background:var(--success);color:#fff}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-secondary{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
+    .btn-gold{background:var(--gold);color:#fff}
+    .btn-sm{padding:.3rem .65rem;font-size:.77rem}
+
+    /* ── table ── */
+    table{width:100%;border-collapse:collapse;font-size:.84rem}
+    th{padding:.55rem .9rem;text-align:left;font-size:.72rem;color:var(--muted);font-weight:700;
+      text-transform:uppercase;background:#f9fafb;border-bottom:1px solid var(--border)}
+    td{padding:.62rem .9rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#fafafa}
+
+    /* ── badge ── */
+    .badge{display:inline-block;border-radius:9999px;padding:.2rem .65rem;font-size:.72rem;font-weight:700}
+    .b-linked{background:#dcfce7;color:#166534}
+    .b-pending{background:#fef3c7;color:#92400e}
+    .b-none{background:#f3f4f6;color:var(--muted)}
+
+    /* ── student search ── */
+    .stu-search-wrap{position:relative}
+    .stu-search-wrap input{width:100%;padding:.52rem 2rem .52rem .85rem;border:1.5px solid var(--border);
+      border-radius:8px;font-size:.875rem;outline:none}
+    .stu-search-wrap input:focus{border-color:var(--brand2)}
+    .stu-search-icon{position:absolute;right:.65rem;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
+    .stu-dropdown{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;
+      border:1.5px solid var(--brand2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.13);
+      z-index:200;max-height:220px;overflow-y:auto;display:none}
+    .stu-dropdown.open{display:block}
+    .stu-drop-item{padding:.55rem .85rem;cursor:pointer;font-size:.84rem;border-bottom:1px solid #f3f4f6}
+    .stu-drop-item:hover{background:#eff6ff}
+    .stu-drop-item .dn{font-weight:600}
+    .stu-drop-item .dm{font-size:.73rem;color:var(--muted);margin-top:.08rem}
+
+    /* ── info box ── */
+    .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.85rem 1rem;
+      font-size:.85rem;color:#1d4ed8;margin-bottom:1.25rem;display:flex;gap:.5rem;align-items:flex-start}
+    .warn-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:.85rem 1rem;
+      font-size:.85rem;color:#92400e;margin-bottom:1.25rem;display:flex;gap:.5rem;align-items:flex-start}
+
+    /* ── copy link box ── */
+    .link-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:.85rem 1rem;
+      display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.85rem}
+    .link-box input{flex:1;min-width:200px;padding:.4rem .75rem;border:1px solid #86efac;border-radius:7px;
+      font-family:monospace;font-size:.82rem;background:#fff;outline:none}
+
+    /* ── modal ── */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;place-items:center;padding:1rem}
+    .modal.open{display:grid}
+    .modal-box{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;
+      overflow-y:auto;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.22)}
+    .modal-box h3{font-size:1rem;font-weight:700;color:var(--brand);margin-bottom:1rem}
+    .modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
+
+    /* ── empty ── */
+    .empty{text-align:center;padding:2.5rem 1rem;color:var(--muted)}
+    .empty-ico{font-size:2rem;margin-bottom:.5rem}
+
+    /* ── toast ── */
+    .toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.4rem}
+    .toast{background:#1e293b;color:#fff;padding:.6rem 1rem;border-radius:9px;font-size:.83rem;font-weight:500;
+      animation:toastIn .2s ease;border-left:3px solid #3b82f6}
+    @keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    @media(max-width:640px){.frow,.frow3{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-brand">
+    <img class="tb-logo" src="images/sahaco logo.jpg" alt="SAHARCO" onerror="this.style.display='none'">
+    <div>
+      <h1>Sacred Heart College Eziukwu Aba</h1>
+      <p>Parent–Student Account Manager</p>
+    </div>
+  </div>
+  <a href="dashboard.html" class="btn-tb">← Dashboard</a>
+</div>
+
+<div class="page">
+  <div class="page-title">👨‍👩‍👧 Parent–Student Account Manager</div>
+  <div class="page-sub">Link parent accounts to their children, create parent login credentials, and share the self-registration link with parents.</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('link')">🔗 Link Parent to Student</button>
+    <button class="tab" onclick="showTab('list')">📋 Linked Accounts</button>
+    <button class="tab" onclick="showTab('invite')">📨 Parent Self-Register Link</button>
+  </div>
+
+  <!-- ═══ TAB 1: LINK ═══ -->
+  <div class="tab-panel active" id="tab-link">
+    <div class="info-box">
+      <span>ℹ️</span>
+      <div>Use this form to create a parent portal account linked to a student. The parent will be able to log in and view their child's financial records, report cards, attendance and results.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>Create Parent Account & Link to Student</h3></div>
+      <div class="card-body">
+
+        <!-- Step 1: Find student -->
+        <div style="margin-bottom:1.25rem;">
+          <div style="font-size:.82rem;font-weight:700;color:var(--brand);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;">
+            <span style="background:var(--brand);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;">1</span>
+            Find the Student
+          </div>
+          <div class="stu-search-wrap">
+            <input type="text" id="link-stu-input" autocomplete="off" placeholder="Type student name, class or admission ID…"
+              oninput="linkStuFilter(this.value)" onfocus="linkStuOpen()" onkeydown="linkStuKeydown(event)">
+            <span class="stu-search-icon">🔍</span>
+            <div class="stu-dropdown" id="link-stu-dd"></div>
+          </div>
+          <div id="link-stu-card" style="display:none;margin-top:.75rem;background:#eff6ff;border-radius:10px;padding:.85rem 1rem;display:flex;align-items:center;gap:.85rem;">
+            <div style="width:44px;height:44px;border-radius:50%;background:var(--brand);color:#fff;
+              display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;flex-shrink:0;"
+              id="link-stu-avatar">—</div>
+            <div style="flex:1">
+              <div style="font-weight:700;color:var(--text)" id="link-stu-name">—</div>
+              <div style="font-size:.78rem;color:var(--muted)" id="link-stu-meta">—</div>
+            </div>
+            <button onclick="clearLinkStudent()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;">✕</button>
+          </div>
+          <input type="hidden" id="link-stu-id">
+        </div>
+
+        <!-- Step 2: Parent details -->
+        <div style="margin-bottom:1rem;">
+          <div style="font-size:.82rem;font-weight:700;color:var(--brand);margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;">
+            <span style="background:var(--brand);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;">2</span>
+            Parent / Guardian Details
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Parent Full Name *</label>
+              <input type="text" id="link-par-name" placeholder="e.g. Mr Emmanuel Okonkwo"></div>
+            <div class="fg"><label>Relationship to Student</label>
+              <select id="link-par-rel">
+                <option value="Father">Father</option><option value="Mother">Mother</option>
+                <option value="Guardian">Legal Guardian</option><option value="Uncle">Uncle</option>
+                <option value="Aunt">Aunt</option><option value="Other">Other</option>
+              </select></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Email Address * <span style="font-size:.72rem;font-weight:400;color:var(--muted)">(will be used to log in)</span></label>
+              <input type="email" id="link-par-email" placeholder="parent@email.com"></div>
+            <div class="fg"><label>Phone Number</label>
+              <input type="tel" id="link-par-phone" placeholder="08012345678"></div>
+          </div>
+        </div>
+
+        <!-- Step 3: Password -->
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:var(--brand);margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;">
+            <span style="background:var(--brand);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;">3</span>
+            Set Login Password
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Password *</label>
+              <input type="password" id="link-par-pass" placeholder="Min 6 characters"
+                oninput="checkPassStrength(this.value)">
+              <div id="pass-strength-bar" style="height:4px;background:#e5e7eb;border-radius:2px;margin-top:.35rem;overflow:hidden">
+                <div id="pass-strength-fill" style="height:100%;width:0%;background:#e5e7eb;transition:width .3s,background .3s;border-radius:2px"></div>
+              </div>
+              <div id="pass-strength-label" style="font-size:.72rem;color:var(--muted);margin-top:.2rem;"></div>
+            </div>
+            <div class="fg"><label>Confirm Password *</label>
+              <input type="password" id="link-par-pass2" placeholder="Re-type password"></div>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:.65rem .9rem;font-size:.8rem;color:var(--muted);">
+            💡 Tip: Share credentials securely. The parent can change their password after first login via Settings → Change Password.
+          </div>
+        </div>
+
+        <div id="link-err" style="color:var(--danger);font-size:.82rem;min-height:1.1rem;margin-top:.5rem;"></div>
+        <div style="display:flex;gap:.5rem;margin-top:1rem;justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="clearLinkForm()">Clear</button>
+          <button class="btn btn-primary" onclick="submitLinkAccount()">✅ Create Account & Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2: LINKED ACCOUNTS LIST ═══ -->
+  <div class="tab-panel" id="tab-list">
+    <div class="card">
+      <div class="card-hdr">
+        <h3>All Parent Accounts</h3>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <input type="text" id="list-search" placeholder="Search name, email or ID…"
+            style="padding:.4rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.83rem;outline:none;width:220px"
+            oninput="filterParentList(this.value)">
+          <button class="btn btn-secondary btn-sm" onclick="loadParentList()">↺ Refresh</button>
+        </div>
+      </div>
+      <div id="parent-list-body">
+        <div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 3: INVITE LINK ═══ -->
+  <div class="tab-panel" id="tab-invite">
+    <div class="warn-box">
+      <span>📨</span>
+      <div>Share the self-registration link below with parents. They can use it to create their own portal account by verifying their phone number against the school's records — no admin involvement needed.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>📨 Parent Self-Registration Page</h3></div>
+      <div class="card-body">
+        <p style="font-size:.875rem;color:var(--muted);margin-bottom:1rem;">
+          Parents visit this page, enter their child's Admission Number and their registered phone number, set a password, and instantly get access to their child's portal.
+        </p>
+        <div class="link-box">
+          <span>🔗</span>
+          <input type="text" id="invite-url" readonly>
+          <button class="btn btn-success btn-sm" onclick="copyInviteLink()">📋 Copy Link</button>
+          <a id="invite-open" href="#" target="_blank" class="btn btn-secondary btn-sm">↗ Open Page</a>
+        </div>
+        <div style="margin-top:1.25rem;">
+          <p style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.5rem;">Share via:</p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="shareWhatsApp()">💬 WhatsApp</button>
+            <button class="btn btn-secondary btn-sm" onclick="shareSMS()">📱 SMS</button>
+            <button class="btn btn-secondary btn-sm" onclick="shareEmail()">✉️ Email</button>
+          </div>
+        </div>
+        <div style="margin-top:1.25rem;background:#f8fafc;border-radius:10px;padding:1rem;">
+          <p style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">What parents need to self-register:</p>
+          <ul style="font-size:.82rem;color:var(--muted);line-height:1.9;margin-left:1.25rem;">
+            <li>Their child's <strong>Admission Number</strong> (e.g. SAHARCO/20250115/0042)</li>
+            <li>Their <strong>phone number</strong> as registered with the school</li>
+            <li>A valid <strong>email address</strong> (will be their login username)</li>
+            <li>A <strong>password</strong> of their choice (min 6 characters)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><h3>📱 Print / SMS Instructions for Parents</h3></div>
+      <div class="card-body">
+        <div id="sms-template"
+          style="background:#fff;border:1.5px dashed #d1d5db;border-radius:10px;padding:1rem;font-size:.85rem;line-height:1.8;color:var(--text);font-family:monospace;white-space:pre-wrap;"></div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem;">
+          <button class="btn btn-secondary btn-sm" onclick="copySMSTemplate()">📋 Copy Message</button>
+          <button class="btn btn-secondary btn-sm" onclick="printInstructions()">🖨 Print Instructions</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const API      = window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api';
+const getToken = () => sessionStorage.getItem('shc_token');
+const $ = id   => document.getElementById(id);
+
+/* ── API helper ── */
+async function api(path, opts={}) {
+  const r = await fetch(API + path, {
+    ...opts, credentials:'include',
+    headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${getToken()}`, ...opts.headers },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const d = await r.json().catch(()=>({success:false,message:'Server error'}));
+  if (!d.success) throw new Error(d.message || 'HTTP '+r.status);
+  return d;
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeftColor = type==='success'?'#22c55e':type==='error'?'#ef4444':type==='warning'?'#f59e0b':'#3b82f6';
+  el.textContent = msg;
+  $('toast-wrap').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+const showModal = html => { $('modal-box').innerHTML=html; $('modal').classList.add('open'); };
+const closeModal = () => $('modal').classList.remove('open');
+
+/* ── Auth guard ── */
+async function boot() {
+  const token = getToken();
+  if (!token) { location.href = 'login.html'; return; }
+  const session = JSON.parse(sessionStorage.getItem('shc_session')||'null');
+  if (session?.role !== 'Admin') {
+    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;">
+      <div style="text-align:center;padding:2rem"><div style="font-size:3rem">🔒</div>
+      <h2 style="color:#1e3a5f;margin:.75rem 0 .5rem">Admin Only</h2>
+      <p style="color:#6b7280;margin:0 0 1.5rem">Only Admins can manage parent accounts.</p>
+      <a href="dashboard.html" style="background:#1e3a5f;color:#fff;padding:.65rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:600">← Back</a></div></div>`;
+    return;
+  }
+
+  // Load students
+  try {
+    const r = await api('/students');
+    window._students = (r.data||[]).sort((a,b)=>a.name.localeCompare(b.name));
+  } catch(e) { toast('Failed to load students: '+e.message,'error'); }
+
+  // Set invite URL
+  const inviteURL = location.origin + '/parent-register.html';
+  $('invite-url').value = inviteURL;
+  $('invite-open').href = inviteURL;
+
+  // SMS template
+  $('sms-template').textContent =
+    `Dear Parent/Guardian,\n\nSacred Heart College Eziukwu Aba has launched a Parent Portal where you can view your child's fees, report cards, attendance and results.\n\nTo create your account, visit:\n${inviteURL}\n\nYou will need:\n• Your child's Admission Number (on their admission letter)\n• Your phone number as registered with the school\n\nFor assistance, contact the school admin office.\n\nSacred Heart College Eziukwu Aba`;
+
+  loadParentList();
+  showTab('link');
+}
+
+/* ── Tabs ── */
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['link','list','invite'][i]===id));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+id));
+  if (id==='list') loadParentList();
+}
+
+/* ── Student search in link form ── */
+let _linkStuIdx = -1;
+function linkStuFilter(q) {
+  const all = window._students || [];
+  const fq  = q.trim().toLowerCase();
+  const matches = fq ? all.filter(s=>(s.name||'').toLowerCase().includes(fq)||(s.id||'').toLowerCase().includes(fq)||((s.class||s.class_name||'')+' '+(s.arm||'')).toLowerCase().includes(fq)) : all.slice(0,40);
+  const dd = $('link-stu-dd');
+  if (!matches.length) { dd.innerHTML='<div class="stu-drop-item" style="color:var(--muted)">No students found</div>'; dd.classList.add('open'); return; }
+  dd.innerHTML = matches.slice(0,50).map(s=>`
+    <div class="stu-drop-item" onclick="linkStuSelect('${s.id}','${s.name.replace(/'/g,"\\'")}','${(s.class||s.class_name||'').replace(/'/g,"\\'")}','${s.arm||''}','${s.phone||''}','${s.parent||''}')">
+      <div class="dn">${s.name}</div>
+      <div class="dm">${s.class||s.class_name||''} ${s.arm||''} · ${s.id}</div>
+    </div>`).join('');
+  dd.classList.add('open');
+}
+function linkStuOpen() { const v=$('link-stu-input').value; if(v.length>=0) linkStuFilter(v); }
+function linkStuKeydown(e) {
+  const dd=$('link-stu-dd'); const items=dd?.querySelectorAll('.stu-drop-item')||[];
+  if (e.key==='Escape'){dd.classList.remove('open');return;}
+  if (!items.length) return;
+  if (e.key==='ArrowDown'){e.preventDefault();_linkStuIdx=Math.min(_linkStuIdx+1,items.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();_linkStuIdx=Math.max(_linkStuIdx-1,0);}
+  else if(e.key==='Enter'){e.preventDefault();if(_linkStuIdx>=0)items[_linkStuIdx]?.click();return;}
+  else return;
+  items.forEach((el,i)=>el.style.background=i===_linkStuIdx?'#eff6ff':'');
+}
+function linkStuSelect(id,name,cls,arm,phone,parent) {
+  $('link-stu-dd').classList.remove('open');
+  $('link-stu-input').value = name+' — '+cls+' '+arm;
+  $('link-stu-id').value = id;
+  $('link-stu-avatar').textContent = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('link-stu-name').textContent = name;
+  $('link-stu-meta').textContent = cls+' '+arm+' · '+id;
+  $('link-stu-card').style.display = 'flex';
+  // Pre-fill parent name if on record
+  if (parent && !$('link-par-name').value) $('link-par-name').value = parent;
+  if (phone  && !$('link-par-phone').value) $('link-par-phone').value = phone;
+}
+function clearLinkStudent() {
+  $('link-stu-input').value=''; $('link-stu-id').value=''; $('link-stu-card').style.display='none';
+}
+document.addEventListener('click', e=>{
+  if (!e.target.closest('.stu-search-wrap')) $('link-stu-dd').classList.remove('open');
+});
+
+function clearLinkForm() {
+  clearLinkStudent();
+  ['link-par-name','link-par-email','link-par-phone','link-par-pass','link-par-pass2'].forEach(id=>{ $(id).value=''; });
+  $('link-err').textContent='';
+}
+
+/* ── Password strength ── */
+function checkPassStrength(v) {
+  const fill=$('pass-strength-fill'), lbl=$('pass-strength-label');
+  if (!v) { fill.style.width='0%'; lbl.textContent=''; return; }
+  let score=0;
+  if (v.length>=6) score++; if (v.length>=10) score++;
+  if (/[0-9]/.test(v)) score++; if (/[^a-zA-Z0-9]/.test(v)) score++;
+  const levels=[['#ef4444','Weak',10],['#f59e0b','Fair',40],['#3b82f6','Good',70],['#16a34a','Strong',100]];
+  const [col,txt,pct] = levels[Math.min(score,3)];
+  fill.style.width=pct+'%'; fill.style.background=col;
+  lbl.style.color=col; lbl.textContent=txt;
+}
+
+/* ── Submit link account ── */
+async function submitLinkAccount() {
+  const sid   = $('link-stu-id').value.trim();
+  const name  = $('link-par-name').value.trim();
+  const rel   = $('link-par-rel').value;
+  const email = $('link-par-email').value.trim().toLowerCase();
+  const phone = $('link-par-phone').value.trim();
+  const pass  = $('link-par-pass').value;
+  const pass2 = $('link-par-pass2').value;
+  const err   = $('link-err');
+  err.textContent='';
+
+  if (!sid)   { err.textContent='Please select a student first.'; return; }
+  if (!name)  { err.textContent='Parent name is required.'; return; }
+  if (!email) { err.textContent='Email address is required.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent='Please enter a valid email address.'; return; }
+  if (!pass)  { err.textContent='Password is required.'; return; }
+  if (pass.length<6) { err.textContent='Password must be at least 6 characters.'; return; }
+  if (pass !== pass2) { err.textContent='Passwords do not match.'; return; }
+
+  const student = (window._students||[]).find(s=>s.id===sid);
+
+  try {
+    const r = await api('/users', { method:'POST', body:{
+      name, email, role:'Parent', password:pass,
+      ward_id: sid,
+      note: `${rel} of ${student?.name||sid}`
+    }});
+    toast(`✅ Parent account created for ${name} — linked to ${student?.name||sid}`, 'success');
+    clearLinkForm();
+    // Show credentials summary modal
+    showModal(`
+      <h3 style="color:#16a34a">✅ Account Created Successfully</h3>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Share these login details with the parent securely:</p>
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:1rem">
+        <tr><td style="padding:.45rem;background:#f9fafb;font-weight:600;border:1px solid #e5e7eb;width:38%">Parent Name</td><td style="padding:.45rem;border:1px solid #e5e7eb">${name}</td></tr>
+        <tr><td style="padding:.45rem;background:#f9fafb;font-weight:600;border:1px solid #e5e7eb">Login Email</td><td style="padding:.45rem;border:1px solid #e5e7eb;font-family:monospace">${email}</td></tr>
+        <tr><td style="padding:.45rem;background:#f9fafb;font-weight:600;border:1px solid #e5e7eb">Password</td><td style="padding:.45rem;border:1px solid #e5e7eb;font-family:monospace">${pass}</td></tr>
+        <tr><td style="padding:.45rem;background:#f9fafb;font-weight:600;border:1px solid #e5e7eb">Linked Student</td><td style="padding:.45rem;border:1px solid #e5e7eb">${student?.name||sid} (${sid})</td></tr>
+        <tr><td style="padding:.45rem;background:#f9fafb;font-weight:600;border:1px solid #e5e7eb">Login URL</td><td style="padding:.45rem;border:1px solid #e5e7eb;font-family:monospace;font-size:.78rem">${location.origin}/login.html</td></tr>
+      </table>
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.65rem .9rem;font-size:.8rem;color:#92400e;margin-bottom:1rem">
+        ⚠ Share the password securely (verbally or via private message). The parent should change it on first login.
+      </div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="printCredentials('${name}','${email}','${pass}','${student?.name||sid}','${sid}')">🖨 Print Slip</button>
+        <button class="btn btn-primary" onclick="closeModal()">Done</button>
+      </div>`);
+    showTab('list');
+  } catch(e) { err.textContent = 'Error: '+e.message; }
+}
+
+/* ── Load parent list ── */
+let _allParents = [];
+async function loadParentList() {
+  const body = $('parent-list-body');
+  body.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>';
+  try {
+    const r = await api('/users?role=Parent');
+    _allParents = r.data || [];
+    renderParentList(_allParents);
+  } catch(e) { body.innerHTML = `<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
+}
+
+function renderParentList(parents) {
+  const body = $('parent-list-body');
+  if (!parents.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">👨‍👩‍👧</div><p>No parent accounts yet.<br>Create one using the "Link Parent to Student" tab.</p></div>';
+    return;
+  }
+  const students = window._students||[];
+  body.innerHTML = `<div style="overflow-x:auto"><table>
+    <thead><tr><th>Parent Name</th><th>Email</th><th>Linked Student</th><th>Class</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${parents.map(p=>{
+      const ward = students.find(s=>s.id===p.ward_id);
+      const cls  = ward ? (ward.class||ward.class_name||'')+' '+(ward.arm||'') : '—';
+      return `<tr>
+        <td style="font-weight:600">${p.name}</td>
+        <td style="font-size:.8rem;color:var(--muted)">${p.email}</td>
+        <td>${ward ? `<strong>${ward.name}</strong><div style="font-size:.73rem;color:var(--muted);font-family:monospace">${p.ward_id}</div>` : p.ward_id ? `<span style="color:var(--danger);font-size:.8rem">⚠ ${p.ward_id}<br>(student not found)</span>` : '<span style="color:var(--muted);font-size:.8rem">Not linked</span>'}</td>
+        <td style="font-size:.8rem">${cls}</td>
+        <td><span class="badge ${p.active?'b-linked':'b-none'}">${p.active?'Active':'Inactive'}</span></td>
+        <td><div style="display:flex;gap:.3rem;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openEditParent(${p.id},'${p.name.replace(/'/g,"\\'")}','${p.email}','${p.ward_id||''}')">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteParent(${p.id},'${p.name.replace(/'/g,"\\'")}')">🗑</button>
+        </div></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+}
+
+function filterParentList(q) {
+  const fq = q.trim().toLowerCase();
+  if (!fq) { renderParentList(_allParents); return; }
+  renderParentList(_allParents.filter(p=>
+    p.name.toLowerCase().includes(fq)||p.email.toLowerCase().includes(fq)||(p.ward_id||'').toLowerCase().includes(fq)
+  ));
+}
+
+function openEditParent(id,name,email,wardId) {
+  const students = window._students||[];
+  const stuOpts  = students.map(s=>`<option value="${s.id}" ${s.id===wardId?'selected':''}>${s.name} — ${s.class||s.class_name||''} ${s.arm||''} (${s.id})</option>`).join('');
+  showModal(`
+    <h3>✏ Edit Parent Account</h3>
+    <div class="fg"><label>Parent Name</label><input type="text" id="ep-name" value="${name}"></div>
+    <div class="fg"><label>Email (login)</label><input type="email" id="ep-email" value="${email}"></div>
+    <div class="fg"><label>Linked Student (ward)</label>
+      <select id="ep-ward"><option value="">— No student linked —</option>${stuOpts}</select>
+    </div>
+    <div class="fg"><label>New Password <span style="font-size:.72rem;color:var(--muted)">(leave blank to keep current)</span></label>
+      <input type="password" id="ep-pass" placeholder="Leave blank to keep unchanged"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEditParent(${id})">Save Changes</button>
+    </div>`);
+}
+
+async function submitEditParent(id) {
+  const name  = $('ep-name')?.value.trim();
+  const email = $('ep-email')?.value.trim().toLowerCase();
+  const ward  = $('ep-ward')?.value||null;
+  const pass  = $('ep-pass')?.value;
+  if (!name||!email){toast('Name and email are required','error');return;}
+  const body = { name, email, ward_id:ward };
+  if (pass && pass.length>=6) body.password = pass;
+  try {
+    await api('/users/'+id, {method:'PUT', body});
+    toast('✅ Parent account updated','success');
+    closeModal(); loadParentList();
+  } catch(e){toast('Error: '+e.message,'error');}
+}
+
+async function deleteParent(id,name) {
+  if (!confirm(`Delete parent account for "${name}"? This cannot be undone.`)) return;
+  try {
+    await api('/users/'+id, {method:'DELETE'});
+    toast(`Deleted account for ${name}`,'warning');
+    loadParentList();
+  } catch(e){toast('Error: '+e.message,'error');}
+}
+
+/* ── Invite / Share ── */
+function copyInviteLink() {
+  navigator.clipboard.writeText($('invite-url').value).then(()=>toast('✅ Link copied!','success')).catch(()=>toast('Copy failed','error'));
+}
+function shareWhatsApp() {
+  const url = `https://wa.me/?text=${encodeURIComponent('Dear Parent, create your Sacred Heart College portal account here: '+$('invite-url').value)}`;
+  window.open(url,'_blank');
+}
+function shareSMS() {
+  window.open(`sms:?body=${encodeURIComponent('Create your SAHARCO Parent Portal account: '+$('invite-url').value)}`,'_blank');
+}
+function shareEmail() {
+  window.location.href = `mailto:?subject=${encodeURIComponent('Sacred Heart College Parent Portal Access')}&body=${encodeURIComponent($('sms-template').textContent)}`;
+}
+function copySMSTemplate() {
+  navigator.clipboard.writeText($('sms-template').textContent).then(()=>toast('✅ Message copied!','success')).catch(()=>toast('Copy failed','error'));
+}
+function printInstructions() {
+  const w=window.open('','_blank','width=700,height=600');
+  w.document.write(`<html><head><title>Parent Portal Instructions</title>
+  <style>body{font-family:Arial,sans-serif;padding:2rem;font-size:.9rem;line-height:1.7}pre{white-space:pre-wrap;background:#f9fafb;padding:1rem;border-radius:8px;border:1px solid #e5e7eb}</style></head>
+  <body><h2>Parent Portal — Registration Instructions</h2><pre>${$('sms-template').textContent}</pre>
+  <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.5rem 1.25rem;border-radius:8px;cursor:pointer;font-weight:700;margin-top:1rem">🖨 Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+function printCredentials(name,email,pass,stuName,stuId) {
+  const w=window.open('','_blank','width=600,height=500');
+  w.document.write(`<html><head><title>Parent Login Credentials</title>
+  <style>body{font-family:Arial,sans-serif;padding:2rem;font-size:.9rem}
+  .box{border:2px solid #1e3a5f;border-radius:10px;padding:1.25rem;max-width:420px;margin:0 auto}
+  h2{color:#1e3a5f;margin-bottom:.75rem;font-size:1rem}
+  table{width:100%;border-collapse:collapse}td{padding:.5rem;border:1px solid #e5e7eb;font-size:.88rem}
+  td:first-child{background:#f9fafb;font-weight:600;width:38%}
+  .note{font-size:.78rem;color:#d97706;margin-top:.75rem;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:.5rem .75rem}
+  @media print{button{display:none}}</style></head>
+  <body><div class="box"><h2>🏫 Sacred Heart College Eziukwu Aba<br>Parent Portal Login Details</h2>
+  <table>
+    <tr><td>Parent Name</td><td>${name}</td></tr>
+    <tr><td>Login Email</td><td><strong>${email}</strong></td></tr>
+    <tr><td>Password</td><td><strong>${pass}</strong></td></tr>
+    <tr><td>Child</td><td>${stuName}</td></tr>
+    <tr><td>Admission No.</td><td style="font-family:monospace">${stuId}</td></tr>
+    <tr><td>Login URL</td><td style="font-family:monospace;font-size:.78rem">${location.origin}/login.html</td></tr>
+  </table>
+  <div class="note">⚠ Please change your password after first login: Settings → Change Password</div>
+  </div><br>
+  <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.5rem 1.25rem;border-radius:8px;cursor:pointer;font-weight:700">🖨 Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+boot();
+</script>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+</body>
+</html>

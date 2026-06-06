@@ -52,16 +52,19 @@
     .btn-white  { background: #fff; color: var(--brand); }
 
     /* ── Layout ── */
-    .layout { display: flex; min-height: calc(100vh - 56px); }
+    .layout { display: flex; min-height: calc(100vh - 56px); overflow: hidden; }
 
     /* ── Sidebar ── */
     .sidebar {
-      width: 260px;
+      width: 240px;
+      min-width: 240px;
+      max-width: 240px;
       background: #fff;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
+      overflow-x: visible;
       overflow-y: auto;
     }
     .student-card {
@@ -86,23 +89,63 @@
     .balance-clear { background: #dcfce7; color: #166534; }
     .balance-owed  { background: #fee2e2; color: #991b1b; }
 
-    /* Student picker */
-    .stu-picker { padding: 1rem; border-bottom: 1px solid var(--border); }
-    .stu-picker label { font-size: .75rem; font-weight: 600; color: var(--text3); text-transform: uppercase; display: block; margin-bottom: .35rem; }
-    .stu-picker select {
-      width: 100%; padding: .5rem .75rem; border: 1.5px solid var(--border);
-      border-radius: 8px; font-size: .875rem; background: #fff; outline: none;
+    /* ── Student search picker ── */
+    .stu-picker { padding: .85rem; border-bottom: 1px solid var(--border); flex-shrink:0; }
+    .stu-picker label { font-size:.72rem; font-weight:700; color:var(--text3); text-transform:uppercase;
+      letter-spacing:.06em; display:block; margin-bottom:.4rem; }
+    .stu-search-box {
+      display:flex; align-items:center; gap:.4rem;
+      background:#f8fafc; border:1.5px solid var(--border); border-radius:9px;
+      padding:.4rem .65rem; transition:border-color .15s;
     }
-    .stu-picker select:focus { border-color: var(--brand2); }
+    .stu-search-box:focus-within { border-color:var(--brand2); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.08); }
+    .stu-search-box .s-ico { font-size:.95rem; opacity:.4; flex-shrink:0; }
+    .stu-search-box input {
+      flex:1; border:none; background:transparent; outline:none;
+      font-size:.855rem; color:var(--text); min-width:0;
+    }
+    .stu-search-box input::placeholder { color:var(--text3); }
+    .stu-search-box .s-clear {
+      flex-shrink:0; font-size:.8rem; cursor:pointer; opacity:.45;
+      padding:.1rem .25rem; border-radius:4px; display:none;
+    }
+    .stu-search-box .s-clear:hover { opacity:1; background:#e5e7eb; }
+    /* Dropdown — fixed position so sidebar clip can't hide it */
+    #stu-dropdown {
+      position:absolute; top:calc(100% + 3px); left:0; right:0;
+      background:#fff; border:1.5px solid var(--brand2); border-radius:12px;
+      box-shadow:0 12px 32px rgba(0,0,0,.18);
+      max-height:300px; overflow-y:auto; display:none;
+      z-index:9999;
+    }
+    #stu-dropdown.open { display:block; }
+    .stu-drop-item {
+      padding:.58rem .9rem; cursor:pointer; font-size:.84rem;
+      border-bottom:1px solid #f3f4f6; transition:background .1s;
+    }
+    .stu-drop-item:last-child { border-bottom:none; }
+    .stu-drop-item:hover, .stu-drop-item.selected { background:#eff6ff; }
+    .stu-drop-item .dn { font-weight:700; color:var(--text); line-height:1.3; }
+    .stu-drop-item .dm { font-size:.73rem; color:var(--text3); margin-top:.12rem;
+      display:flex; gap:.6rem; align-items:center; }
+    .stu-drop-item .dm .did { font-family:monospace; }
+    .stu-drop-empty { padding:1rem; text-align:center; color:var(--text3); font-size:.84rem; }
+    .stu-drop-hdr { padding:.38rem .9rem; font-size:.7rem; font-weight:700; color:var(--text3);
+      background:#f9fafb; border-bottom:1px solid #f3f4f6; text-transform:uppercase; letter-spacing:.06em; }
+    mark { background:#fef9c3; border-radius:2px; padding:0 1px; }
 
     /* Sidebar nav */
     .sfp-nav { padding: .75rem 0; flex: 1; }
     .sfp-nav-item {
-      display: flex; align-items: center; gap: .65rem;
-      padding: .65rem 1.2rem; cursor: pointer;
-      font-size: .875rem; color: var(--text2);
+      display: flex; align-items: center; gap: .55rem;
+      padding: .6rem 1rem; cursor: pointer;
+      font-size: .82rem; color: var(--text2);
       border-left: 3px solid transparent;
       transition: all .15s;
+      white-space: nowrap !important;
+      word-break: normal !important;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .sfp-nav-item:hover  { background: var(--surface); color: var(--brand); }
     .sfp-nav-item.active { background: #eff6ff; color: var(--brand); border-left-color: var(--brand2); font-weight: 600; }
@@ -211,7 +254,6 @@
       .layout { display: block; }
     }
   </style>
-  <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
 
@@ -238,11 +280,19 @@
   <aside class="sidebar">
 
     <!-- Student picker -->
-    <div class="stu-picker no-print">
-      <label>Select Student</label>
-      <select id="stu-picker" onchange="selectStudent(this.value)">
-        <option value="">— Loading students… —</option>
-      </select>
+    <div class="stu-picker no-print" id="picker-wrap" style="position:relative;">
+      <label>Search Student</label>
+      <div class="stu-search-box" id="stu-search-wrap">
+        <span class="s-ico">🔍</span>
+        <input type="text" id="stu-search-input" autocomplete="off" spellcheck="false"
+          placeholder="Name, class or ID…"
+          oninput="stuSearchFilter(this.value)"
+          onkeydown="stuSearchKeydown(event)"
+          onfocus="stuSearchOpen()">
+        <span class="s-clear" id="stu-search-clear" onclick="stuSearchClear()" title="Clear">✕</span>
+      </div>
+      <div id="stu-dropdown"></div>
+      <select id="stu-picker" style="display:none"><option value="">—</option></select>
     </div>
 
     <!-- Student card -->
@@ -417,15 +467,23 @@ async function boot() {
     // Admin / Bursar / Teacher / Staff: load all students
     const resp     = await apiFetch('/students');
     const students = (resp.data || []).sort((a, b) => a.name.localeCompare(b.name));
-    const sel      = $('stu-picker');
-    sel.innerHTML  = '<option value="">— Select a student —</option>' +
-      students.map(s =>
-        `<option value="${s.id}">${s.name} — ${s.class || s.class_name || ''} ${s.arm || ''}</option>`
-      ).join('');
+    // Store students globally for search
+    window._allStudents = students;
+    stuSearchRenderDropdown('');
 
-    const params = new URLSearchParams(location.search);
-    const pid    = params.get('studentId') || params.get('id');
-    if (pid) { sel.value = pid; selectStudent(pid); }
+    // Auto-select from URL param
+    const params  = new URLSearchParams(location.search);
+    const pid     = decodeURIComponent(params.get('studentId') || params.get('id') || '').trim();
+    if (pid) {
+      const matched = students.find(s => s.id === pid || s.id?.toLowerCase() === pid.toLowerCase());
+      const resolvedId = matched?.id || pid;
+      if (matched) {
+        $('stu-search-input').value = matched.name + ' — ' + (matched.class||matched.class_name||'') + ' ' + (matched.arm||'');
+        $('stu-search-icon').style.display = 'none';
+        $('stu-search-clear').style.display = '';
+      }
+      selectStudent(resolvedId);
+    }
 
   } catch(e) {
     toast('Load error: ' + e.message, 'error');
@@ -1182,7 +1240,7 @@ function _generateReceipt(p, isLevy) {
   .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:1rem 1.75rem;font-size:.72rem;color:#9ca3af;text-align:center;}
   .no-print{text-align:center;margin-bottom:1rem;display:flex;gap:.5rem;justify-content:center;}
   @media print{body{background:#fff;padding:0;}.receipt{box-shadow:none;max-width:100%;border-radius:0;}.no-print{display:none;}}
-</style>  <link rel="stylesheet" href="responsive.css">
+</style>
 </head><body>
 <div class="no-print">
   <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.55rem 1.3rem;border-radius:8px;cursor:pointer;font-size:.875rem;font-weight:700;">🖨 Print</button>
@@ -1598,6 +1656,119 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ── END BURSAR FEATURES ── */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   STUDENT SEARCH / AUTOCOMPLETE
+═══════════════════════════════════════════════════════════════ */
+let _stuSearchFocused = false;
+let _stuActiveIdx = -1;
+
+function stuSearchRenderDropdown(query) {
+  const all = window._allStudents || [];
+  const q   = query.trim().toLowerCase();
+  const dd  = $('stu-dropdown');
+  if (!dd) return;
+
+  const filtered = q.length >= 1
+    ? all.filter(s =>
+        (s.name||'').toLowerCase().includes(q) ||
+        (s.id||'').toLowerCase().includes(q) ||
+        ((s.class||s.class_name||'')+' '+(s.arm||'')).toLowerCase().includes(q)
+      )
+    : all;
+
+  _stuActiveIdx = -1;
+
+  if (!filtered.length) {
+    dd.innerHTML = `<div class="stu-drop-empty">No students match "<strong>${query}</strong>"</div>`;
+      dd.classList.add('open');
+    return;
+  }
+
+  const shown = filtered.slice(0, 80);
+  dd.innerHTML =
+    (filtered.length > 80
+      ? `<div class="stu-drop-hdr">Showing 80 of ${filtered.length} — type more to narrow</div>`
+      : `<div class="stu-drop-hdr">${filtered.length} student${filtered.length===1?'':''}</div>`) +
+    shown.map((s, i) => {
+      const cls = (s.class || s.class_name || '');
+      const arm = (s.arm || '');
+      let dn = s.name;
+      if (q) {
+        try {
+          const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          dn = s.name.replace(new RegExp('('+safe+')', 'gi'), '<mark>$1</mark>');
+        } catch(x) {}
+      }
+      return `<div class="stu-drop-item" data-id="${s.id}" data-idx="${i}"
+        onclick="stuSearchSelect('${s.id}','${s.name.replace(/'/g,"\'")}','${cls.replace(/'/g,"\'")}','${arm}')">
+        <div class="dn">${dn}</div>
+        <div class="dm"><span>${cls} ${arm}</span><span class="did">${s.id}</span></div>
+      </div>`;
+    }).join('');
+
+  dd.classList.add('open');
+}
+
+function stuSearchFilter(val) {
+  $('stu-search-clear').style.display = val ? '' : 'none';
+  if (!val) { $('stu-dropdown')?.classList.remove('open'); return; }
+  stuSearchRenderDropdown(val);
+}
+
+function stuSearchOpen() {
+  const val = $('stu-search-input')?.value || '';
+  if (val.length > 0) stuSearchRenderDropdown(val);
+}
+
+function stuSearchSelect(id, name, cls, arm) {
+  $('stu-search-input').value = name + ' — ' + cls + (arm ? ' ' + arm : '');
+  $('stu-dropdown').classList.remove('open');
+  $('stu-search-clear').style.display = '';
+  selectStudent(id);
+}
+
+function stuSearchClear() {
+  $('stu-search-input').value = '';
+  $('stu-search-clear').style.display = 'none';
+  $('stu-dropdown').classList.remove('open');
+  $('stu-search-input').focus();
+  _student = null;
+  $('stu-card').style.display = 'none';
+  $('sfp-main').innerHTML = '<div class="empty"><div class="empty-ico">🔍</div><p>Search for a student above.</p></div>';
+  const url = new URL(location.href);
+  url.searchParams.delete('studentId');
+  history.replaceState(null,'',url);
+}
+
+function stuSearchKeydown(e) {
+  const dd    = $('stu-dropdown');
+  const items = dd?.querySelectorAll('.stu-drop-item') || [];
+  if (e.key === 'Escape') { dd?.classList.remove('open'); return; }
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _stuActiveIdx = Math.min(_stuActiveIdx + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _stuActiveIdx = Math.max(_stuActiveIdx - 1, 0);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_stuActiveIdx >= 0) items[_stuActiveIdx]?.click();
+    return;
+  } else { return; }
+  items.forEach((el, i) => el.classList.toggle('selected', i === _stuActiveIdx));
+  items[_stuActiveIdx]?.scrollIntoView({ block: 'nearest' });
+}
+
+// Close on outside click; reposition on scroll/resize
+document.addEventListener('click', e => {
+  if (!e.target.closest('#stu-search-wrap') && !e.target.closest('#stu-dropdown'))
+    $('stu-dropdown')?.classList.remove('open');
+});
+
+
 
 /* ── Boot ── */
 boot();

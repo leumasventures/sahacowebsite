@@ -167,17 +167,33 @@ async function _renderParentDashboard(section, wardId) {
       ? `sid=${encodeURIComponent(wardId)}`
       : `sid=${encodeURIComponent(wardId)}&phone=${encodeURIComponent(_ppPhone)}`;
 
-    const fetchFin = (path) => {
+    const fetchFin = async (path) => {
       const url = `${_finBase}/${path}?${_finQuery}`;
       const opts = token ? { headers: hdr, credentials:'include' } : { credentials:'include' };
-      return fetch(url, opts).then(r => r.json());
+      const r = await fetch(url, opts);
+      if (!r.ok) {
+        const err = await r.json().catch(()=>({message:'Server error '+r.status}));
+        throw new Error(err.message || 'HTTP '+r.status);
+      }
+      return r.json();
     };
 
     const [sumResp, chargesResp, leviesResp] = await Promise.all([
-      fetchFin('summary'),
-      fetchFin('charges'),
-      fetchFin('levies'),
+      fetchFin('summary').catch(e=>({ success:false, data:null, _err:e.message })),
+      fetchFin('charges').catch(e=>({ success:false, data:[],   _err:e.message })),
+      fetchFin('levies').catch(e=> ({ success:false, data:[],   _err:e.message })),
     ]);
+
+    // Show error if summary failed (student not found or auth failed)
+    if (!sumResp.success || !sumResp.data) {
+      const msg = sumResp._err || sumResp.message || 'Could not load financial records.';
+      section.innerHTML = `<div style="max-width:860px;margin:2rem auto;background:#fff;border-radius:14px;padding:2rem;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08);">
+        <div style="font-size:2rem;margin-bottom:.75rem;">⚠️</div>
+        <div style="font-weight:700;color:#dc2626;margin-bottom:.5rem;">Unable to load records</div>
+        <div style="font-size:.85rem;color:#6b7280;">${msg}</div>
+      </div>`;
+      return;
+    }
 
     const student  = sumResp.data?.student  || {};
     const ledger   = sumResp.data?.ledger   || {};

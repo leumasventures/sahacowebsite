@@ -1197,9 +1197,12 @@ document.getElementById('reg-form').addEventListener('submit', async function(e)
       body: JSON.stringify(payload)
     });
     var json = await resp.json();
+    console.log('[regForm] server response:', resp.status, JSON.stringify(json));
 
     if (!resp.ok || !json.success) {
-      throw new Error(json.message || 'Submission failed. Please try again.');
+      var errMsg = json.message || 'Submission failed. Please try again.';
+      if (json.code) errMsg += ' [' + json.code + ']';
+      throw new Error(errMsg);
     }
 
     var admNo = json.data?.applicationNo || json.data?.id || 'ADM-' + Date.now();

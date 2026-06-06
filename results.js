@@ -986,7 +986,13 @@ function renderCumulativeTab() {
     const classOpts = App.data.classes.map(c=>`<option>${c.name}</option>`).join('');
     div.innerHTML = `
       <div class="result-card">
-        <h4 style="margin:0 0 1.25rem;color:#1e3a5f;">🎓 Cumulative Session Results & Promotion</h4>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+          <div>
+            <h4 style="margin:0 0 .3rem;color:#1e3a5f;">🎓 Cumulative Session Results &amp; Promotion</h4>
+            <p style="margin:0;font-size:.82rem;color:#6b7280;">Aggregates all three terms. Auto-promotion applies saved criteria from Settings.</p>
+          </div>
+          ${!priv.isTeacher() ? `<button onclick="openAutoPromotionWizard()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:.55rem 1.1rem;font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.4rem;white-space:nowrap;">⚡ Run Auto-Promotion</button>` : ''}
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:1.25rem;">
           <div>
             <label style="${labelStyle()}">Class</label>
@@ -1000,13 +1006,27 @@ function renderCumulativeTab() {
             <label style="${labelStyle()}">Session</label>
             <input id="cum-session" value="${App.data.schoolInfo?.session||'2025/2026'}" style="${inputStyle()}">
           </div>
+          <div>
+            <label style="${labelStyle()}">View Mode</label>
+            <select id="cum-view-mode" style="${inputStyle()}">
+              <option value="summary">Summary (Avg per Subject)</option>
+              <option value="full">Full (All 3 Terms)</option>
+            </select>
+          </div>
         </div>
-        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
           <button onclick="loadCumulativeResults()" style="${btnStyle('primary')}">📊 Load Cumulative Results</button>
           <button onclick="exportCumulativeCSV()" style="${btnStyle('secondary')}">⬇ Export CSV</button>
+          <span id="cum-promotion-criteria-badge" style="font-size:.78rem;color:#6b7280;padding:.35rem .75rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;"></span>
         </div>
       </div>
-      <div id="cumulative-results-area"></div>`;
+      <div id="cumulative-results-area"></div>
+      <!-- Auto-Promotion Wizard Modal -->
+      <div id="auto-promo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:2rem;max-width:540px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.25);">
+          <div id="auto-promo-modal-content"></div>
+        </div>
+      </div>`;
 
     // Insert before the switchResultTab script area — append to the results section
     const section = document.getElementById('results');
@@ -1063,9 +1083,112 @@ function _renderCumulativeResults(rows, summary, ps, cls, arm, session) {
   const area = document.getElementById('cumulative-results-area');
   if (!area) return;
   const promoColor = { [ps.labelPromoted]:'#16a34a', [ps.labelRepeat]:'#dc2626', [ps.labelIncomplete]:'#d97706' };
+  const viewMode   = document.getElementById('cum-view-mode')?.value || 'summary';
+  const passMark   = getPassMark();
 
+  // Update the criteria badge
+  const badge = document.getElementById('cum-promotion-criteria-badge');
+  if (badge) {
+    const parts = [];
+    if (ps.useAverage)    parts.push(`Avg ≥ ${ps.minAverage}%`);
+    if (ps.usePassCount)  parts.push(`Pass ≥ ${ps.minPassCount} subj`);
+    if (ps.useAttendance) parts.push(`Attend ≥ ${ps.minAttendance}%`);
+    if (ps.useNoFail)     parts.push(`No subj < ${ps.noFailMark}%`);
+    if (ps.useCoreSubjects && ps.coreSubjects?.length) parts.push(`Core: ${ps.coreSubjects.join(', ')}`);
+    badge.textContent = parts.length ? '⚙ Criteria: ' + parts.join(' · ') : '⚙ No criteria set';
+  }
+
+  const allSubjects = rows[0]?.subjects || [];
+
+  /* ── Per-student card view (full 3-term mode) ── */
+  if (viewMode === 'full') {
+    area.innerHTML = `
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.85rem;margin-bottom:1.5rem;">
+        ${[
+          ['Total Students', summary.total || rows.length, '#1e3a5f'],
+          [ps.labelPromoted || 'PROMOTED', summary.promoted || 0, '#16a34a'],
+          [ps.labelRepeat   || 'REPEAT',   summary.repeat   || 0, '#dc2626'],
+          ['Incomplete', summary.incomplete || 0, '#d97706'],
+          ['Class Average', (summary.classAvg != null ? summary.classAvg + '%' : '—'), '#7c3aed'],
+        ].map(([l,v,c])=>`
+          <div style="background:#fff;border-radius:10px;padding:1rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:4px solid ${c};text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:${c};">${v}</div>
+            <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;">${l}</div>
+          </div>`).join('')}
+      </div>
+
+      ${rows.map(r => {
+        const dc   = promoColor[r.promotion] || '#6b7280';
+        const subs = r.subjects || [];
+        const pos  = r.position || '—';
+        return `
+        <div style="background:#fff;border-radius:14px;margin-bottom:1.25rem;box-shadow:0 4px 16px rgba(0,0,0,.08);overflow:hidden;">
+          <!-- Student header -->
+          <div style="background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+            <div>
+              <span style="font-weight:700;font-size:1rem;color:#1e3a5f;">${r.name}</span>
+              <span style="font-size:.78rem;color:#9ca3af;margin-left:.5rem;">${r.studentId}</span>
+              ${ps.showCumulativePosition ? `<span style="font-size:.78rem;color:#7c3aed;margin-left:.75rem;font-weight:600;">Position: ${pos}</span>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;">
+              <span style="font-size:.82rem;color:#6b7280;">Grand Avg: <strong style="color:#1e3a5f;">${r.grandAvg ?? '—'}</strong></span>
+              <span style="background:${dc}18;color:${dc};font-weight:800;font-size:.82rem;padding:.3rem .8rem;border-radius:6px;white-space:nowrap;">${r.promotion}</span>
+            </div>
+          </div>
+          <!-- Subject rows with T1/T2/T3 breakdown -->
+          <div style="overflow-x:auto;">
+          <table style="${tableStyle()}">
+            <thead><tr style="${thRowStyle()}">
+              <th style="${thStyle()}">Subject</th>
+              <th style="${thStyle('65px')}">1st Term</th>
+              <th style="${thStyle('65px')}">2nd Term</th>
+              <th style="${thStyle('65px')}">3rd Term</th>
+              <th style="${thStyle('70px')}">Cumulative Avg</th>
+              <th style="${thStyle('55px')}">Grade</th>
+              <th style="${thStyle('90px')}">Status</th>
+            </tr></thead>
+            <tbody>
+              ${subs.map(sub => {
+                const passed = sub.avg !== null && sub.avg >= passMark;
+                const rowBg  = sub.avg !== null && !passed ? '#fff5f5' : '';
+                const termCell = (v) => `<td style="${tdStyle()};text-align:center;color:${v!==null&&v<passMark?'#dc2626':'#374151'};">${v ?? '<span style="color:#d1d5db;">—</span>'}</td>`;
+                return `<tr style="${trStyle()};${rowBg?'background:'+rowBg+';':''}">
+                  <td style="${tdStyle()};font-weight:600;">${sub.name}</td>
+                  ${termCell(sub.t1)}${termCell(sub.t2)}${termCell(sub.t3)}
+                  <td style="${tdStyle()};text-align:center;font-weight:700;color:${passed?'#1e3a8a':'#dc2626'};">${sub.avg ?? '—'}</td>
+                  <td style="${tdStyle()};text-align:center;">${sub.grade}</td>
+                  <td style="${tdStyle()};text-align:center;">
+                    <span style="background:${passed?'#dcfce7':'#fee2e2'};color:${passed?'#166534':'#991b1b'};padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700;">
+                      ${passed ? '✓ Pass' : '✗ Fail'}
+                    </span>
+                  </td>
+                </tr>`;
+              }).join('')}
+              <tr style="background:#eff6ff;font-weight:700;">
+                <td style="${tdStyle()};font-weight:800;">TOTALS</td>
+                <td style="${tdStyle()};text-align:center;color:#6b7280;">${subs.some(s=>s.t1!==null)?subs.filter(s=>s.t1!==null).reduce((a,s)=>a+s.t1,0):'—'}</td>
+                <td style="${tdStyle()};text-align:center;color:#6b7280;">${subs.some(s=>s.t2!==null)?subs.filter(s=>s.t2!==null).reduce((a,s)=>a+s.t2,0):'—'}</td>
+                <td style="${tdStyle()};text-align:center;color:#6b7280;">${subs.some(s=>s.t3!==null)?subs.filter(s=>s.t3!==null).reduce((a,s)=>a+s.t3,0):'—'}</td>
+                <td style="${tdStyle()};text-align:center;font-size:1.05rem;font-weight:800;color:#1e3a5f;">${r.grandAvg ?? '—'}</td>
+                <td style="${tdStyle()};text-align:center;">${r.grandAvg !== null ? grade(r.grandAvg).letter : '—'}</td>
+                <td style="${tdStyle()};text-align:center;font-size:.78rem;color:#6b7280;">${r.passed||0} passed / ${subs.filter(s=>s.avg!==null).length} total</td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          ${r.reasons?.length && r.promotion !== ps.labelPromoted ? `
+          <div style="padding:.5rem 1.25rem;background:#fff5f5;border-top:1px solid #fecaca;font-size:.78rem;color:#991b1b;">
+            ⚠ ${r.reasons.join(' · ')}
+          </div>` : ''}
+        </div>`;
+      }).join('')}`;
+    return;
+  }
+
+  /* ── Summary table view (default) ── */
   area.innerHTML = `
-    <!-- Summary -->
+    <!-- Summary cards -->
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.85rem;margin-bottom:1.5rem;">
       ${[
         ['Total Students', summary.total || rows.length, '#1e3a5f'],
@@ -1080,28 +1203,36 @@ function _renderCumulativeResults(rows, summary, ps, cls, arm, session) {
         </div>`).join('')}
     </div>
 
-    <!-- Per-student table -->
+    <!-- Per-student summary table -->
     <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);">
-      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
         <h4 style="margin:0;color:#1e3a5f;">📊 ${cls} ${arm} — ${session} Cumulative Results</h4>
-        <span style="font-size:.82rem;color:#6b7280;">${students.length} students</span>
+        <span style="font-size:.82rem;color:#6b7280;">${rows.length} students · hover subject cell for term breakdown</span>
       </div>
       <div style="overflow-x:auto;">
       <table style="${tableStyle()}">
-        <thead><tr style="${thRowStyle()}">
-          <th style="${thStyle('40px')}">#</th>
-          <th style="${thStyle()}">Student</th>
-          ${(rows[0]?.subjects||[]).map(s=>`<th style="${thStyle('70px')}" title="${s.name}">${s.name.length>8?s.name.substring(0,7)+'…':s.name}</th>`).join('')}
-          <th style="${thStyle('70px')}">Avg</th>
-          <th style="${thStyle('55px')}">Grade</th>
-          <th style="${thStyle('60px')}">Passed</th>
-          ${ps.showCumulativePosition?`<th style="${thStyle('45px')}">Pos</th>`:''}
-          <th style="${thStyle('100px')}">Decision</th>
-        </tr></thead>
+        <thead>
+          <tr style="${thRowStyle()}">
+            <th style="${thStyle('40px')}">#</th>
+            <th style="${thStyle()}">Student</th>
+            ${allSubjects.map(s=>`<th style="${thStyle('70px')}" title="${s.name}">${s.name.length>8?s.name.substring(0,7)+'…':s.name}</th>`).join('')}
+            <th style="${thStyle('70px')}">Grand Avg</th>
+            <th style="${thStyle('55px')}">Grade</th>
+            <th style="${thStyle('60px')}">Passed</th>
+            ${ps.showCumulativePosition?`<th style="${thStyle('45px')}">Pos</th>`:''}
+            <th style="${thStyle('110px')}">Decision</th>
+          </tr>
+          <!-- Sub-header: T1/T2/T3 per subject -->
+          <tr style="background:#f0f4ff;">
+            <td style="${tdStyle()}" colspan="2"></td>
+            ${allSubjects.map(()=>`<td style="text-align:center;padding:2px 4px;font-size:.65rem;color:#6b7280;border-bottom:1px solid #e5e7eb;">T1·T2·T3</td>`).join('')}
+            <td colspan="${2 + (ps.showCumulativePosition?2:1) + 1}" style="${tdStyle()}"></td>
+          </tr>
+        </thead>
         <tbody>
           ${rows.map(r => {
-            const pos = r.position || '—';
-            const dc  = promoColor[r.promotion] || '#6b7280';
+            const pos  = r.position || '—';
+            const dc   = promoColor[r.promotion] || '#6b7280';
             const subs = r.subjects || [];
             return `<tr style="${trStyle()}">
               <td style="${tdStyle()};font-size:.78rem;color:#9ca3af;">${pos}</td>
@@ -1110,11 +1241,12 @@ function _renderCumulativeResults(rows, summary, ps, cls, arm, session) {
                 <div style="font-size:.72rem;color:#9ca3af;">${r.studentId}</div>
               </td>
               ${subs.map(sub=>`
-                <td style="${tdStyle()};text-align:center;" title="${sub.name}&#10;T1:${sub.t1??'—'} T2:${sub.t2??'—'} T3:${sub.t3??'—'}">
-                  <div style="font-weight:${sub.avg!==null&&sub.avg>=getPassMark()?'600':'400'};color:${sub.avg!==null&&sub.avg<getPassMark()?'#dc2626':'#111'};">
+                <td style="${tdStyle()};text-align:center;padding:4px;" title="${sub.name}&#10;1st: ${sub.t1??'—'} | 2nd: ${sub.t2??'—'} | 3rd: ${sub.t3??'—'}&#10;Avg: ${sub.avg??'—'}">
+                  <div style="font-weight:${sub.avg!==null&&sub.avg>=passMark?'600':'400'};color:${sub.avg!==null&&sub.avg<passMark?'#dc2626':'#111'};">
                     ${sub.avg !== null ? sub.avg : '—'}
                   </div>
-                  ${sub.avg!==null?`<div style="font-size:.68rem;color:#6b7280;">${sub.grade}</div>`:''}
+                  <div style="font-size:.6rem;color:#9ca3af;margin-top:1px;">${sub.t1??'—'}·${sub.t2??'—'}·${sub.t3??'—'}</div>
+                  ${sub.avg!==null?`<div style="font-size:.65rem;color:#6b7280;">${sub.grade}</div>`:''}
                 </td>`).join('')}
               <td style="${tdStyle()};text-align:center;font-weight:700;font-size:1rem;color:#1e3a5f;">${r.grandAvg ?? '—'}</td>
               <td style="${tdStyle()};text-align:center;">${r.grandAvg !== null ? grade(r.grandAvg).letter : '—'}</td>
@@ -1133,6 +1265,209 @@ function _renderCumulativeResults(rows, summary, ps, cls, arm, session) {
       </table>
       </div>
     </div>`;
+};
+
+/* ══════════════════════════════════════════════════════════
+   AUTO-PROMOTION WIZARD
+══════════════════════════════════════════════════════════ */
+window.openAutoPromotionWizard = function() {
+  if (!priv.isAdmin()) { toast('Only Admin can run auto-promotion.', 'error'); return; }
+  const ps = getPromotionSettings();
+  const modal = document.getElementById('auto-promo-modal');
+  const content = document.getElementById('auto-promo-modal-content');
+  if (!modal || !content) return;
+
+  const classOpts = App.data.classes.map(c => `<option>${c.name}</option>`).join('');
+  const criteriaList = [];
+  if (ps.useAverage)    criteriaList.push(`<li>Cumulative average ≥ <strong>${ps.minAverage}%</strong></li>`);
+  if (ps.usePassCount)  criteriaList.push(`<li>At least <strong>${ps.minPassCount}</strong> subjects passed</li>`);
+  if (ps.useNoFail)     criteriaList.push(`<li>No subject below <strong>${ps.noFailMark}%</strong></li>`);
+  if (ps.useAttendance) criteriaList.push(`<li>Attendance ≥ <strong>${ps.minAttendance}%</strong></li>`);
+  if (ps.useCoreSubjects && ps.coreSubjects?.length) criteriaList.push(`<li>Must pass core subjects: <strong>${ps.coreSubjects.join(', ')}</strong></li>`);
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+      <div>
+        <h3 style="margin:0 0 .3rem;color:#1e3a5f;">⚡ Auto-Promotion Wizard</h3>
+        <p style="margin:0;font-size:.85rem;color:#6b7280;">Evaluates each student and stamps a promotion decision based on saved criteria.</p>
+      </div>
+      <button onclick="document.getElementById('auto-promo-modal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
+    </div>
+
+    <!-- Active Criteria display -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;">
+      <div style="font-weight:700;font-size:.85rem;color:#166534;margin-bottom:.5rem;">✅ Active Promotion Criteria</div>
+      ${criteriaList.length
+        ? `<ul style="margin:0;padding-left:1.25rem;font-size:.85rem;color:#374151;line-height:1.8;">${criteriaList.join('')}</ul>`
+        : `<p style="margin:0;font-size:.85rem;color:#6b7280;">No criteria enabled. Go to Settings → Promotion to configure.</p>`}
+      <a onclick="document.getElementById('auto-promo-modal').style.display='none';document.querySelector('[data-settings-tab=\"promotion\"]')?.click();"
+         style="font-size:.8rem;color:#16a34a;cursor:pointer;margin-top:.5rem;display:inline-block;text-decoration:underline;">
+        Edit criteria in Settings →
+      </a>
+    </div>
+
+    <!-- Class / Arm / Session -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <label style="${labelStyle()}">Class</label>
+        <select id="ap-class" style="${inputStyle()}" onchange="populateAutoPromoArms()">${classOpts}</select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Arm</label>
+        <select id="ap-arm" style="${inputStyle()}"><option>A</option></select>
+      </div>
+      <div>
+        <label style="${labelStyle()}">Session</label>
+        <input id="ap-session" value="${App.data.schoolInfo?.session||'2025/2026'}" style="${inputStyle()}">
+      </div>
+    </div>
+
+    <!-- Scope -->
+    <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:1rem;margin-bottom:1.25rem;">
+      <label style="${labelStyle()}">Scope</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.35rem;">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.875rem;">
+          <input type="radio" name="ap-scope" value="arm" checked> Selected Class &amp; Arm only
+        </label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.875rem;">
+          <input type="radio" name="ap-scope" value="class"> All arms of selected class
+        </label>
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.875rem;">
+          <input type="radio" name="ap-scope" value="all"> ALL classes &amp; arms (entire school)
+        </label>
+      </div>
+    </div>
+
+    <div id="ap-preview-area" style="margin-bottom:1.25rem;"></div>
+
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+      <button onclick="previewAutoPromotion()" style="${btnStyle('secondary')}">🔍 Preview Results</button>
+      <button id="ap-apply-btn" onclick="applyAutoPromotion()" style="${btnStyle('primary')};display:none;">⚡ Apply Promotion Decisions</button>
+      <button onclick="document.getElementById('auto-promo-modal').style.display='none'" style="${btnStyle('ghost'||'secondary')}">Cancel</button>
+    </div>`;
+
+  modal.style.display = 'flex';
+  populateAutoPromoArms();
+};
+
+window.populateAutoPromoArms = function() {
+  const cls = document.getElementById('ap-class')?.value;
+  const sel = document.getElementById('ap-arm');
+  if (!sel || !cls) return;
+  const c = App.data.classes.find(x => x.name === cls);
+  const arms = c?.arms || ['A'];
+  sel.innerHTML = arms.map(a => `<option>${a}</option>`).join('');
+};
+
+window.previewAutoPromotion = function() {
+  const cls     = document.getElementById('ap-class')?.value;
+  const arm     = document.getElementById('ap-arm')?.value;
+  const session = document.getElementById('ap-session')?.value;
+  const scope   = document.querySelector('input[name="ap-scope"]:checked')?.value || 'arm';
+  const ps      = getPromotionSettings();
+  const preview = document.getElementById('ap-preview-area');
+  if (!preview) return;
+
+  let students = [];
+  if (scope === 'arm')   students = App.data.students.filter(s => s.class===cls && s.arm===arm);
+  else if (scope==='class') students = App.data.students.filter(s => s.class===cls);
+  else students = [...App.data.students];
+
+  if (!students.length) { preview.innerHTML = `<p style="color:#ef4444;font-size:.875rem;">No students found.</p>`; return; }
+
+  const results = students.map(s => ({ s, cum: computeCumulative(s.id, session) }));
+  const promoted = results.filter(r => r.cum.promotion === ps.labelPromoted).length;
+  const repeat   = results.filter(r => r.cum.promotion === ps.labelRepeat).length;
+  const incomplete = results.filter(r => r.cum.promotion === ps.labelIncomplete).length;
+
+  preview.innerHTML = `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:1rem;margin-bottom:.75rem;">
+      <div style="font-weight:700;font-size:.875rem;color:#1e3a5f;margin-bottom:.75rem;">📋 Preview — ${students.length} students</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem;">
+        <div style="background:#dcfce7;border-radius:8px;padding:.75rem;text-align:center;">
+          <div style="font-size:1.6rem;font-weight:800;color:#16a34a;">${promoted}</div>
+          <div style="font-size:.72rem;font-weight:700;color:#166534;text-transform:uppercase;">${ps.labelPromoted}</div>
+        </div>
+        <div style="background:#fee2e2;border-radius:8px;padding:.75rem;text-align:center;">
+          <div style="font-size:1.6rem;font-weight:800;color:#dc2626;">${repeat}</div>
+          <div style="font-size:.72rem;font-weight:700;color:#991b1b;text-transform:uppercase;">${ps.labelRepeat}</div>
+        </div>
+        <div style="background:#fef3c7;border-radius:8px;padding:.75rem;text-align:center;">
+          <div style="font-size:1.6rem;font-weight:800;color:#d97706;">${incomplete}</div>
+          <div style="font-size:.72rem;font-weight:700;color:#92400e;text-transform:uppercase;">INCOMPLETE</div>
+        </div>
+      </div>
+      <div style="max-height:200px;overflow-y:auto;">
+        <table style="${tableStyle()}">
+          <thead><tr style="${thRowStyle()}">
+            <th style="${thStyle()}">Student</th>
+            <th style="${thStyle('60px')}">Class</th>
+            <th style="${thStyle('70px')}">Grand Avg</th>
+            <th style="${thStyle('80px')}">Passed</th>
+            <th style="${thStyle('110px')}">Decision</th>
+          </tr></thead>
+          <tbody>
+            ${results.map(({s, cum}) => {
+              const dc = { [ps.labelPromoted]:'#16a34a', [ps.labelRepeat]:'#dc2626', [ps.labelIncomplete]:'#d97706' }[cum.promotion] || '#6b7280';
+              return `<tr style="${trStyle()}">
+                <td style="${tdStyle()};font-weight:600;">${s.name}</td>
+                <td style="${tdStyle()};text-align:center;">${s.class} ${s.arm}</td>
+                <td style="${tdStyle()};text-align:center;font-weight:700;">${cum.grandAvg ?? '—'}</td>
+                <td style="${tdStyle()};text-align:center;">${cum.passed}/${cum.subjects.filter(x=>x.avg!==null).length}</td>
+                <td style="${tdStyle()};text-align:center;">
+                  <span style="background:${dc}18;color:${dc};font-weight:800;font-size:.75rem;padding:.2rem .5rem;border-radius:4px;">${cum.promotion}</span>
+                  ${cum.reasons?.length && cum.promotion!==ps.labelPromoted ? `<div style="font-size:.62rem;color:#ef4444;margin-top:1px;" title="${cum.reasons.join('; ')}">ⓘ ${cum.reasons[0].substring(0,25)}…</div>` : ''}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  const applyBtn = document.getElementById('ap-apply-btn');
+  if (applyBtn) applyBtn.style.display = '';
+  // Store results for apply step
+  window._apPreviewData = results;
+};
+
+window.applyAutoPromotion = function() {
+  const data = window._apPreviewData;
+  if (!data?.length) { toast('Please run Preview first.', 'warning'); return; }
+  const ps    = getPromotionSettings();
+  const session = document.getElementById('ap-session')?.value;
+
+  if (!confirm(`Apply promotion decisions for ${data.length} student(s)?\n\nThis will record the decision in each student's cumulative record for session ${session}. It does NOT move students to a new class — use Student Management for class transitions.`)) return;
+
+  let applied = 0;
+  data.forEach(({ s, cum }) => {
+    // Store the promotion decision on the student record
+    if (!App.data.promotionRecords) App.data.promotionRecords = [];
+    const existing = App.data.promotionRecords.find(r => r.studentId === s.id && r.session === session);
+    const record   = {
+      studentId:  s.id,
+      session,
+      decision:   cum.promotion,
+      grandAvg:   cum.grandAvg,
+      passed:     cum.passed,
+      failed:     cum.failed,
+      reasons:    cum.reasons || [],
+      appliedBy:  App.currentUser?.username || 'admin',
+      appliedAt:  new Date().toISOString(),
+    };
+    if (existing) { Object.assign(existing, record); }
+    else          { App.data.promotionRecords.push(record); }
+    applied++;
+  });
+
+  saveAppData?.();
+  document.getElementById('auto-promo-modal').style.display = 'none';
+  toast(`✅ Promotion decisions applied for ${applied} student(s).`, 'success');
+
+  // Refresh cumulative view if open
+  if (document.getElementById('result-tab-cumulative')?.style.display !== 'none') {
+    loadCumulativeResults();
+  }
 };
 
 window.exportCumulativeCSV = function() {

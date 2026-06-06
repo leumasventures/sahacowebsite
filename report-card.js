@@ -838,6 +838,16 @@ function buildReportCard(student, cls, arm, term, session, school) {
       </div>
     </div>` : ''}
 
+    ${(() => {
+      // Show auto-promotion stamp if admin applied it
+      const rec = (App?.data?.promotionRecords||[]).find(r => r.studentId === student.id && r.session === session);
+      if (!rec) return '';
+      return `<div style="margin:4px 14px;padding:5px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:9px;color:#166534;">
+        <span style="font-size:12px;">✅</span>
+        <span>Auto-promotion applied by <strong>${rec.appliedBy||'Admin'}</strong> on ${rec.appliedAt?new Date(rec.appliedAt).toLocaleDateString():''}</span>
+      </div>`;
+    })()}
+
     <!-- Signatures -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin:16px 14px 14px;padding-top:10px;border-top:1px solid #e5e7eb;">
       ${['Form Teacher', 'Vice Principal', school.principal||'Principal'].map(role=>`

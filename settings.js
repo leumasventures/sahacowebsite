@@ -788,6 +788,21 @@ function renderSettings() {
         </div>
 
         <button onclick="savePromotionSettings()" style="${btnStyle('primary')};min-width:220px;">💾 Save Promotion Settings</button>
+
+        <!-- Auto-Promotion Quick Launch -->
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:1.5rem;margin-top:1.75rem;">
+          <h4 style="margin:0 0 .5rem;color:#7c3aed;">⚡ Auto-Promotion</h4>
+          <p style="margin:0 0 1rem;font-size:.85rem;color:#6b7280;">
+            After saving criteria above, run Auto-Promotion from the <strong>Results → Cumulative tab</strong> to evaluate and stamp decisions for an entire class. Only Admin can execute this.
+          </p>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            <button onclick="switchSection('results');setTimeout(()=>{switchResultTab('cumulative');openAutoPromotionWizard();},300);" style="${btnStyle('primary')};background:#7c3aed;">
+              ⚡ Open Auto-Promotion Wizard
+            </button>
+            <button onclick="renderPromotionHistory()" style="${btnStyle('secondary')}">📋 View Promotion Records</button>
+          </div>
+          <div id="promo-history-area" style="margin-top:1.25rem;"></div>
+        </div>
       </div>
 
       <!-- ══════════════════════════════════
@@ -1132,6 +1147,68 @@ window.saveGeneralSettings = function() {
 /* ═══════════════════════════════════════════════════
    PROMOTION SETTINGS
 ═══════════════════════════════════════════════════ */
+
+/* ── Promotion Records History ── */
+window.renderPromotionHistory = function() {
+  const area = document.getElementById('promo-history-area');
+  if (!area) return;
+  const records = App.data.promotionRecords || [];
+  if (!records.length) {
+    area.innerHTML = `<p style="font-size:.85rem;color:#9ca3af;text-align:center;padding:1rem;">No promotion records yet. Run Auto-Promotion to create records.</p>`;
+    return;
+  }
+  // Group by session
+  const sessions = [...new Set(records.map(r => r.session))].sort().reverse();
+  area.innerHTML = sessions.map(sess => {
+    const recs = records.filter(r => r.session === sess);
+    const promoted   = recs.filter(r => r.decision === (App.data.promotionSettings?.labelPromoted || 'PROMOTED')).length;
+    const repeat     = recs.filter(r => r.decision === (App.data.promotionSettings?.labelRepeat   || 'REPEAT')).length;
+    const incomplete = recs.length - promoted - repeat;
+    return `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:1rem;overflow:hidden;">
+        <div style="background:#f8fafc;padding:.75rem 1rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
+          <span style="font-weight:700;color:#1e3a5f;">Session: ${sess}</span>
+          <div style="display:flex;gap:.75rem;font-size:.78rem;">
+            <span style="color:#16a34a;font-weight:700;">${promoted} Promoted</span>
+            <span style="color:#dc2626;font-weight:700;">${repeat} Repeat</span>
+            <span style="color:#d97706;font-weight:700;">${incomplete} Incomplete</span>
+          </div>
+        </div>
+        <div style="overflow-x:auto;max-height:240px;overflow-y:auto;">
+        <table style="${tableStyle()}">
+          <thead><tr style="${thRowStyle()}">
+            <th style="${thStyle()}">Student</th>
+            <th style="${thStyle('70px')}">Grand Avg</th>
+            <th style="${thStyle('60px')}">Passed</th>
+            <th style="${thStyle('110px')}">Decision</th>
+            <th style="${thStyle()}">Applied By</th>
+            <th style="${thStyle()}">Date</th>
+          </tr></thead>
+          <tbody>
+            ${recs.map(rec => {
+              const student = App.data.students?.find(s => s.id === rec.studentId);
+              const dc = rec.decision === (App.data.promotionSettings?.labelPromoted||'PROMOTED') ? '#16a34a'
+                       : rec.decision === (App.data.promotionSettings?.labelRepeat||'REPEAT')    ? '#dc2626' : '#d97706';
+              return `<tr style="${trStyle()}">
+                <td style="${tdStyle()};font-weight:600;">${student?.name || rec.studentId}<br><span style="font-size:.7rem;color:#9ca3af;">${student?.class||''} ${student?.arm||''}</span></td>
+                <td style="${tdStyle()};text-align:center;font-weight:700;">${rec.grandAvg ?? '—'}</td>
+                <td style="${tdStyle()};text-align:center;">${rec.passed ?? '—'}</td>
+                <td style="${tdStyle()};text-align:center;">
+                  <span style="background:${dc}18;color:${dc};font-weight:800;font-size:.75rem;padding:.2rem .5rem;border-radius:4px;">${rec.decision}</span>
+                  ${rec.reasons?.length && rec.decision !== (App.data.promotionSettings?.labelPromoted||'PROMOTED') ?
+                    `<div style="font-size:.62rem;color:#ef4444;margin-top:1px;" title="${rec.reasons.join('; ')}">ⓘ ${rec.reasons[0]?.substring(0,25)}…</div>` : ''}
+                </td>
+                <td style="${tdStyle()};font-size:.78rem;">${rec.appliedBy || '—'}</td>
+                <td style="${tdStyle()};font-size:.78rem;color:#6b7280;">${rec.appliedAt ? new Date(rec.appliedAt).toLocaleDateString() : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>`;
+  }).join('');
+};
+
 window.savePromotionSettings = function() {
   const getBool = id => document.getElementById(id)?.checked ?? false;
   const getVal  = id => document.getElementById(id)?.value;

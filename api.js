@@ -295,6 +295,14 @@
       if (subjects.length) App.data.subjects = subjects;
       if (fixtures.length) App.data.fixtures = fixtures;
       if (notices.length)  App.data.notices  = notices;
+      var userRole = (global.App && global.App.currentUser && global.App.currentUser.role) || '';
+      if (userRole !== 'Admin') {
+        console.info('[api] loadAppData done — classes:' + (App.data.classes||[]).length +
+          ' students:' + (App.data.students||[]).length +
+          ' staff:' + (App.data.teachers||[]).length +
+          ' subjects:' + (App.data.subjects||[]).length);
+        return Promise.resolve();
+      }
       return Admin.getSettings().then(function (res) {
         var d = res && res.data;
         if (d && App.data.schoolInfo) {

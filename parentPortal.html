@@ -3,1105 +3,536 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Finance Portal — Sacred Heart College</title>
+  <title>Parent Portal — Sacred Heart College</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --brand:#1e3a5f; --brand2:#2563eb; --gold:#c8972b;
-      --success:#16a34a; --warn:#d97706; --danger:#dc2626;
-      --bg:#f8fafc; --border:#e2e8f0; --text:#111827; --muted:#6b7280;
-      --radius:12px; --shadow:0 2px 12px rgba(0,0,0,.08);
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-
-    /* ── topbar ── */
-    .topbar{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;
-      padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
-      gap:.75rem;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
-    .tb-brand{display:flex;align-items:center;gap:.75rem}
-    .tb-logo{width:38px;height:38px;border-radius:50%;object-fit:contain;border:1.5px solid rgba(255,255,255,.4)}
-    .tb-brand h1{font-size:.95rem;font-weight:700}
-    .tb-brand p{font-size:.72rem;opacity:.8}
-    .tb-actions{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
-    .btn-tb{padding:.38rem .9rem;border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;text-decoration:none}
-    .btn-tb-ghost{background:rgba(255,255,255,.18);color:#fff}
-    .btn-tb-white{background:#fff;color:var(--brand)}
-
-    /* ── layout ── */
-    .layout{display:flex;min-height:calc(100vh - 56px)}
-    .sidebar{width:250px;background:#fff;border-right:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
-    .main{flex:1;padding:1.5rem;overflow-y:auto;max-width:1100px}
-
-    /* ── sidebar ── */
-    .stu-picker-wrap{padding:.85rem;border-bottom:1px solid var(--border)}
-    .stu-picker-wrap label{font-size:.73rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:.35rem}
-    .stu-picker-wrap select{width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;outline:none;background:#fff}
-    .stu-picker-wrap select:focus{border-color:var(--brand2)}
-
-    .stu-card{padding:1.1rem;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#eff6ff,#f0fdf4);display:none}
-    .stu-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));
-      color:#fff;font-size:1.1rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem}
-    .stu-name{font-size:.95rem;font-weight:700;margin-bottom:.1rem}
-    .stu-meta{font-size:.75rem;color:var(--muted)}
-    .balance-pill{display:inline-block;margin-top:.4rem;padding:.2rem .65rem;border-radius:9999px;font-size:.73rem;font-weight:700}
-    .pill-ok{background:#dcfce7;color:#166534}
-    .pill-owed{background:#fee2e2;color:#991b1b}
-
-    .sfp-nav{padding:.5rem 0;flex:1}
-    .nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1.1rem;cursor:pointer;
-      font-size:.85rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
-    .nav-item:hover{background:var(--bg);color:var(--brand)}
-    .nav-item.active{background:#eff6ff;color:var(--brand);border-left-color:var(--brand2);font-weight:600}
-    .nav-badge{background:var(--danger);color:#fff;font-size:.63rem;font-weight:700;border-radius:9999px;padding:.1rem .4rem;margin-left:auto}
-
-    /* ── cards & tables ── */
-    .card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.1rem}
-    .card-hdr{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
-    .card-hdr h3{font-size:.92rem;font-weight:700;color:var(--brand)}
-    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:.75rem;margin-bottom:1.1rem}
-    .stat-card{background:#fff;border-radius:var(--radius);padding:.9rem 1rem;box-shadow:var(--shadow);border-left:4px solid var(--brand2)}
-    .stat-val{font-size:1.35rem;font-weight:700;margin-bottom:.1rem}
-    .stat-lbl{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase}
-
-    table{width:100%;border-collapse:collapse;font-size:.83rem}
-    th{padding:.55rem .9rem;text-align:left;font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid var(--border)}
-    td{padding:.6rem .9rem;border-bottom:1px solid #f3f4f6}
-    tr:last-child td{border-bottom:none}
-    tr:hover td{background:#fafafa}
-
-    /* ── badges ── */
-    .badge{display:inline-block;border-radius:9999px;padding:.18rem .6rem;font-size:.72rem;font-weight:700}
-    .b-paid{background:#dcfce7;color:#166534}
-    .b-partial{background:#fef3c7;color:#92400e}
-    .b-unpaid{background:#fee2e2;color:#991b1b}
-    .b-waived{background:#f3f4f6;color:var(--muted)}
-    .b-charge{background:#eff6ff;color:#1d4ed8}
-    .b-payment{background:#f0fdf4;color:#166534}
-    .b-adj{background:#faf5ff;color:#7c3aed}
-
-    /* ── buttons ── */
-    .btn{display:inline-flex;align-items:center;gap:.3rem;padding:.42rem .9rem;border:none;border-radius:8px;
-      cursor:pointer;font-size:.8rem;font-weight:600;transition:opacity .15s;text-decoration:none}
-    .btn:hover{opacity:.85}
-    .btn-primary{background:var(--brand);color:#fff}
-    .btn-success{background:var(--success);color:#fff}
-    .btn-danger{background:var(--danger);color:#fff}
-    .btn-secondary{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
-    .btn-warning{background:var(--warn);color:#fff}
-    .btn-ghost{background:transparent;color:var(--brand2);border:1.5px solid var(--brand2)}
-    .btn-sm{padding:.28rem .6rem;font-size:.76rem}
-
-    /* ── forms ── */
-    .fg{margin-bottom:.75rem}
-    .fg label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.28rem}
-    .fg input,.fg select,.fg textarea{width:100%;padding:.5rem .8rem;border:1.5px solid var(--border);
-      border-radius:8px;font-size:.875rem;outline:none;font-family:inherit}
-    .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--brand2)}
-    .frow{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
-
-    /* ── modal ── */
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;place-items:center;padding:1rem}
-    .modal.open{display:grid}
-    .modal-box{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;
-      overflow-y:auto;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.22)}
-    .modal-box h3{font-size:1rem;font-weight:700;color:var(--brand);margin-bottom:1rem}
-    .modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem}
-
-    /* ── misc ── */
-    .empty{text-align:center;padding:3rem 1rem;color:var(--muted)}
-    .empty-ico{font-size:2.5rem;margin-bottom:.5rem}
-    .loading{text-align:center;padding:2rem;color:var(--muted)}
-    .section-title{font-size:1.05rem;font-weight:700;color:var(--brand);margin-bottom:1rem}
-    .viewonly-banner{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:.6rem 1rem;
-      margin-bottom:1rem;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:.5rem}
-
-    .toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.4rem}
-    .toast{background:#1e293b;color:#fff;padding:.6rem 1rem;border-radius:9px;font-size:.83rem;font-weight:500;
-      animation:toastIn .2s ease}
-    @keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-
-    .ledger-debit{color:var(--danger);font-weight:600}
-    .ledger-credit{color:var(--success);font-weight:600}
-    .balance-row{font-weight:700}
-
-    /* ── parent portal specific ── */
-    .parent-login-wrap{max-width:480px;margin:3rem auto;padding:0 1rem}
-    .parent-login-card{background:#fff;border-radius:16px;padding:2rem;box-shadow:var(--shadow)}
-    .parent-login-card h2{font-size:1.1rem;font-weight:800;color:var(--brand);margin-bottom:.35rem}
-    .parent-login-card p{font-size:.85rem;color:var(--muted);margin-bottom:1.25rem}
-
-    @media(max-width:680px){
-      .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}
-      .layout{flex-direction:column}
-      .frow{grid-template-columns:1fr}
-    }
-    @media print{
-      .topbar,.sidebar,.no-print{display:none!important}
-      .main{padding:0;max-width:100%}
-      .layout{display:block}
-    }
+    :root{--brand:#1a3352;--brand2:#1e5fa8;--gold:#c8922b;--gold-lt:#f5e6c8;--success:#15803d;--warn:#b45309;--danger:#b91c1c;--bg:#f4f6f9;--surface:#fff;--border:#dde3ec;--text:#0f172a;--muted:#64748b;--muted2:#94a3b8;--radius:14px;--shadow:0 2px 16px rgba(26,51,82,.10);}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+    .topbar{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:.85rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:200;box-shadow:0 3px 18px rgba(26,51,82,.28);}
+    .tb-brand{display:flex;align-items:center;gap:.85rem;}.tb-logo{width:42px;height:42px;border-radius:50%;object-fit:contain;border:2px solid rgba(255,255,255,.35);}
+    .tb-brand h1{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;line-height:1.25;}.tb-brand p{font-size:.72rem;opacity:.75;margin-top:.1rem;}
+    .tb-actions{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
+    .btn-tb{padding:.4rem .95rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;text-decoration:none;font-family:'DM Sans',sans-serif;}
+    .btn-ghost{background:rgba(255,255,255,.15);color:#fff;}.btn-white{background:#fff;color:var(--brand);}
+    .shell{display:flex;min-height:calc(100vh - 58px);}
+    .sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+    .student-hero{padding:1.4rem 1.2rem;background:linear-gradient(160deg,#eef3fb,#f0fdf6);border-bottom:1px solid var(--border);text-align:center;}
+    .student-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto .65rem;box-shadow:0 4px 14px rgba(26,51,82,.22);}
+    .student-name{font-size:1rem;font-weight:700;}.student-meta{font-size:.75rem;color:var(--muted);margin-top:.25rem;}
+    .balance-pill{display:inline-block;margin-top:.55rem;padding:.25rem .75rem;border-radius:9999px;font-size:.73rem;font-weight:700;}
+    .pill-ok{background:#dcfce7;color:#166534;}.pill-owed{background:#fee2e2;color:#991b1b;}
+    .portal-nav{padding:.6rem 0;flex:1;}
+    .nav-section-lbl{padding:.6rem 1.2rem .25rem;font-size:.65rem;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;}
+    .nav-item{display:flex;align-items:center;gap:.6rem;padding:.62rem 1.2rem;cursor:pointer;font-size:.84rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s;white-space:nowrap;}
+    .nav-item:hover{background:#f1f5fc;color:var(--brand);}.nav-item.active{background:#ebf2fd;color:var(--brand);border-left-color:var(--brand2);font-weight:600;}
+    .nav-badge{background:var(--danger);color:#fff;font-size:.62rem;font-weight:700;border-radius:9999px;padding:.1rem .42rem;margin-left:auto;}
+    .token-block{padding:1rem 1.1rem;border-top:1px solid var(--border);background:linear-gradient(135deg,#faf5ff,#f0fdf4);}
+    .token-block label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:.4rem;}
+    .token-input-wrap{display:flex;gap:.35rem;}
+    .token-input-wrap input{flex:1;padding:.45rem .7rem;border:1.5px solid var(--border);border-radius:8px;font-size:.8rem;font-family:'DM Mono',monospace;outline:none;background:#fff;text-transform:uppercase;letter-spacing:.04em;}
+    .token-input-wrap input:focus{border-color:var(--brand2);}
+    .token-input-wrap button{padding:.45rem .75rem;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;}
+    .token-hint{font-size:.69rem;color:var(--muted2);margin-top:.35rem;}
+    .token-status{font-size:.72rem;margin-top:.35rem;padding:.3rem .6rem;border-radius:6px;display:none;}
+    .token-status.valid{background:#dcfce7;color:#166534;display:block;}.token-status.invalid{background:#fee2e2;color:#991b1b;display:block;}
+    .main{flex:1;padding:1.5rem;overflow-y:auto;}
+    .login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f2640 0%,#1a4a8a 50%,#0f3c26 100%);padding:1.5rem;}
+    .login-card{background:#fff;border-radius:22px;padding:2.5rem 2.2rem;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
+    .login-logo-wrap{text-align:center;margin-bottom:1.5rem;}
+    .login-logo{width:72px;height:72px;border-radius:50%;object-fit:contain;border:3px solid var(--gold-lt);}
+    .login-logo-fallback{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto;}
+    .login-title{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;color:var(--brand);text-align:center;margin-bottom:.2rem;}
+    .login-sub{font-size:.84rem;color:var(--muted);text-align:center;margin-bottom:1.75rem;}
+    .login-divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;}
+    .login-divider hr{flex:1;border:none;border-top:1px solid var(--border);}
+    .login-divider span{font-size:.72rem;color:var(--muted2);white-space:nowrap;}
+    .fg{margin-bottom:.9rem;}.fg label{display:block;font-size:.79rem;font-weight:600;color:var(--muted);margin-bottom:.32rem;}
+    .fg input,.fg select{width:100%;padding:.58rem .9rem;border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;outline:none;font-family:'DM Sans',sans-serif;transition:border-color .15s;}
+    .fg input:focus{border-color:var(--brand2);box-shadow:0 0 0 3px rgba(30,95,168,.1);}
+    .btn-login{width:100%;padding:.7rem;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;}
+    .btn-login:hover{opacity:.9;}.btn-login:disabled{opacity:.6;cursor:not-allowed;}
+    .login-error{color:var(--danger);font-size:.8rem;min-height:1.2rem;margin-bottom:.35rem;text-align:center;}
+    .login-staff-link{text-align:center;font-size:.8rem;color:var(--muted);margin-top:1.1rem;}
+    .login-staff-link a{color:var(--brand2);text-decoration:none;font-weight:600;}
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.1rem;}
+    .card-hdr{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;}
+    .card-hdr h3{font-size:.92rem;font-weight:700;color:var(--brand);}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.75rem;margin-bottom:1.1rem;}
+    .stat-card{background:var(--surface);border-radius:var(--radius);padding:.9rem 1.1rem;box-shadow:var(--shadow);border-left:4px solid var(--brand2);}
+    .stat-val{font-size:1.35rem;font-weight:700;margin-bottom:.1rem;}.stat-lbl{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;}
+    table{width:100%;border-collapse:collapse;font-size:.83rem;}
+    th{padding:.55rem 1rem;text-align:left;font-size:.71rem;color:var(--muted);font-weight:700;text-transform:uppercase;background:#f8fafc;border-bottom:1px solid var(--border);}
+    td{padding:.62rem 1rem;border-bottom:1px solid #f1f5f9;}tr:last-child td{border-bottom:none;}tr:hover td{background:#fafbfd;}
+    .badge{display:inline-block;border-radius:9999px;padding:.18rem .62rem;font-size:.71rem;font-weight:700;}
+    .b-paid{background:#dcfce7;color:#166534;}.b-partial{background:#fef3c7;color:#92400e;}.b-unpaid{background:#fee2e2;color:#991b1b;}
+    .b-excellent{background:#dcfce7;color:#166534;}.b-good{background:#dbeafe;color:#1d4ed8;}.b-average{background:#fef9c3;color:#854d0e;}.b-poor{background:#fee2e2;color:#991b1b;}
+    .btn{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .95rem;border:none;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;transition:opacity .15s;font-family:'DM Sans',sans-serif;text-decoration:none;}
+    .btn:hover{opacity:.85;}.btn-secondary{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);}.btn-sm{padding:.28rem .62rem;font-size:.76rem;}
+    .section-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--brand);margin-bottom:1rem;}
+    .empty{text-align:center;padding:3rem 1rem;color:var(--muted);}.empty-ico{font-size:2.5rem;margin-bottom:.5rem;}
+    .loading{text-align:center;padding:2rem;color:var(--muted);font-size:.9rem;}
+    .ledger-debit{color:var(--danger);font-weight:600;}.ledger-credit{color:var(--success);font-weight:600;}
+    .toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:.4rem;}
+    .toast{background:#1e293b;color:#fff;padding:.6rem 1rem;border-radius:9px;font-size:.83rem;font-weight:500;animation:tIn .2s ease;}
+    @keyframes tIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;place-items:center;padding:1rem;}
+    .modal.open{display:grid;}
+    .modal-box{background:#fff;border-radius:18px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;padding:1.75rem;box-shadow:0 24px 60px rgba(0,0,0,.25);}
+    .modal-box h3{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:var(--brand);margin-bottom:1rem;}
+    .grade-cell{font-family:'DM Mono',monospace;font-weight:700;font-size:.9rem;}
+    .grade-A{color:#166534;}.grade-B{color:#1d4ed8;}.grade-C{color:#854d0e;}.grade-D{color:#b45309;}.grade-F{color:#991b1b;}
+    .progress-bar-wrap{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:.35rem;}
+    .progress-bar{height:100%;border-radius:4px;}
+    .perf-summary{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1.25rem;}
+    .perf-box{background:linear-gradient(135deg,#eef3fb,#f0fdf6);border-radius:12px;padding:1rem 1.1rem;text-align:center;border:1px solid var(--border);}
+    .perf-box .pval{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;}.perf-box .plbl{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-top:.2rem;}
+    .comment-box{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:10px;padding:.85rem 1rem;margin:.75rem 1.1rem;font-size:.84rem;color:#78350f;font-style:italic;}
+    .comment-box strong{font-style:normal;color:var(--brand);display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;}
+    .unlock-banner{background:linear-gradient(135deg,#1a3352,#1e5fa8);color:#fff;border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1rem;}
+    .unlock-banner h3{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.4rem;}.unlock-banner p{font-size:.82rem;opacity:.8;margin-bottom:1rem;}
+    .unlock-input-row{display:flex;gap:.5rem;max-width:380px;margin:0 auto;}
+    .unlock-input-row input{flex:1;padding:.55rem .9rem;border:1.5px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-family:'DM Mono',monospace;font-size:.85rem;outline:none;text-transform:uppercase;}
+    .unlock-input-row input:focus{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.18);}
+    .unlock-input-row button{padding:.55rem 1.1rem;background:var(--gold);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.85rem;white-space:nowrap;}
+    @media(max-width:700px){.sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border);}.shell{flex-direction:column;}.perf-summary{grid-template-columns:1fr 1fr;}}
+    @media print{.topbar,.sidebar,.toast-wrap,.no-print{display:none!important}.main{padding:0;}.shell{display:block;}}
   </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
+<div class="topbar" id="topbar" style="display:none">
   <div class="tb-brand">
-    <img class="tb-logo" src="images/sahaco logo.jpg" alt="SAHARCO" onerror="this.style.display='none'">
-    <div>
-      <h1 id="top-school-name">Sacred Heart College Eziukwu Aba</h1>
-      <p id="top-role-label">Student Finance Portal</p>
-    </div>
+    <img class="tb-logo" src="images/sahaco logo.jpg" alt="" onerror="this.style.display='none'">
+    <div><h1 id="top-school">Sacred Heart College Eziukwu Aba</h1><p>Parent / Guardian Portal</p></div>
   </div>
   <div class="tb-actions no-print">
-    <a href="dashboard.html" class="btn-tb btn-tb-ghost">← Dashboard</a>
-    <button class="btn-tb btn-tb-white" onclick="window.print()">🖨 Print</button>
-    <button class="btn-tb btn-tb-ghost" id="btn-export" style="display:none" onclick="doExport()">⬇ Export CSV</button>
+    <a href="dashboard.html" class="btn-tb btn-ghost">← Dashboard</a>
+    <button class="btn-tb btn-white" onclick="window.print()">🖨 Print</button>
+    <button class="btn-tb btn-ghost" onclick="doLogout()">Sign Out</button>
   </div>
 </div>
 
-<!-- LAYOUT -->
-<div class="layout">
-
-  <!-- SIDEBAR -->
+<div class="shell" id="portal-shell" style="display:none">
   <aside class="sidebar">
-    <div class="stu-picker-wrap no-print" id="picker-wrap">
-      <label>Select Student</label>
-      <select id="stu-picker" onchange="selectStudent(this.value)">
-        <option value="">Loading…</option>
-      </select>
-    </div>
-
-    <div class="stu-card" id="stu-card">
-      <div class="stu-avatar" id="stu-avatar">—</div>
-      <div class="stu-name"  id="stu-name">—</div>
-      <div class="stu-meta"  id="stu-meta">—</div>
+    <div class="student-hero">
+      <div class="student-avatar" id="stu-avatar">—</div>
+      <div class="student-name"  id="stu-name">Loading…</div>
+      <div class="student-meta"  id="stu-meta"></div>
       <div id="stu-balance"></div>
     </div>
-
-    <nav class="sfp-nav" id="sfp-nav">
-      <div class="nav-item active" data-view="overview"   onclick="switchView('overview')"><span>📊</span> Overview</div>
-      <div class="nav-item"        data-view="charges"    onclick="switchView('charges')"><span>⚡</span> Charges <span id="badge-unpaid" class="nav-badge" style="display:none"></span></div>
-      <div class="nav-item"        data-view="payments"   onclick="switchView('payments')"><span>💳</span> Payments</div>
-      <div class="nav-item"        data-view="levies"     onclick="switchView('levies')"><span>🎯</span> Levies</div>
-      <div class="nav-item"        data-view="ledger"     onclick="switchView('ledger')"><span>📒</span> Ledger</div>
-      <!-- Staff/Admin only below -->
-      <div class="nav-item edit-only" data-view="bursar"  onclick="switchView('bursar')"><span>⚙️</span> Bursar Tools</div>
-      <div class="nav-item edit-only" data-view="class"   onclick="switchView('class')"><span>🏫</span> Class Finance</div>
+    <nav class="portal-nav">
+      <div class="nav-section-lbl">Finance</div>
+      <div class="nav-item active" data-view="overview"  onclick="switchView('overview')"><span>📊</span> Overview</div>
+      <div class="nav-item"        data-view="charges"   onclick="switchView('charges')"><span>⚡</span> Charges <span id="nav-unpaid-badge" class="nav-badge" style="display:none"></span></div>
+      <div class="nav-item"        data-view="payments"  onclick="switchView('payments')"><span>💳</span> Payments</div>
+      <div class="nav-item"        data-view="levies"    onclick="switchView('levies')"><span>🎯</span> Levies</div>
+      <div class="nav-item"        data-view="ledger"    onclick="switchView('ledger')"><span>📒</span> Ledger</div>
+      <div class="nav-section-lbl" style="margin-top:.5rem">Academics</div>
+      <div class="nav-item" data-view="results"     onclick="switchView('results')"><span>📋</span> Report Card</div>
+      <div class="nav-item" data-view="performance" onclick="switchView('performance')"><span>📈</span> Performance</div>
+      <div class="nav-item" data-view="attendance"  onclick="switchView('attendance')"><span>📅</span> Attendance</div>
     </nav>
+    <div class="token-block no-print">
+      <label>Result Access Token</label>
+      <div class="token-input-wrap">
+        <input type="text" id="sidebar-token" placeholder="SHC-XXXX-XXXX"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')validateAndApplyToken()">
+        <button onclick="validateAndApplyToken()">✓</button>
+      </div>
+      <div class="token-hint">Token from the school unlocks report cards.</div>
+      <div class="token-status" id="token-status"></div>
+    </div>
   </aside>
-
-  <!-- MAIN -->
-  <main class="main" id="sfp-main">
-    <div class="empty"><div class="empty-ico">👈</div><p>Select a student to view their financial records.</p></div>
-  </main>
+  <main class="main" id="sfp-main"><div class="loading">⏳ Loading…</div></main>
 </div>
 
-<!-- MODAL -->
+<div id="login-shell">
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="login-logo-wrap">
+        <img class="login-logo" src="images/sahaco logo.jpg" alt="SHC"
+          onerror="this.outerHTML='<div class=&quot;login-logo-fallback&quot;>🏫</div>'">
+      </div>
+      <div class="login-title">Parent Portal</div>
+      <div class="login-sub">Sacred Heart College Eziukwu Aba<br>View your child's academic &amp; financial records</div>
+      <div class="fg">
+        <label>Student ID</label>
+        <input id="pl-sid" type="text" placeholder="e.g. SAHARCO/2025/0001"
+          style="font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.04em"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')parentLogin()">
+      </div>
+      <div class="fg">
+        <label>Your Phone Number (registered with the school)</label>
+        <input id="pl-phone" type="tel" placeholder="e.g. 08012345678"
+          onkeydown="if(event.key==='Enter')parentLogin()">
+      </div>
+      <div id="login-error" class="login-error"></div>
+      <button class="btn-login" id="login-btn" onclick="parentLogin()">View My Child's Records →</button>
+      <div class="login-divider"><hr><span>Optional — unlock results now</span><hr></div>
+      <div class="fg">
+        <label>Result Access Token <span style="font-weight:400;color:var(--muted2)">(optional, from school)</span></label>
+        <input id="pl-token" type="text" placeholder="SHC-XXXX-XXXX"
+          style="font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.04em"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="login-staff-link">Staff login? <a href="login.html">Click here →</a></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-box" id="modal-box"></div>
 </div>
-
-<!-- TOASTS -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════
-   STUDENT FINANCE PORTAL  v3
-═══════════════════════════════════════════════════════════ */
-const API      = window.__ENV__?.API_URL || 'https://rms-bckend.onrender.com/api';
-const getToken = () => sessionStorage.getItem('shc_token');
+const API='https://rms-bckend.onrender.com/api';
+let _parentToken='',_resultToken='',_student=null,_view='overview',_info={};
+const $=id=>document.getElementById(id);
+const fmt=n=>'₦'+parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate=d=>d?new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}):'—';
 
-const $ = id => document.getElementById(id);
-const fmt = n => '₦' + parseFloat(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
-const badge = (s) => {
-  const m = {Paid:'b-paid',Partial:'b-partial',Unpaid:'b-unpaid',Waived:'b-waived',
-             charge:'b-charge',payment:'b-payment',adjustment:'b-adj',refund:'b-adj'};
-  return `<span class="badge ${m[s]||'b-unpaid'}">${s}</span>`;
-};
-
-function toast(msg, type='info') {
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.style.borderLeft = `3px solid ${type==='success'?'#22c55e':type==='error'?'#ef4444':type==='warning'?'#f59e0b':'#3b82f6'}`;
-  el.textContent = msg;
-  $('toast-wrap').appendChild(el);
-  setTimeout(()=>el.remove(), 3500);
+function toast(msg,type='info'){
+  const el=document.createElement('div');el.className='toast';
+  el.style.borderLeft=`3px solid ${type==='success'?'#22c55e':type==='error'?'#ef4444':type==='warning'?'#f59e0b':'#3b82f6'}`;
+  el.textContent=msg;$('toast-wrap').appendChild(el);setTimeout(()=>el.remove(),3500);
 }
-function showModal(html){ $('modal-box').innerHTML=html; $('modal').classList.add('open'); }
-function closeModal(){ $('modal').classList.remove('open'); }
+function showModal(html){$('modal-box').innerHTML=html;$('modal').classList.add('open');}
+function closeModal(){$('modal').classList.remove('open');}
 
-/* ── State ── */
-let _student=null, _view='overview', _role='', _wardId=null, _info={};
-const canEdit  = ()=>['Admin','Bursar'].includes(_role);
-const canAdmin = ()=>_role==='Admin';
-const isParent = ()=>_role==='Parent';
-
-/* ═══════════════════════════════════════════════════════════
-   API HELPERS
-═══════════════════════════════════════════════════════════ */
-async function api(path, opts={}) {
-  const headers = { 'Content-Type':'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const r = await fetch(API + path, {
-    ...opts, credentials:'include', headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
-  const data = await r.json().catch(()=>({success:false,message:'Invalid JSON'}));
-  if (!data.success) throw new Error(data.message || `HTTP ${r.status}`);
-  return data;
+async function apiFetch(path,opts={}){
+  const r=await fetch(API+path,{...opts,credentials:'include',
+    headers:{'Content-Type':'application/json',...(_parentToken?{Authorization:`Bearer ${_parentToken}`}:{}),...(opts.headers||{})},
+    body:opts.body?JSON.stringify(opts.body):undefined});
+  const d=await r.json().catch(()=>({success:false,message:'Invalid JSON'}));
+  if(!d.success)throw new Error(d.message||`HTTP ${r.status}`);
+  return d;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   BOOT
-═══════════════════════════════════════════════════════════ */
-async function boot() {
-  const token = getToken();
-  const session = JSON.parse(sessionStorage.getItem('shc_session')||'null');
-  _role   = session?.role   || '';
-  _wardId = session?.wardId || session?.ward_id || null;
+/* ── BOOT ── */
+(async function boot(){
+  _parentToken=sessionStorage.getItem('shc_parent_token')||'';
+  _resultToken=sessionStorage.getItem('shc_result_token')||'';
 
-  /* ── Parent login form (no token) ── */
-  if (!token || !_role) {
-    showParentLoginForm();
+  /* Staff redirect */
+  const staffToken=sessionStorage.getItem('shc_token');
+  const session=JSON.parse(sessionStorage.getItem('shc_session')||'null');
+  if(staffToken&&session?.role&&session.role!=='Parent'){
+    const p=new URLSearchParams(location.search);
+    window.location.href='student-finance.html'+(p.get('studentId')?`?studentId=${p.get('studentId')}` :'');
     return;
   }
 
-  /* ── Role badge in topbar ── */
-  const roleColor = {Admin:'#dc2626',Bursar:'#7c3aed',Teacher:'#2563eb',Staff:'#0891b2',Parent:'#16a34a'}[_role]||'#6b7280';
-  $('top-role-label').innerHTML = `Student Finance Portal &nbsp;<span style="background:${roleColor};color:#fff;border-radius:5px;padding:.1rem .5rem;font-size:.68rem;font-weight:700;">${_role}</span>`;
-
-  /* ── Hide edit-only UI for view-only roles ── */
-  if (!canEdit()) {
-    const s = document.createElement('style');
-    s.textContent = '.edit-only{display:none!important}';
-    document.head.appendChild(s);
+  if(_parentToken){
+    const stored=JSON.parse(sessionStorage.getItem('shc_parent_student')||'null');
+    if(stored){await showPortal(stored);return;}
   }
+  $('login-shell').style.display='';
+})();
 
-  /* ── Load school info ── */
-  const si = await api('/admin/').catch(()=>null);
-  _info = si?.data || { school_name:'Sacred Heart College Eziukwu Aba',
-    current_term: session?.term||'', current_session: session?.session||'' };
-  $('top-school-name').textContent = _info.school_name || 'Sacred Heart College Eziukwu Aba';
-
-  /* ── Parent: show only their ward ── */
-  if (isParent()) {
-    $('picker-wrap').style.display = 'none';
-    const ward = _wardId || new URLSearchParams(location.search).get('studentId');
-    if (ward) { selectStudent(decodeURIComponent(ward)); }
-    else { $('sfp-main').innerHTML = `<div class="empty"><div class="empty-ico">🔒</div><p>No ward linked. Contact the school administrator.</p></div>`; }
-    return;
-  }
-
-  /* ── Staff: load all students into picker ── */
-  try {
-    const resp = await api('/students');
-    const list = (resp.data||[]).sort((a,b)=>a.name.localeCompare(b.name));
-    $('stu-picker').innerHTML = '<option value="">— Select a student —</option>' +
-      list.map(s=>`<option value="${s.id}">${s.name} — ${s.class||s.class_name||''} ${s.arm||''} (${s.id})</option>`).join('');
-
-    /* auto-select from URL */
-    const pid = decodeURIComponent(new URLSearchParams(location.search).get('studentId')||'').trim();
-    if (pid) {
-      const match = list.find(s=>s.id===pid||s.id?.toLowerCase()===pid.toLowerCase());
-      const id = match?.id || pid;
-      $('stu-picker').value = id;
-      selectStudent(id);
-    }
-    $('btn-export').style.display = '';
-  } catch(e) { toast('Failed to load students: '+e.message,'error'); }
-}
-
-/* ── Parent login form (no session) ── */
-function showParentLoginForm() {
-  $('picker-wrap').style.display = 'none';
-  document.querySelector('.layout').innerHTML = `
-    <div class="parent-login-wrap">
-      <div class="parent-login-card">
-        <h2>👨‍👩‍👧 Parent / Guardian Portal</h2>
-        <p>Enter your child's Student ID and your registered phone number to view their financial records.</p>
-        <div class="fg"><label>Student ID</label>
-          <input id="pl-sid" type="text" placeholder="e.g. SAHARCO/20250115/0001"
-            style="font-family:monospace;text-transform:uppercase"
-            oninput="this.value=this.value.toUpperCase()"
-            onkeydown="if(event.key==='Enter')parentLogin()">
-        </div>
-        <div class="fg"><label>Your Phone Number</label>
-          <input id="pl-phone" type="tel" placeholder="e.g. 08012345678"
-            onkeydown="if(event.key==='Enter')parentLogin()">
-        </div>
-        <div id="pl-err" style="color:var(--danger);font-size:.8rem;min-height:1rem;margin-bottom:.5rem"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:.65rem"
-          onclick="parentLogin()">View Financial Records →</button>
-        <div style="text-align:center;margin-top:1rem;font-size:.8rem;color:var(--muted)">
-          <a href="login.html" style="color:var(--brand2)">Staff login →</a>
-        </div>
-      </div>
-    </div>`;
-}
-
-window.parentLogin = async function() {
-  const sid   = ($('pl-sid')?.value||'').trim().toUpperCase();
-  const phone = ($('pl-phone')?.value||'').trim();
-  const errEl = $('pl-err');
-  if (!sid)   { errEl.textContent='Please enter the Student ID.';   return; }
-  if (!phone) { errEl.textContent='Please enter the phone number.'; return; }
-  errEl.textContent = 'Verifying…';
-  try {
-    const resp = await api('/students/parent-verify/'+encodeURIComponent(sid));
-    const student = resp.data || resp;
-    const stored = (student.phone||student.parent_phone||'').replace(/\s/g,'').replace(/^(\+234|234)/,'0');
-    const entered = phone.replace(/\s/g,'').replace(/^(\+234|234)/,'0');
-    if (!stored || entered.slice(-8) !== stored.slice(-8)) {
-      errEl.textContent = 'Phone does not match our records. Contact the school.'; return;
-    }
-    errEl.textContent = '';
-    _role   = 'Parent';
-    _wardId = sid;
-    // Restore layout
-    location.reload(); // simplest — boot will find the pre-set sid via URL
-  } catch(e) { errEl.textContent = e.message; }
+/* ── LOGIN ── */
+window.parentLogin=async function(){
+  const sid=($('pl-sid')?.value||'').trim().toUpperCase();
+  const phone=($('pl-phone')?.value||'').trim();
+  const rtCode=($('pl-token')?.value||'').trim().toUpperCase();
+  const errEl=$('login-error');const btn=$('login-btn');
+  if(!sid){errEl.textContent='Please enter your child\'s Student ID.';return;}
+  if(!phone){errEl.textContent='Please enter your registered phone number.';return;}
+  errEl.textContent='';btn.disabled=true;btn.textContent='Verifying…';
+  try{
+    const resp=await fetch(API+'/students/parent-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({studentId:sid,phone})});
+    const data=await resp.json();
+    if(!data.success){errEl.textContent='❌ '+(data.message||'Login failed.');btn.disabled=false;btn.textContent='View My Child\'s Records →';return;}
+    _parentToken=data.token;
+    sessionStorage.setItem('shc_parent_token',_parentToken);
+    sessionStorage.setItem('shc_parent_student',JSON.stringify(data.student));
+    if(rtCode){_resultToken=rtCode;sessionStorage.setItem('shc_result_token',rtCode);}
+    await showPortal(data.student);
+  }catch(e){errEl.textContent='❌ '+e.message;btn.disabled=false;btn.textContent='View My Child\'s Records →';}
 };
 
-/* ═══════════════════════════════════════════════════════════
-   SELECT STUDENT
-═══════════════════════════════════════════════════════════ */
-async function selectStudent(id) {
-  if (!id) { _student=null; $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">👈</div><p>Select a student.</p></div>'; return; }
-  try {
-    const resp = await api('/students/'+encodeURIComponent(id)).catch(async ()=>{
-      const s = await api('/student-finance/summary?sid='+encodeURIComponent(id)).catch(()=>null);
-      return { data: s?.data?.student || { id, name: id } };
-    });
-    _student = resp.data || resp;
-
-    /* sidebar card */
-    const initials = (_student.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-    $('stu-avatar').textContent = initials;
-    $('stu-name').textContent   = _student.name;
-    $('stu-meta').textContent   = `${_student.class_name||_student.class||''} ${_student.arm||''} · ${_student.id}`;
-    $('stu-card').style.display = '';
-
-    /* URL update */
-    const url = new URL(location.href);
-    url.searchParams.set('studentId', id);
-    history.replaceState(null,'',url);
-
-    loadBalance();
-    switchView(_view);
-  } catch(e) { toast('Error: '+e.message,'error'); }
+/* ── SHOW PORTAL ── */
+async function showPortal(studentData){
+  _student=studentData;
+  $('login-shell').style.display='none';
+  $('topbar').style.display='';
+  $('portal-shell').style.display='';
+  try{const si=await apiFetch('/admin/');_info=si?.data||{};$('top-school').textContent=_info.school_name||'Sacred Heart College Eziukwu Aba';}catch(e){}
+  const initials=(_student.name||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('stu-avatar').textContent=initials;
+  $('stu-name').textContent=_student.name;
+  $('stu-meta').textContent=`${_student.class_name||_student.class||''} ${_student.arm||''} · ${_student.id}`;
+  if(_resultToken){$('sidebar-token').value=_resultToken;updateTokenStatus(true,null);}
+  loadBalance();switchView('overview');
 }
 
-async function loadBalance() {
-  if (!_student) return;
-  try {
-    const r = await api('/student-finance/summary?sid='+encodeURIComponent(_student.id));
-    const bal = parseFloat(r.data?.ledger?.balance||0);
-    $('stu-balance').innerHTML = `<span class="balance-pill ${bal>0?'pill-owed':'pill-ok'}">${bal>0?'⚠ Owes '+fmt(bal):'✓ Account Clear'}</span>`;
-    const n = r.data?.unpaid?.totalCount||0;
-    const b = $('badge-unpaid');
-    b.textContent = n; b.style.display = n>0?'':'none';
-  } catch(e){}
+function doLogout(){
+  sessionStorage.removeItem('shc_parent_token');sessionStorage.removeItem('shc_parent_student');sessionStorage.removeItem('shc_result_token');
+  _parentToken='';_resultToken='';_student=null;
+  $('topbar').style.display='none';$('portal-shell').style.display='none';$('login-shell').style.display='';
+  $('pl-sid').value='';$('pl-phone').value='';$('pl-token').value='';
+  $('login-btn').disabled=false;$('login-btn').textContent='View My Child\'s Records →';
 }
 
-/* ═══════════════════════════════════════════════════════════
-   NAVIGATION
-═══════════════════════════════════════════════════════════ */
-function switchView(v) {
-  _view = v;
+async function loadBalance(){
+  if(!_student)return;
+  try{
+    const r=await apiFetch('/student-finance/summary?sid='+encodeURIComponent(_student.id));
+    const bal=parseFloat(r.data?.ledger?.balance||0);
+    $('stu-balance').innerHTML=`<span class="balance-pill ${bal>0?'pill-owed':'pill-ok'}">${bal>0?'⚠ Owes '+fmt(bal):'✓ Account Clear'}</span>`;
+    const n=r.data?.unpaid?.totalCount||0;const b=$('nav-unpaid-badge');
+    if(b){b.textContent=n;b.style.display=n>0?'':'none';}
+  }catch(e){}
+}
+
+/* ── TOKEN VALIDATION ── */
+async function validateAndApplyToken(){
+  const code=$('sidebar-token')?.value?.trim().toUpperCase();
+  if(!code){toast('Enter a token code first','warning');return;}
+  try{
+    const resp=await fetch(API+'/access-tokens/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,studentId:_student?.id})});
+    const data=await resp.json();
+    if(data.success){
+      _resultToken=code;sessionStorage.setItem('shc_result_token',code);
+      updateTokenStatus(true,data.data);
+      toast(`✅ Token valid — ${data.data.term||''} results unlocked`,'success');
+      if(_view==='results'||_view==='performance')switchView(_view);
+    }else{updateTokenStatus(false,null);toast('❌ '+data.message,'error');}
+  }catch(e){updateTokenStatus(false,null);toast('Error: '+e.message,'error');}
+}
+
+function updateTokenStatus(valid,d){
+  const el=$('token-status');
+  if(valid){el.textContent=d?`✓ Valid · ${d.term||''}${d.session?' '+d.session:''}`:'✓ Token active';el.className='token-status valid';}
+  else{el.textContent='✗ Invalid or expired';el.className='token-status invalid';}
+}
+
+window.applyInlineToken=async function(){
+  const code=$('inline-token')?.value?.trim().toUpperCase();
+  if(!code){toast('Enter a token code','warning');return;}
+  $('sidebar-token').value=code;await validateAndApplyToken();
+};
+
+/* ── NAV ── */
+function switchView(v){
+  _view=v;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===v));
-  if (!_student && v!=='class') { $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">👈</div><p>Select a student first.</p></div>'; return; }
-  $('sfp-main').innerHTML = '<div class="loading">Loading…</div>';
-  const map = {overview:renderOverview,charges:renderCharges,payments:renderPayments,
-               levies:renderLevies,ledger:renderLedger,bursar:renderBursar,class:renderClassFinance};
-  (map[v] || renderOverview)();
+  $('sfp-main').innerHTML='<div class="loading">⏳ Loading…</div>';
+  ({overview:renderOverview,charges:renderCharges,payments:renderPayments,levies:renderLevies,ledger:renderLedger,results:renderResults,performance:renderPerformance,attendance:renderAttendance}[v]||renderOverview)();
 }
 
-/* ═══════════════════════════════════════════════════════════
-   VIEW — OVERVIEW
-═══════════════════════════════════════════════════════════ */
-async function renderOverview() {
-  const main = $('sfp-main'); const sid = encodeURIComponent(_student.id);
-  try {
-    const [sumR, charR, levR] = await Promise.all([
-      api('/student-finance/summary?sid='+sid),
-      api('/student-finance/charges?sid='+sid),
-      api('/student-finance/levies?sid='+sid),
-    ]);
-    const sum = sumR.data; const ledger = sum.ledger||{}; const unpaid = sum.unpaid||{};
-    const charges=charR.data||[]; const levies=levR.data||[];
-    const bal = parseFloat(ledger.balance||0);
-    const pct = ledger.totalCharged>0 ? Math.min(100,Math.round(ledger.totalPaid/ledger.totalCharged*100)) : 0;
-
-    main.innerHTML = `
-      <div class="section-title">📊 Overview — ${_student.name}</div>
-      ${!canEdit()?'<div class="viewonly-banner">👁 View only — contact Admin or Bursar to record payments.</div>':''}
-
+/* ── FINANCE VIEWS ── */
+async function renderOverview(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const[sumR,charR]=await Promise.all([apiFetch('/student-finance/summary?sid='+sid),apiFetch('/student-finance/charges?sid='+sid)]);
+    const sum=sumR.data,ledger=sum.ledger||{},unpaid=sum.unpaid||{},charges=charR.data||[];
+    const bal=parseFloat(ledger.balance||0);
+    const pct=ledger.totalCharged>0?Math.min(100,Math.round(ledger.totalPaid/ledger.totalCharged*100)):0;
+    main.innerHTML=`
+      <div class="section-title">📊 Financial Overview</div>
       <div class="stat-grid">
-        ${[['Total Charged',fmt(ledger.totalCharged||0),'#1e3a5f'],
-           ['Total Paid',fmt(ledger.totalPaid||0),'#16a34a'],
-           ['Balance Due',fmt(bal),bal>0?'#dc2626':'#16a34a'],
-           ['Unpaid Items',(unpaid.totalCount||0),unpaid.totalCount>0?'#dc2626':'#16a34a']
-          ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}">
-          <div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
-      </div>
-
-      <div class="card"><div class="card-hdr"><h3>Payment Progress</h3><span style="font-size:.82rem;color:var(--muted)">${pct}% paid</span></div>
-        <div style="padding:1rem 1.2rem">
-          <div style="height:12px;background:#e5e7eb;border-radius:6px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${pct>=100?'#16a34a':'#2563eb'};border-radius:6px"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:.35rem">
-            <span>Paid: ${fmt(ledger.totalPaid||0)}</span><span>Total: ${fmt(ledger.totalCharged||0)}</span>
-          </div>
-        </div>
-      </div>
-
-      ${unpaid.totalCount>0?`
-      <div class="card" style="border-top:3px solid var(--danger)">
-        <div class="card-hdr" style="background:#fff5f5">
-          <h3 style="color:var(--danger)">⚠ ${unpaid.totalCount} Outstanding — ${fmt(unpaid.totalAmount||0)}</h3>
-          ${canEdit()?`<button class="btn btn-success btn-sm" onclick="openPayAllModal()">💳 Pay All Outstanding</button>`:''}
-        </div>
-        <table>
-          <thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Status</th>${canEdit()?'<th></th>':''}</tr></thead>
-          <tbody>${charges.filter(c=>c.status!=='Paid').slice(0,5).map(c=>`
-            <tr><td><strong>${c.fee_type}</strong></td><td>${c.term}</td>
-            <td style="color:var(--danger);font-weight:700">${fmt(c.amount)}</td>
-            <td>${badge(c.status)}</td>
-            ${canEdit()?`<td><button class="btn btn-success btn-sm" onclick="openPayModal('${c.id}','${c.fee_type.replace(/'/g,"\\'")}',${c.amount},'${c.term}')">💳 Pay</button></td>`:''}</tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`:
-      `<div class="card"><div style="padding:1.25rem;text-align:center;color:var(--success);font-weight:600">✅ All charges settled</div></div>`}
-
-      <div class="card"><div class="card-hdr"><h3>Recent Activity</h3>
-        <button class="btn btn-secondary btn-sm" onclick="switchView('ledger')">Full Ledger →</button></div>
-        ${(sum.recentActivity||[]).length?`<table>
-          <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
-          <tbody>${(sum.recentActivity||[]).slice(0,5).reverse().map(e=>`
-            <tr>
-              <td style="font-size:.75rem">${fmtDate(e.created_at)}</td>
-              <td>${e.description}</td><td>${badge(e.entry_type)}</td>
-              <td class="${parseFloat(e.debit||0)>0?'ledger-debit':''}">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
-              <td class="${parseFloat(e.credit||0)>0?'ledger-credit':''}">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
-              <td class="balance-row" style="color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`:'<div class="empty"><p>No activity yet.</p></div>'}
-      </div>`;
-  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">Error: ${e.message}</p></div>`; }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   VIEW — CHARGES
-═══════════════════════════════════════════════════════════ */
-async function renderCharges() {
-  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
-  try {
-    const r = await api('/student-finance/charges?sid='+sid);
-    const all = r.data||[];
-    main.innerHTML = `
-      <div class="section-title">⚡ Charges — ${_student.name}</div>
-      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
-      <div class="card"><div class="card-hdr"><h3>All Charges (${all.length})</h3>
-        ${canEdit()?`<button class="btn btn-primary btn-sm" onclick="openAddChargeModal()">+ Add Charge</button>`:''}
-      </div>
-      ${all.length?`<table>
-        <thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${all.map(c=>`<tr>
-          <td><strong>${c.fee_type}</strong></td><td>${c.term}</td>
-          <td style="font-weight:700">${fmt(c.amount)}</td>
-          <td style="font-size:.78rem">${fmtDate(c.payment_date)}</td>
-          <td>${badge(c.status)}</td>
-          <td><div style="display:flex;gap:.25rem;flex-wrap:wrap">
-            ${canEdit()&&c.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="openPayModal('${c.id}','${c.fee_type.replace(/'/g,"\\'")}',${c.amount},'${c.term||''}')">💳 Pay</button>`:''}
-            <button class="btn btn-secondary btn-sm" onclick="printReceipt(${JSON.stringify(c).replace(/"/g,'&quot;')})">🧾</button>
-            ${canAdmin()?`<button class="btn btn-danger btn-sm" onclick="deleteCharge('${c.id}')">🗑</button>`:''}
-          </div></td></tr>`).join('')}
-        </tbody></table>`:
-        '<div class="empty"><div class="empty-ico">⚡</div><p>No charges recorded.</p></div>'}
-      </div>`;
-  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   VIEW — PAYMENTS
-═══════════════════════════════════════════════════════════ */
-async function renderPayments() {
-  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
-  try {
-    const r = await api('/student-finance/payments?sid='+sid);
-    const all = r.data||[];
-    const total = all.reduce((s,p)=>s+parseFloat(p.amount||0),0);
-    main.innerHTML = `
-      <div class="section-title">💳 Payments — ${_student.name}</div>
-      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
-      <div class="stat-grid">
-        <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-val" style="color:#16a34a">${fmt(total)}</div><div class="stat-lbl">Total Paid</div></div>
-        <div class="stat-card"><div class="stat-val">${all.length}</div><div class="stat-lbl">Transactions</div></div>
-      </div>
-      <div class="card"><div class="card-hdr"><h3>Payment Records</h3>
-        ${canEdit()?`<button class="btn btn-primary btn-sm" onclick="openDirectPayModal()">+ Record Payment</button>`:''}
-      </div>
-      ${all.length?`<table>
-        <thead><tr><th>Fee</th><th>Term</th><th>Amount Paid</th><th>Date</th><th>Reference</th><th></th></tr></thead>
-        <tbody>${all.map(p=>`<tr>
-          <td><strong>${p.fee_type}</strong></td><td>${p.term}</td>
-          <td style="color:#16a34a;font-weight:700">${fmt(p.amount)}</td>
-          <td style="font-size:.78rem">${fmtDate(p.payment_date)}</td>
-          <td style="font-size:.78rem;color:var(--muted)">${p.reference||'—'}</td>
-          <td><button class="btn btn-secondary btn-sm" onclick="printReceipt(${JSON.stringify(p).replace(/"/g,'&quot;')})">🧾</button></td>
-        </tr>`).join('')}</tbody></table>`:
-        '<div class="empty"><div class="empty-ico">💳</div><p>No payments recorded yet.</p></div>'}
-      </div>`;
-  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   VIEW — LEVIES
-═══════════════════════════════════════════════════════════ */
-async function renderLevies() {
-  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
-  try {
-    const r = await api('/student-finance/levies?sid='+sid);
-    const all = r.data||[];
-    main.innerHTML = `
-      <div class="section-title">🎯 Levies — ${_student.name}</div>
-      ${!canEdit()?'<div class="viewonly-banner">👁 View only</div>':''}
-      <div class="card"><div class="card-hdr"><h3>Levies (${all.length})</h3></div>
-      ${all.length?`<table>
-        <thead><tr><th>Levy</th><th>Category</th><th>Due Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
-        <tbody>${all.map(l=>`<tr>
-          <td><strong>${l.levy_name}</strong></td>
-          <td><span style="background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:.15rem .5rem;font-size:.72rem">${l.category||'—'}</span></td>
-          <td style="font-size:.78rem">${fmtDate(l.due_date)}</td>
-          <td style="font-weight:700">${fmt(l.amount_paid)}</td>
-          <td>${badge(l.status)}</td>
-          <td>${canEdit()&&l.status!=='Paid'?`<button class="btn btn-success btn-sm" onclick="openLevyPayModal('${l.id}','${l.levy_name.replace(/'/g,"\\'")}',${l.amount_paid})">💳 Pay</button>`:''}
-          </td></tr>`).join('')}</tbody></table>`:
-        '<div class="empty"><div class="empty-ico">🎯</div><p>No levies assigned.</p></div>'}
-      </div>`;
-  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   VIEW — LEDGER
-═══════════════════════════════════════════════════════════ */
-async function renderLedger() {
-  const main=$('sfp-main'), sid=encodeURIComponent(_student.id);
-  try {
-    const r = await api('/student-finance/ledger?sid='+sid);
-    const entries = r.data||[];
-    const charged = parseFloat(r.totalCharged||0);
-    const paid    = parseFloat(r.totalPaid||0);
-    const bal     = parseFloat(r.balance||0);
-    main.innerHTML = `
-      <div class="section-title">📒 Full Ledger — ${_student.name}</div>
-      <div class="stat-grid">
-        ${[['Total Debits',fmt(charged),'#dc2626'],['Total Credits',fmt(paid),'#16a34a'],
-           ['Net Balance',fmt(bal),bal>0?'#dc2626':'#16a34a'],['Entries',entries.length,'#2563eb']
+        ${[['Total Charged',fmt(ledger.totalCharged||0),'#1a3352'],['Total Paid',fmt(ledger.totalPaid||0),'#15803d'],
+           ['Balance Due',fmt(bal),bal>0?'#b91c1c':'#15803d'],['Unpaid Items',unpaid.totalCount||0,(unpaid.totalCount||0)>0?'#b91c1c':'#15803d']
           ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
       </div>
+      <div class="card"><div class="card-hdr"><h3>💰 Payment Progress</h3><span style="font-size:.82rem;color:var(--muted)">${pct}%</span></div>
+        <div style="padding:1rem 1.25rem">
+          <div class="progress-bar-wrap" style="height:14px"><div class="progress-bar" style="width:${pct}%;background:${pct>=100?'#15803d':'#1e5fa8'}"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:.4rem"><span>Paid: ${fmt(ledger.totalPaid||0)}</span><span>Total: ${fmt(ledger.totalCharged||0)}</span></div>
+        </div>
+      </div>
+      ${(unpaid.totalCount||0)>0?`
+      <div class="card" style="border-top:3px solid var(--danger)"><div class="card-hdr" style="background:#fff5f5"><h3 style="color:var(--danger)">⚠ ${unpaid.totalCount} Outstanding — ${fmt(unpaid.totalAmount||0)}</h3></div>
+        <table><thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>${charges.filter(c=>c.status!=='Paid').map(c=>`<tr><td><strong>${c.fee_type}</strong></td><td>${c.term}</td><td style="color:var(--danger);font-weight:700">${fmt(c.amount)}</td><td><span class="badge b-unpaid">${c.status}</span></td></tr>`).join('')}</tbody></table>
+        <div style="padding:.75rem 1.25rem;background:#fff5f5;font-size:.81rem;color:#991b1b">ℹ️ Contact the school bursar to make payment.</div>
+      </div>` : `<div class="card"><div style="padding:1.25rem;text-align:center;color:var(--success);font-weight:600">✅ All charges fully settled.</div></div>`}
+      <div class="card"><div class="card-hdr"><h3>🕐 Recent Activity</h3><button class="btn btn-secondary btn-sm" onclick="switchView('ledger')">Full Ledger →</button></div>
+        ${(sum.recentActivity||[]).length?`<table><thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+        <tbody>${(sum.recentActivity||[]).slice(0,6).reverse().map(e=>`<tr>
+          <td style="font-size:.76rem;white-space:nowrap">${fmtDate(e.created_at)}</td><td>${e.description}</td>
+          <td class="${parseFloat(e.debit||0)>0?'ledger-debit':''}">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+          <td class="${parseFloat(e.credit||0)>0?'ledger-credit':''}">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+          <td style="font-weight:700;color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty"><p>No activity yet.</p></div>'}
+      </div>`;
+  }catch(e){main.innerHTML=`<div class="empty"><p style="color:var(--danger)">Error: ${e.message}</p></div>`;}
+}
+
+async function renderCharges(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const r=await apiFetch('/student-finance/charges?sid='+sid);const all=r.data||[];
+    main.innerHTML=`<div class="section-title">⚡ Fee Charges</div><div class="card"><div class="card-hdr"><h3>All Charges (${all.length})</h3></div>
+      ${all.length?`<table><thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+      <tbody>${all.map(c=>`<tr><td><strong>${c.fee_type}</strong></td><td>${c.term}</td><td style="font-weight:700">${fmt(c.amount)}</td><td style="font-size:.76rem">${fmtDate(c.payment_date)}</td><td><span class="badge ${c.status==='Paid'?'b-paid':c.status==='Partial'?'b-partial':'b-unpaid'}">${c.status}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty"><div class="empty-ico">⚡</div><p>No charges recorded.</p></div>'}
+      </div><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.85rem 1rem;font-size:.82rem;color:#1d4ed8">ℹ️ To dispute a charge, contact the school bursar's office.</div>`;
+  }catch(e){main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`;}
+}
+
+async function renderPayments(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const r=await apiFetch('/student-finance/payments?sid='+sid);const all=r.data||[];
+    const total=all.reduce((s,p)=>s+parseFloat(p.amount||0),0);
+    main.innerHTML=`<div class="section-title">💳 Payment History</div>
+      <div class="stat-grid"><div class="stat-card" style="border-left-color:#15803d"><div class="stat-val" style="color:#15803d">${fmt(total)}</div><div class="stat-lbl">Total Paid</div></div>
+      <div class="stat-card"><div class="stat-val">${all.length}</div><div class="stat-lbl">Transactions</div></div></div>
+      <div class="card"><div class="card-hdr"><h3>All Payments</h3></div>
+      ${all.length?`<table><thead><tr><th>Fee</th><th>Term</th><th>Amount</th><th>Date</th><th>Reference</th></tr></thead>
+      <tbody>${all.map(p=>`<tr><td><strong>${p.fee_type}</strong></td><td>${p.term}</td><td style="color:#15803d;font-weight:700">${fmt(p.amount)}</td><td style="font-size:.76rem">${fmtDate(p.payment_date)}</td><td style="font-size:.76rem;color:var(--muted)">${p.reference||'—'}</td></tr>`).join('')}</tbody></table>`
+      :'<div class="empty"><div class="empty-ico">💳</div><p>No payments recorded yet.</p></div>'}</div>`;
+  }catch(e){main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`;}
+}
+
+async function renderLevies(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const r=await apiFetch('/student-finance/levies?sid='+sid);const all=r.data||[];
+    main.innerHTML=`<div class="section-title">🎯 Levies & Special Fees</div><div class="card"><div class="card-hdr"><h3>Levies (${all.length})</h3></div>
+      ${all.length?`<table><thead><tr><th>Levy</th><th>Category</th><th>Due Date</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>${all.map(l=>`<tr><td><strong>${l.levy_name}</strong></td><td><span style="background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:.15rem .5rem;font-size:.72rem">${l.category||'—'}</span></td><td style="font-size:.76rem">${fmtDate(l.due_date)}</td><td style="font-weight:700">${fmt(l.amount_paid)}</td><td><span class="badge ${l.status==='Paid'?'b-paid':l.status==='Partial'?'b-partial':'b-unpaid'}">${l.status}</span></td></tr>`).join('')}</tbody></table>`
+      :'<div class="empty"><div class="empty-ico">🎯</div><p>No levies assigned.</p></div>'}</div>`;
+  }catch(e){main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`;}
+}
+
+async function renderLedger(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const r=await apiFetch('/student-finance/ledger?sid='+sid);
+    const entries=r.data||[],charged=parseFloat(r.totalCharged||0),paid=parseFloat(r.totalPaid||0),bal=parseFloat(r.balance||0);
+    main.innerHTML=`<div class="section-title">📒 Full Account Ledger</div>
+      <div class="stat-grid">${[['Total Debits',fmt(charged),'#b91c1c'],['Total Credits',fmt(paid),'#15803d'],['Net Balance',fmt(bal),bal>0?'#b91c1c':'#15803d'],['Entries',entries.length,'#1e5fa8']].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}</div>
       <div class="card"><div class="card-hdr"><h3>Ledger Entries</h3></div>
-      ${entries.length?`<div style="overflow-x:auto"><table>
-        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Term</th>
-          <th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead>
-        <tbody>
-          ${entries.map(e=>`<tr>
-            <td style="font-size:.75rem;white-space:nowrap">${fmtDate(e.created_at)}</td>
-            <td>${badge(e.entry_type)}</td><td>${e.description}</td>
-            <td style="font-size:.75rem">${e.term||''}</td>
-            <td class="ledger-debit" style="text-align:right">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
-            <td class="ledger-credit" style="text-align:right">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
-            <td class="balance-row" style="text-align:right;color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td>
-          </tr>`).join('')}
-          <tr style="background:#f9fafb;font-weight:700;border-top:2px solid var(--border)">
-            <td colspan="4" style="text-align:right">TOTALS</td>
-            <td class="ledger-debit" style="text-align:right">${fmt(charged)}</td>
-            <td class="ledger-credit" style="text-align:right">${fmt(paid)}</td>
-            <td style="text-align:right;color:${bal>0?'var(--danger)':'var(--success)'}">${fmt(bal)}</td>
-          </tr>
-        </tbody></table></div>`:
-        '<div class="empty"><p>No ledger entries yet.</p></div>'}
-      </div>`;
-  } catch(e){ main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
+      ${entries.length?`<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Description</th><th>Term</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead>
+      <tbody>${entries.map(e=>`<tr><td style="font-size:.75rem;white-space:nowrap">${fmtDate(e.created_at)}</td><td>${e.description}</td><td style="font-size:.75rem">${e.term||''}</td>
+        <td class="ledger-debit" style="text-align:right">${parseFloat(e.debit||0)>0?fmt(e.debit):'—'}</td>
+        <td class="ledger-credit" style="text-align:right">${parseFloat(e.credit||0)>0?fmt(e.credit):'—'}</td>
+        <td style="text-align:right;font-weight:700;color:${parseFloat(e.balance||0)>0?'var(--danger)':'var(--success)'}">${fmt(e.balance)}</td></tr>`).join('')}
+        <tr style="background:#f9fafb;font-weight:700;border-top:2px solid var(--border)"><td colspan="3" style="text-align:right">TOTALS</td><td class="ledger-debit" style="text-align:right">${fmt(charged)}</td><td class="ledger-credit" style="text-align:right">${fmt(paid)}</td><td style="text-align:right;color:${bal>0?'var(--danger)':'var(--success)'}">${fmt(bal)}</td></tr>
+      </tbody></table></div>` : '<div class="empty"><p>No ledger entries yet.</p></div>'}</div>`;
+  }catch(e){main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`;}
 }
 
-/* ═══════════════════════════════════════════════════════════
-   VIEW — BURSAR TOOLS
-═══════════════════════════════════════════════════════════ */
-function renderBursar() {
-  if (!canEdit()) { $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">🔒</div><p>Access restricted.</p></div>'; return; }
-  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
-  $('sfp-main').innerHTML = `
-    <div class="section-title">⚙️ Bursar Tools — ${_student.name}</div>
+/* ── ACADEMIC VIEWS ── */
+function gradeClass(s){if(s>=75)return'grade-A';if(s>=60)return'grade-B';if(s>=50)return'grade-C';if(s>=40)return'grade-D';return'grade-F';}
+function gradeLabel(s){if(s>=75)return'A';if(s>=60)return'B';if(s>=50)return'C';if(s>=40)return'D';return'F';}
+function barColor(s){if(s>=75)return'#15803d';if(s>=60)return'#1e5fa8';if(s>=50)return'#c8922b';return'#b91c1c';}
+function remarkBadge(s){if(s>=75)return'<span class="badge b-excellent">Excellent</span>';if(s>=60)return'<span class="badge b-good">Good</span>';if(s>=50)return'<span class="badge b-average">Average</span>';return'<span class="badge b-poor">Poor</span>';}
 
-    <div class="card"><div class="card-hdr"><h3>📋 Assign Fees</h3></div>
-      <div style="padding:1.2rem">
-        <div class="frow" style="margin-bottom:.65rem">
-          <div class="fg" style="margin:0"><label>Term *</label><select id="bt-term">${termOpts}</select></div>
-          <div class="fg" style="margin:0"><label>Session</label><input type="text" id="bt-session" value="${_info.current_session||''}" placeholder="2025/2026"></div>
-        </div>
-        <div id="bt-fee-rows">
-          <div class="fee-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.4rem">
-            <input class="fee-name" type="text" placeholder="Fee name" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
-            <input class="fee-amt"  type="number" placeholder="Amount ₦" min="0" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
-            <button onclick="this.closest('.fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.48rem .75rem;cursor:pointer;font-weight:700">✕</button>
-          </div>
-        </div>
-        <button class="btn btn-secondary btn-sm" onclick="addFeeRow()" style="margin-bottom:.75rem">+ Add Row</button>
-        <div><button class="btn btn-primary" onclick="submitBulkFees()">💾 Assign All Fees</button></div>
-      </div>
-    </div>
-
-    <div class="card"><div class="card-hdr"><h3>💳 Pay All Outstanding</h3></div>
-      <div style="padding:1.2rem">
-        <div class="frow">
-          <div class="fg"><label>Total Amount Paid (₦) *</label><input type="number" id="pa-amount" placeholder="0.00" min="0"></div>
-          <div class="fg"><label>Date *</label><input type="date" id="pa-date" value="${new Date().toISOString().slice(0,10)}"></div>
-        </div>
-        <div class="frow">
-          <div class="fg"><label>Payment Method</label>
-            <select id="pa-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
-          </div>
-          <div class="fg"><label>Reference</label><input type="text" id="pa-ref" placeholder="Optional"></div>
-        </div>
-        <button class="btn btn-success" onclick="submitPayAll()">✅ Record Bulk Payment</button>
-      </div>
-    </div>`;
-}
-
-function addFeeRow() {
-  const row = document.createElement('div');
-  row.className = 'fee-row';
-  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.4rem';
-  row.innerHTML = `<input class="fee-name" type="text" placeholder="Fee name" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
-    <input class="fee-amt" type="number" placeholder="Amount ₦" min="0" style="padding:.48rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem">
-    <button onclick="this.closest('.fee-row').remove()" style="background:#fee2e2;color:#991b1b;border:none;border-radius:8px;padding:.48rem .75rem;cursor:pointer;font-weight:700">✕</button>`;
-  $('bt-fee-rows').appendChild(row);
-}
-
-async function submitBulkFees() {
-  const term = $('bt-term')?.value;
-  const session = $('bt-session')?.value;
-  const rows = [...document.querySelectorAll('.fee-row')];
-  const fees = rows.map(r=>({ name:r.querySelector('.fee-name')?.value?.trim(), amt:parseFloat(r.querySelector('.fee-amt')?.value||0) })).filter(f=>f.name&&f.amt>0);
-  if (!fees.length) { toast('Add at least one fee','warning'); return; }
-  let count=0;
-  for (const f of fees) {
-    try {
-      await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{ method:'POST', body:{ feeType:f.name, amount:f.amt, term, session, status:'Unpaid', date:new Date().toISOString().slice(0,10) }});
-      count++;
-    } catch(e){ toast(`Failed: ${f.name} — ${e.message}`,'error'); }
-  }
-  toast(`✅ ${count} fee(s) assigned`,'success');
-  loadBalance();
-}
-
-async function submitPayAll() {
-  const amount = parseFloat($('pa-amount')?.value||0);
-  const date   = $('pa-date')?.value;
-  const method = $('pa-method')?.value;
-  const ref    = $('pa-ref')?.value||null;
-  if (!amount||!date){ toast('Amount and date required','error'); return; }
-  try {
-    const r = await api('/student-finance/pay-all?sid='+encodeURIComponent(_student.id),{ method:'POST', body:{amount,date,method,reference:ref}});
-    toast(`✅ ${r.data?.cleared||0} charges cleared`,'success');
-    loadBalance(); switchView('overview');
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   VIEW — CLASS FINANCE
-═══════════════════════════════════════════════════════════ */
-async function renderClassFinance() {
-  if (!canEdit()){ $('sfp-main').innerHTML='<div class="empty"><div class="empty-ico">🔒</div><p>Access restricted.</p></div>'; return; }
-  $('sfp-main').innerHTML = `
-    <div class="section-title">🏫 Class Finance</div>
-    <div class="card"><div class="card-hdr"><h3>Select Class</h3></div>
-      <div style="padding:1.1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end">
-        <div class="fg" style="flex:1;min-width:160px;margin:0"><label>Class</label>
-          <select id="cf-cls" style="width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem" onchange="populateCfArms()">
-            <option value="">— Select —</option>
-          </select>
-        </div>
-        <div class="fg" style="flex:0 0 120px;margin:0"><label>Arm</label>
-          <select id="cf-arm" style="width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem">
-            <option value="">All</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" onclick="loadClassFinance()">📊 Load</button>
-        ${canEdit()?`<button class="btn btn-secondary" onclick="openClassFeeModal()">⚡ Assign Fee to Class</button>`:''}
-      </div>
-    </div>
-    <div id="cf-out"></div>`;
-
-  try {
-    const r = await api('/classes');
-    const sel = $('cf-cls');
-    (r.data||[]).forEach(c=>{ const o=document.createElement('option'); o.value=c.name; o.textContent=c.name; sel.appendChild(o); });
-  } catch(e){}
-}
-
-async function populateCfArms() {
-  const cls = $('cf-cls')?.value; const arm = $('cf-arm');
-  arm.innerHTML = '<option value="">All</option>';
-  if (!cls) return;
-  try {
-    const r = await api('/classes');
-    const c = (r.data||[]).find(x=>x.name===cls);
-    (c?.arms||[]).forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; arm.appendChild(o); });
-  } catch(e){}
-}
-
-async function loadClassFinance() {
-  const cls = $('cf-cls')?.value; const arm = $('cf-arm')?.value;
-  const out = $('cf-out');
-  if (!cls){ toast('Select a class first','warning'); return; }
-  out.innerHTML = '<div class="loading">Loading…</div>';
-  try {
-    const r = await api('/student-finance/class-summary?class='+encodeURIComponent(cls)+(arm?'&arm='+encodeURIComponent(arm):''));
-    const students = r.data||[];
-    const totalOwed = students.reduce((s,st)=>s+parseFloat(st.balance||0),0);
-    const cleared   = students.filter(s=>parseFloat(s.balance||0)<=0).length;
-    out.innerHTML = `
-      <div class="stat-grid">
-        ${[['Students',students.length,'#1e3a5f'],['Total Owed',fmt(totalOwed),totalOwed>0?'#dc2626':'#16a34a'],
-           ['Fully Paid',cleared,'#16a34a'],['Outstanding',students.length-cleared,students.length-cleared>0?'#dc2626':'#16a34a']
-          ].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
-      </div>
-      <div class="card"><div class="card-hdr"><h3>${cls}${arm?' '+arm:''}</h3></div>
-        <div style="overflow-x:auto"><table>
-          <thead><tr><th>Name</th><th>ID</th><th>Arm</th><th>Charged</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
-          <tbody>${students.map(s=>{const b=parseFloat(s.balance||0);const ok=b<=0;return`<tr>
-            <td style="font-weight:600">${s.name}</td>
-            <td style="font-size:.75rem;font-family:monospace">${s.id}</td>
-            <td>${s.arm||'—'}</td>
-            <td>${fmt(s.totalCharged||0)}</td>
-            <td style="color:#16a34a;font-weight:600">${fmt(s.totalPaid||0)}</td>
-            <td style="color:${ok?'#16a34a':'#dc2626'};font-weight:700">${fmt(b)}</td>
-            <td><span class="badge ${ok?'b-paid':'b-unpaid'}">${ok?'Clear':'Owes'}</span></td>
-            <td><button class="btn btn-secondary btn-sm" onclick="goToStudent('${s.id}')">View →</button></td>
-          </tr>`}).join('')}</tbody>
-        </table></div>
-      </div>`;
-  } catch(e){ out.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`; }
-}
-
-function goToStudent(id) {
-  const sel = $('stu-picker');
-  if (sel) sel.value = id;
-  selectStudent(id);
-  switchView('overview');
-}
-
-async function openClassFeeModal() {
-  const cls = $('cf-cls')?.value; const arm = $('cf-arm')?.value;
-  if (!cls){ toast('Select a class first','warning'); return; }
-  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
-  showModal(`<h3>⚡ Assign Fee to ${cls}${arm?' '+arm:''}</h3>
-    <div class="fg"><label>Fee Type *</label><input type="text" id="cbf-type" placeholder="e.g. School Fees"></div>
-    <div class="frow">
-      <div class="fg"><label>Amount (₦) *</label><input type="number" id="cbf-amount" min="0"></div>
-      <div class="fg"><label>Term *</label><select id="cbf-term">${termOpts}</select></div>
-    </div>
-    <div class="fg"><label>Session</label><input type="text" id="cbf-session" value="${_info.current_session||''}" placeholder="2025/2026"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitClassFee('${cls}','${arm||''}')">⚡ Assign</button>
-    </div>`);
-}
-
-async function submitClassFee(cls, arm) {
-  const feeType = $('cbf-type')?.value?.trim();
-  const amount  = parseFloat($('cbf-amount')?.value||0);
-  const term    = $('cbf-term')?.value;
-  const session = $('cbf-session')?.value;
-  if (!feeType||!amount){ toast('Fee type and amount required','error'); return; }
-  try {
-    const r = await api('/fees/bulk-charge',{ method:'POST', body:{ class:cls, arm:arm||undefined, feeType, amount, term, session }});
-    closeModal();
-    toast(`✅ ${r.data?.charged||0} students charged`,'success');
-    loadClassFinance();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PAYMENT MODALS
-═══════════════════════════════════════════════════════════ */
-function openPayModal(id, feeType, amount, term) {
-  showModal(`<h3>💳 Record Payment</h3>
-    <div style="background:#eff6ff;border-radius:8px;padding:.65rem 1rem;margin-bottom:.9rem;font-size:.85rem;color:#1d4ed8">
-      <strong>${feeType}</strong> · Expected: ${fmt(amount)} · ${term}
-    </div>
-    <div class="fg"><label>Amount Paid (₦) *</label><input type="number" id="qp-amount" value="${amount}" min="0"></div>
-    <div class="frow">
-      <div class="fg"><label>Date *</label><input type="date" id="qp-date" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="fg"><label>Method</label>
-        <select id="qp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option><option>Online</option></select>
-      </div>
-    </div>
-    <div class="fg"><label>Reference No.</label><input type="text" id="qp-ref" placeholder="Optional"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-success" onclick="submitPay('${id}','${feeType}',${amount},'${term}')">✅ Record & Receipt</button>
-    </div>`);
-}
-
-async function submitPay(chargeId, feeType, expected, term) {
-  const amt  = parseFloat($('qp-amount')?.value||0);
-  const date = $('qp-date')?.value;
-  const meth = $('qp-method')?.value;
-  const ref  = $('qp-ref')?.value||null;
-  if (!amt||!date){ toast('Amount and date required','error'); return; }
-  try {
-    const r = await api('/student-finance/pay?sid='+encodeURIComponent(_student.id),{
-      method:'POST', body:{ chargeId, amountPaid:amt, date, method:meth, reference:ref }});
-    closeModal();
-    toast('✅ Payment recorded!','success');
-    printReceipt({ ...r.data?.receiptData, method:meth, student_name:_student.name,
-      class_name:_student.class_name||_student.class||'', student_arm:_student.arm||'' });
-    loadBalance(); renderCharges();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-function openPayAllModal() {
-  showModal(`<h3>💳 Pay All Outstanding</h3>
-    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">
-      Record a single payment to clear all outstanding charges for ${_student.name}.
-    </p>
-    <div class="fg"><label>Total Amount Paid (₦) *</label><input type="number" id="pam-amount" placeholder="0.00" min="0"></div>
-    <div class="frow">
-      <div class="fg"><label>Date *</label><input type="date" id="pam-date" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="fg"><label>Method</label>
-        <select id="pam-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
-      </div>
-    </div>
-    <div class="fg"><label>Reference</label><input type="text" id="pam-ref" placeholder="Optional"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-success" onclick="submitPayAllModal()">✅ Record Bulk Payment</button>
-    </div>`);
-}
-
-async function submitPayAllModal() {
-  const amount = parseFloat($('pam-amount')?.value||0);
-  const date   = $('pam-date')?.value;
-  const method = $('pam-method')?.value;
-  const ref    = $('pam-ref')?.value||null;
-  if (!amount||!date){ toast('Amount and date required','error'); return; }
-  try {
-    const r = await api('/student-finance/pay-all?sid='+encodeURIComponent(_student.id),{
-      method:'POST', body:{amount,date,method,reference:ref}});
-    closeModal();
-    toast(`✅ ${r.data?.cleared||0} charges cleared`,'success');
-    loadBalance(); renderOverview();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-function openLevyPayModal(id, levyName, amount) {
-  showModal(`<h3>💳 Pay Levy — ${levyName}</h3>
-    <div class="fg"><label>Amount Paid (₦) *</label><input type="number" id="lp-amount" value="${amount}" min="0"></div>
-    <div class="frow">
-      <div class="fg"><label>Date *</label><input type="date" id="lp-date" value="${new Date().toISOString().slice(0,10)}"></div>
-      <div class="fg"><label>Method</label>
-        <select id="lp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
-      </div>
-    </div>
-    <div class="fg"><label>Reference</label><input type="text" id="lp-ref" placeholder="Optional"></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-success" onclick="submitLevyPay('${id}','${levyName}',${amount})">✅ Record</button>
-    </div>`);
-}
-
-async function submitLevyPay(id, levyName, expected) {
-  const amt  = parseFloat($('lp-amount')?.value||0);
-  const date = $('lp-date')?.value;
-  const meth = $('lp-method')?.value;
-  const ref  = $('lp-ref')?.value||null;
-  if (!amt||!date){ toast('Amount and date required','error'); return; }
-  try {
-    await api('/levies/payments/'+id,{ method:'PATCH', body:{status:amt>=expected?'Paid':'Partial',amount_paid:amt,reference:ref}});
-    closeModal();
-    toast('✅ Levy payment recorded!','success');
-    loadBalance(); renderLevies();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-function openAddChargeModal() {
-  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
-  showModal(`<h3>⚡ Add Charge</h3>
-    <div class="fg"><label>Fee Type *</label><input type="text" id="ac-type" placeholder="e.g. School Fees"></div>
-    <div class="frow">
-      <div class="fg"><label>Amount (₦) *</label><input type="number" id="ac-amount" min="0"></div>
-      <div class="fg"><label>Due Date</label><input type="date" id="ac-date" value="${new Date().toISOString().slice(0,10)}"></div>
-    </div>
-    <div class="fg"><label>Term *</label><select id="ac-term">${termOpts}</select></div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitAddCharge()">+ Add</button>
-    </div>`);
-}
-
-async function submitAddCharge() {
-  const feeType = $('ac-type')?.value?.trim();
-  const amount  = parseFloat($('ac-amount')?.value||0);
-  const date    = $('ac-date')?.value;
-  const term    = $('ac-term')?.value;
-  if (!feeType||!amount){ toast('Fee type and amount required','error'); return; }
-  try {
-    await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{
-      method:'POST', body:{feeType,amount,date,term,status:'Unpaid'}});
-    closeModal();
-    toast('✅ Charge added!','success');
-    loadBalance(); renderCharges();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-function openDirectPayModal() {
-  const termOpts = ['First Term','Second Term','Third Term'].map(t=>`<option>${t}</option>`).join('');
-  showModal(`<h3>➕ Record Direct Payment</h3>
-    <div class="fg"><label>Fee Type *</label><input type="text" id="dp-type" placeholder="e.g. School Fees"></div>
-    <div class="frow">
-      <div class="fg"><label>Amount (₦) *</label><input type="number" id="dp-amount" min="0"></div>
-      <div class="fg"><label>Date *</label><input type="date" id="dp-date" value="${new Date().toISOString().slice(0,10)}"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Term *</label><select id="dp-term">${termOpts}</select></div>
-      <div class="fg"><label>Method</label>
-        <select id="dp-method"><option>Cash</option><option>Bank Transfer</option><option>POS</option><option>Cheque</option></select>
-      </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Status</label><select id="dp-status"><option>Paid</option><option>Partial</option><option>Unpaid</option></select></div>
-      <div class="fg"><label>Reference</label><input type="text" id="dp-ref" placeholder="Optional"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="submitDirectPay()">✅ Record & Receipt</button>
-    </div>`);
-}
-
-async function submitDirectPay() {
-  const feeType = $('dp-type')?.value?.trim();
-  const amount  = parseFloat($('dp-amount')?.value||0);
-  const date    = $('dp-date')?.value;
-  const term    = $('dp-term')?.value;
-  const method  = $('dp-method')?.value;
-  const status  = $('dp-status')?.value;
-  const ref     = $('dp-ref')?.value||null;
-  if (!feeType||!amount||!date){ toast('Fee type, amount, date required','error'); return; }
-  try {
-    const r = await api('/student-finance/charge?sid='+encodeURIComponent(_student.id),{
-      method:'POST', body:{feeType,amount,date,term,status,reference:ref}});
-    closeModal();
-    toast('✅ Payment recorded!','success');
-    printReceipt({ id:r.data?.id||'RCP'+Date.now(), student_id:_student.id,
-      student_name:_student.name, class_name:_student.class_name||_student.class||'',
-      student_arm:_student.arm||'', fee_type:feeType, amount, payment_date:date,
-      term, status, reference:ref, method });
-    loadBalance(); renderPayments();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-async function deleteCharge(id) {
-  if (!canAdmin()){ toast('Only Admin can delete charges','error'); return; }
-  if (!confirm('Delete this charge?')) return;
-  try {
-    await api('/fees/'+id,{ method:'DELETE' });
-    toast('Deleted','warning');
-    loadBalance(); renderCharges();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   RECEIPT GENERATOR
-═══════════════════════════════════════════════════════════ */
-function printReceipt(p) {
-  const school = _info.school_name||'Sacred Heart College Eziukwu Aba';
-  const principal = _info.principal_name||'The Principal';
-  const addr = _info.school_address||'Eziukwu Road, Aba, Abia State';
-  const amt = parseFloat(p.amount||p.amount_paid||0);
-  const rcpNo = 'RCP-'+String(p.id||'').replace(/\D/g,'').slice(-6).padStart(6,'0')+'-'+new Date().getFullYear();
-  const status = p.status||(amt>0?'Paid':'Unpaid');
-  const sc = status==='Paid'?'#16a34a':'#d97706';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt ${rcpNo}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f1f5f9;padding:1.5rem}
-  .rc{background:#fff;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.15)}
-  .hdr{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:1.75rem;text-align:center}
-  .hdr img{width:52px;height:52px;border-radius:50%;object-fit:contain;margin-bottom:.5rem}
-  .hdr h1{font-size:1rem;font-weight:800}.hdr p{font-size:.73rem;opacity:.8;margin-top:.2rem}
-  .strip{display:flex;justify-content:space-between;align-items:center;padding:.65rem 1.5rem;background:${sc}18;border-bottom:2px solid ${sc}44}
-  .rno{font-size:.75rem;color:#6b7280;font-family:monospace;font-weight:600}
-  .st{background:${sc};color:#fff;border-radius:9999px;padding:.2rem .85rem;font-size:.75rem;font-weight:800}
-  .body{padding:1.4rem 1.5rem}
-  .sec{margin-bottom:1rem}
-  .sec-lbl{font-size:.66rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;border-bottom:1px solid #f1f5f9;padding-bottom:.25rem}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
-  .row{display:flex;flex-direction:column;gap:.06rem}
-  .lbl{font-size:.68rem;color:#9ca3af}
-  .val{font-size:.85rem;font-weight:600}
-  .amt-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:1rem 1.2rem;
-    display:flex;justify-content:space-between;align-items:center;margin:.85rem 0}
-  .amt-box .big{font-size:1.7rem;font-weight:800;color:#1e3a5f}
-  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:.85rem 1.5rem;font-size:.7rem;color:#9ca3af;text-align:center}
-  .no-print{text-align:center;margin-bottom:1rem;display:flex;gap:.5rem;justify-content:center}
-  @media print{body{background:#fff;padding:0}.rc{box-shadow:none;max-width:100%;border-radius:0}.no-print{display:none}}</style>
-  </head><body>
-  <div class="no-print">
-    <button onclick="window.print()" style="background:#1e3a5f;color:#fff;border:none;padding:.5rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:700">🖨 Print</button>
-    <button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;padding:.5rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:700">✕ Close</button>
+function tokenRequired(title){return`<div class="section-title">${title}</div>
+  <div class="unlock-banner"><h3>🔐 Result Access Token Required</h3>
+    <p>Enter the code from the school to unlock your child's academic records.</p>
+    <div class="unlock-input-row"><input type="text" id="inline-token" placeholder="SHC-XXXX-XXXX" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')applyInlineToken()"><button onclick="applyInlineToken()">🔓 Unlock</button></div>
   </div>
-  <div class="rc">
-    <div class="hdr">
-      <img src="images/sahaco logo.jpg" onerror="this.style.display='none'">
-      <h1>${school}</h1>
-      <p>Official Payment Receipt · ${addr}</p>
-    </div>
-    <div class="strip"><span class="rno">Receipt: ${rcpNo}</span><span class="st">${status.toUpperCase()}</span></div>
-    <div class="body">
-      <div class="sec"><div class="sec-lbl">Student</div>
-        <div class="grid">
-          <div class="row"><span class="lbl">Name</span><span class="val">${p.student_name||_student?.name||'—'}</span></div>
-          <div class="row"><span class="lbl">Student ID</span><span class="val" style="font-family:monospace;font-size:.78rem">${p.student_id||_student?.id||'—'}</span></div>
-          <div class="row"><span class="lbl">Class</span><span class="val">${(p.class_name||'')+' '+(p.student_arm||'')}</span></div>
-          <div class="row"><span class="lbl">Term</span><span class="val">${p.term||'—'}</span></div>
-        </div>
-      </div>
-      <div class="sec"><div class="sec-lbl">Payment</div>
-        <div class="grid">
-          <div class="row"><span class="lbl">Fee Description</span><span class="val">${p.fee_type}</span></div>
-          <div class="row"><span class="lbl">Date</span><span class="val">${new Date(p.payment_date||Date.now()).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'})}</span></div>
-          <div class="row"><span class="lbl">Method</span><span class="val">${p.method||'Cash'}</span></div>
-          <div class="row"><span class="lbl">Reference</span><span class="val">${p.reference||rcpNo}</span></div>
-        </div>
-      </div>
-      <div class="amt-box">
-        <div><div style="font-size:.75rem;color:#6b7280">Amount Paid</div>
-          <div style="font-size:.75rem;color:${sc};margin-top:.15rem">${status==='Paid'?'Fully settled ✓':'Partial payment'}</div>
-        </div>
-        <div class="big">₦${amt.toLocaleString('en-NG',{minimumFractionDigits:2})}</div>
-      </div>
-      <div style="font-size:.7rem;color:#9ca3af;text-align:center">Computer-generated receipt. Contact the school bursar for queries.</div>
-    </div>
-    <div class="footer">Principal: ${principal} · Generated: ${new Date().toLocaleString('en-NG')}</div>
-  </div></body></html>`;
-  const w = window.open('','_blank','width=580,height=760,scrollbars=yes');
-  if (w){ w.document.write(html); w.document.close(); }
-  else toast('Allow popups to print receipts','warning');
+  <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1.25rem;font-size:.84rem;color:var(--muted)">
+    <strong style="color:var(--brand);display:block;margin-bottom:.4rem">How to get your access token:</strong>
+    <ol style="padding-left:1.25rem;line-height:2"><li>Contact the school's academic office or class teacher.</li><li>Request the result access token for the current term.</li><li>Codes look like: <code style="font-family:'DM Mono',monospace;background:#f1f5f9;padding:.1rem .4rem;border-radius:4px">SHC-XXXX-XXXX</code></li></ol>
+  </div>`;}
+
+async function renderResults(){
+  const main=$('sfp-main');
+  if(!_resultToken){main.innerHTML=tokenRequired('📋 Report Card');return;}
+  main.innerHTML='<div class="loading">⏳ Loading report card…</div>';
+  try{
+    const sid=encodeURIComponent(_student.id);
+    const params=new URLSearchParams();
+    if(_info.current_term)params.set('term',_info.current_term);
+    if(_info.current_session)params.set('session',_info.current_session);
+    const r=await apiFetch(`/results/report-card/${sid}?${params}`);
+    renderResultsHTML(main,r.data||r);
+  }catch(e){
+    if(e.message.includes('401')||e.message.includes('403')||e.message.toLowerCase().includes('token')){
+      _resultToken='';sessionStorage.removeItem('shc_result_token');updateTokenStatus(false,null);
+      main.innerHTML=`<div class="section-title">📋 Report Card</div>
+        <div class="unlock-banner" style="background:linear-gradient(135deg,#7c1d1d,#b91c1c)"><h3>❌ Invalid or Expired Token</h3><p>Contact the school for a new access token.</p>
+        <div class="unlock-input-row"><input type="text" id="inline-token" placeholder="SHC-XXXX-XXXX" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')applyInlineToken()"><button onclick="applyInlineToken()">🔓 Retry</button></div></div>`;
+    }else{main.innerHTML=`<div class="empty"><p style="color:var(--danger)">Error: ${e.message}</p></div>`;}
+  }
 }
 
-function doExport() {
-  if (!_student) return;
-  window.open(API+'/student-finance/export?sid='+encodeURIComponent(_student.id),'_blank');
+function renderResultsHTML(main,data){
+  const results=Array.isArray(data)?data:(data.results||[]);
+  const remarks=Array.isArray(data)?{}:(data.remarks||{});
+  const position=Array.isArray(data)?null:data.position;
+  const outOf=Array.isArray(data)?null:data.out_of;
+  if(!results.length){main.innerHTML=`<div class="section-title">📋 Report Card</div><div class="empty"><div class="empty-ico">📋</div><p>No results published yet.</p><p style="margin-top:.5rem;font-size:.82rem">Results are published at the end of each term.</p></div>`;return;}
+  const terms={};
+  results.forEach(r=>{const key=(r.term||'Term')+'|'+(r.session||'');if(!terms[key])terms[key]={term:r.term||'',session:r.session||'',subjects:[]};terms[key].subjects.push(r);});
+  const school=_info.school_name||'Sacred Heart College Eziukwu Aba';
+  const principal=_info.principal_name||'The Principal';
+  let html=`<div class="section-title">📋 Report Card — ${_student.name}</div>`;
+  Object.values(terms).forEach(({term,session,subjects})=>{
+    const avg=subjects.length?Math.round(subjects.reduce((s,r)=>s+parseFloat(r.total||0),0)/subjects.length):0;
+    const pos=position||subjects[0]?.class_position||'—';
+    const tot=outOf||subjects[0]?.total_students||'—';
+    const tr=remarks.teacher_remark||subjects[0]?.teacher_remark||'';
+    const pr=remarks.principal_remark||subjects[0]?.principal_remark||'';
+    html+=`<div class="card" style="margin-bottom:1.25rem">
+      <div class="card-hdr" style="background:linear-gradient(135deg,#eef3fb,#f0fdf6)"><h3>📋 ${term}${session?' — '+session:''}</h3>
+        <div style="display:flex;gap:.5rem;align-items:center">${remarkBadge(avg)}<span style="font-size:.78rem;color:var(--muted)">Avg: ${avg}%</span>${pos!=='—'?`<span style="font-size:.78rem;color:var(--muted)">Position: ${pos}${tot!=='—'?'/'+tot:''}</span>`:''}</div>
+      </div>
+      <div class="perf-summary">
+        <div class="perf-box"><div class="pval ${gradeClass(avg)}">${avg}%</div><div class="plbl">Average</div></div>
+        <div class="perf-box"><div class="pval" style="color:var(--brand)">${subjects.length}</div><div class="plbl">Subjects</div></div>
+        <div class="perf-box"><div class="pval" style="color:var(--gold)">${pos}</div><div class="plbl">Position</div></div>
+        <div class="perf-box"><div class="pval ${gradeClass(avg)}">${gradeLabel(avg)}</div><div class="plbl">Grade</div></div>
+      </div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Subject</th><th style="text-align:center">CA</th><th style="text-align:center">Exam</th><th style="text-align:center">Total</th><th style="text-align:center">Grade</th><th style="text-align:center">Remark</th><th>Progress</th></tr></thead>
+      <tbody>${subjects.map(s=>{const ca=parseFloat(s.ca||0);const ex=parseFloat(s.exam||0);const t=parseFloat(s.total||ca+ex||0);return`<tr><td style="font-weight:600">${s.subject_name||s.subject||'—'}</td><td style="text-align:center;font-family:'DM Mono',monospace">${ca||'—'}</td><td style="text-align:center;font-family:'DM Mono',monospace">${ex||'—'}</td><td class="grade-cell ${gradeClass(t)}" style="text-align:center">${t}</td><td class="grade-cell ${gradeClass(t)}" style="text-align:center">${gradeLabel(t)}</td><td style="text-align:center">${remarkBadge(t)}</td><td style="min-width:80px"><div class="progress-bar-wrap"><div class="progress-bar" style="width:${Math.min(100,t)}%;background:${barColor(t)}"></div></div></td></tr>`;}).join('')}</tbody></table></div>
+      ${tr?`<div class="comment-box"><strong>Class Teacher's Remark</strong>${tr}</div>`:''}
+      ${pr?`<div class="comment-box" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#93c5fd;color:#1e3a5f"><strong>Principal's Remark</strong>${pr}</div>`:''}
+      <div style="padding:.65rem 1.1rem;background:#f9fafb;border-top:1px solid var(--border);font-size:.73rem;color:var(--muted2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.25rem"><span>${school}</span><span>Principal: ${principal}</span></div>
+    </div>`;
+  });
+  main.innerHTML=html;
 }
 
-/* ── Boot ── */
-boot();
+async function renderPerformance(){
+  const main=$('sfp-main');
+  if(!_resultToken){main.innerHTML=tokenRequired('📈 Performance Analysis');return;}
+  main.innerHTML='<div class="loading">⏳ Loading…</div>';
+  try{
+    const r=await apiFetch(`/results/student/${encodeURIComponent(_student.id)}`);
+    const results=r.data||[];
+    const byTerm={},bySubject={};
+    results.forEach(r=>{const t=`${r.term||''}${r.session?' '+r.session:''}`;const s=r.subject_name||r.subject||'?';const v=parseFloat(r.total||0);if(!byTerm[t])byTerm[t]=[];byTerm[t].push(v);if(!bySubject[s])bySubject[s]=[];bySubject[s].push(v);});
+    const termAvgs=Object.entries(byTerm).map(([t,arr])=>({term:t,avg:Math.round(arr.reduce((a,b)=>a+b,0)/arr.length)}));
+    const subjLatest=Object.entries(bySubject).map(([s,arr])=>({subject:s,score:arr[arr.length-1]})).sort((a,b)=>b.score-a.score);
+    main.innerHTML=`<div class="section-title">📈 Performance Analysis — ${_student.name}</div>
+      ${termAvgs.length?`<div class="card"><div class="card-hdr"><h3>📊 Term-by-Term Average</h3></div><div style="padding:1.1rem">
+        ${termAvgs.map(t=>`<div style="margin-bottom:.85rem"><div style="display:flex;justify-content:space-between;font-size:.83rem;margin-bottom:.3rem"><span style="font-weight:600">${t.term}</span><span class="${gradeClass(t.avg)}" style="font-family:'DM Mono',monospace;font-weight:700">${t.avg}% — ${gradeLabel(t.avg)}</span></div><div class="progress-bar-wrap" style="height:16px"><div class="progress-bar" style="width:${t.avg}%;background:${barColor(t.avg)}"></div></div></div>`).join('')}
+      </div></div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="card" style="margin-bottom:0"><div class="card-hdr"><h3 style="color:#15803d">🏆 Strongest</h3></div><div style="padding:.75rem">${subjLatest.slice(0,5).map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .25rem;border-bottom:1px solid #f1f5f9"><span style="font-size:.83rem">${s.subject}</span><span class="grade-cell ${gradeClass(s.score)}">${s.score}%</span></div>`).join('')}${!subjLatest.length?'<div class="empty"><p>No data.</p></div>':''}</div></div>
+        <div class="card" style="margin-bottom:0"><div class="card-hdr"><h3 style="color:var(--danger)">⚠ Needs Work</h3></div><div style="padding:.75rem">${subjLatest.filter(s=>s.score<60).reverse().slice(0,5).map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .25rem;border-bottom:1px solid #f1f5f9"><span style="font-size:.83rem">${s.subject}</span><span class="grade-cell ${gradeClass(s.score)}">${s.score}%</span></div>`).join('')}${!subjLatest.filter(s=>s.score<60).length?'<div style="padding:.75rem;text-align:center;color:var(--success);font-size:.83rem">✅ All above 60%</div>':''}</div></div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.9rem 1.1rem;font-size:.82rem;color:#166534">💡 Contact the class teacher if performance drops below 50% in any subject.</div>`;
+  }catch(e){if(e.message.includes('401')||e.message.includes('403')){main.innerHTML=tokenRequired('📈 Performance Analysis');}else{main.innerHTML=`<div class="empty"><p style="color:var(--danger)">${e.message}</p></div>`;}}
+}
+
+async function renderAttendance(){
+  const main=$('sfp-main'),sid=encodeURIComponent(_student.id);
+  try{
+    const r=await apiFetch(`/attendance/student/${sid}`);const records=r.data||[];
+    const present=records.filter(x=>['p','present','Present'].includes(x.status)).length;
+    const absent=records.filter(x=>['a','absent','Absent'].includes(x.status)).length;
+    const late=records.filter(x=>['l','late','Late'].includes(x.status)).length;
+    const total=records.length;const pct=total>0?Math.round(present/total*100):0;
+    main.innerHTML=`<div class="section-title">📅 Attendance Record</div>
+      <div class="stat-grid">${[['Present',present,'#15803d'],['Absent',absent,'#b91c1c'],['Late',late,'#c8922b'],['Attendance %',pct+'%',pct>=80?'#15803d':pct>=60?'#c8922b':'#b91c1c']].map(([l,v,c])=>`<div class="stat-card" style="border-left-color:${c}"><div class="stat-val" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}</div>
+      <div class="card"><div class="card-hdr"><h3>Attendance Rate</h3></div><div style="padding:1rem 1.25rem"><div class="progress-bar-wrap" style="height:16px"><div class="progress-bar" style="width:${pct}%;background:${barColor(pct)}"></div></div><div style="font-size:.78rem;color:var(--muted);margin-top:.35rem;display:flex;justify-content:space-between"><span>${present} days present of ${total} school days</span><span>${pct}%</span></div></div></div>
+      ${pct<80&&total>0?`<div style="background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:.9rem 1.1rem;font-size:.82rem;color:#991b1b;margin-bottom:1rem">⚠️ Attendance below 80%. Poor attendance significantly affects academic performance.</div>`:''}
+      <div class="card"><div class="card-hdr"><h3>Recent Attendance Log</h3></div>
+        ${records.length?`<table><thead><tr><th>Date</th><th>Status</th><th>Remarks</th></tr></thead><tbody>${records.slice(-30).reverse().map(a=>{const raw=a.status||'p';const label={'p':'Present','a':'Absent','l':'Late','e':'Excused'}[raw]||raw;const cls={'p':'b-paid','a':'b-unpaid','l':'b-partial','e':'b-average'}[raw]||'b-average';return`<tr><td>${fmtDate(a.date)}</td><td><span class="badge ${cls}">${label}</span></td><td style="font-size:.78rem;color:var(--muted)">${a.remarks||'—'}</td></tr>`;}).join('')}</tbody></table>`
+        :'<div class="empty"><div class="empty-ico">📅</div><p>No attendance records available.</p></div>'}
+      </div>`;
+  }catch(e){main.innerHTML=`<div class="section-title">📅 Attendance</div><div class="empty"><div class="empty-ico">📅</div><p>Attendance records are not available at this time.</p></div>`;}
+}
 </script>
 </body>
 </html>

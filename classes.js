@@ -6,7 +6,96 @@
  *             inputStyle(), selectStyle(), showModal(), closeModal(),
  *             toast(), confirmDlg(), denyAccess() from script.js
  */
+function renderTeacherClassView() {
+  const section = document.getElementById('classes');
+  if (!section) return;
+  const u   = App.currentUser;
+  const cls = (App.data.classes || []).find(c => c.name === u.assignedClass);
+
+  if (!cls) {
+    section.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:1rem;">📋</div>
+        <h2 style="color:#1e3a5f;margin:0 0 .5rem;">No Class Assigned</h2>
+        <p style="color:#6b7280;max-width:400px;margin:0;">
+          You have not been assigned to a class yet. Please contact the administrator.
+        </p>
+      </div>`;
+    return;
+  }
+
+  const arm      = u.assignedArm || '';
+  const students = (App.data.students || []).filter(
+    s => s.class === u.assignedClass && s.arm === arm
+  );
+
+  section.innerHTML = `
+    <div style="margin-bottom:1.5rem;">
+      <h2 style="margin:0 0 .2rem;font-size:1.5rem;">My Class</h2>
+      <p style="margin:0;color:#6b7280;font-size:.875rem;">
+        You are assigned to <strong>${u.assignedClass} ${arm}</strong>
+      </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div style="background:#1e3a5f;color:#fff;border-radius:12px;padding:1.25rem 1.5rem;">
+        <div style="font-size:1.3rem;">👩‍🎓</div>
+        <div style="font-size:2rem;font-weight:800;line-height:1.1;">${students.length}</div>
+        <div style="font-size:.75rem;opacity:.8;margin-top:.2rem;">Students in Your Class</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:1.25rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid #6366f1;">
+        <div style="font-size:1.3rem;">🏫</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#6366f1;line-height:1.1;">${u.assignedClass}</div>
+        <div style="font-size:.75rem;color:#6b7280;margin-top:.2rem;">Class</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:1.25rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:3px solid #0891b2;">
+        <div style="font-size:1.3rem;">🚪</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#0891b2;line-height:1.1;">Arm ${arm || '—'}</div>
+        <div style="font-size:.75rem;color:#6b7280;margin-top:.2rem;">Your Arm</div>
+      </div>
+    </div>
+
+    <div style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1.5rem;">
+      <h3 style="margin:0 0 1rem;font-size:1rem;color:#1e3a5f;">Quick Actions</h3>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <button onclick="navigate('results')"    style="${btnStyle('primary')}">📝 Enter Results</button>
+        <button onclick="navigate('attendance')" style="${btnStyle('secondary')}">✅ Take Attendance</button>
+        <button onclick="navigate('students')"   style="${btnStyle('secondary')}">👩‍🎓 View Students</button>
+        <button onclick="navigate('report-cards')" style="${btnStyle('secondary')}">📄 Report Cards</button>
+      </div>
+    </div>
+
+    ${students.length ? `
+    <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;">
+      <div style="padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;">
+        <h3 style="margin:0;font-size:1rem;color:#1e3a5f;">Students in ${u.assignedClass} ${arm}</h3>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+          <thead>
+            <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+              <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;">#</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Name</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Student ID</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-size:.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Gender</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map((s, i) => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:.6rem 1rem;color:#9ca3af;">${i + 1}</td>
+                <td style="padding:.6rem 1rem;font-weight:600;color:#111827;">${s.name}</td>
+                <td style="padding:.6rem 1rem;color:#6b7280;">${s.studentId || s.id}</td>
+                <td style="padding:.6rem 1rem;color:#6b7280;">${s.gender || '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : ''}`;
+}
+
 function renderClasses() {
+  if (priv.isTeacher()) { renderTeacherClassView(); return; }
   if (!priv.canManage()) { accessDeniedPage('classes'); return; }
 
   const section  = document.getElementById('classes');

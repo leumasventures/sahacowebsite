@@ -522,7 +522,7 @@ function renderSection(id) {
     case 'arms':            renderArms();         break;
     case 'students':        renderStudents();     break;
     case 'teachers':        renderTeachers();     break;
-    case 'subjects':        renderSubjects();     break;
+    case 'subjects':      typeof renderSubjects    === 'function' && renderSubjects();    break;
     case 'results':         renderResults();      break;
     case 'report-cards':    renderReportCards();  break;
     case 'attendance':      renderAttendance();   break;

@@ -695,12 +695,45 @@ window.loadResultEntry = function() {
 };
 
 window.calcTotal = function(input) {
-  const row  = input.closest('tr');
+  const row    = input.closest('tr');
   const caEl   = row.querySelector('.ca-input');
   const examEl = row.querySelector('.exam-input');
+
+  // Get max limits from settings
+  const bk      = typeof getScoreBreakdown === 'function' ? getScoreBreakdown() : {};
+  const maxCA   = Object.entries(bk).filter(([k]) => /^ca/i.test(k)).reduce((s,[,v]) => s+v, 0) || 40;
+  const maxExam = Object.entries(bk).find(([k]) => /exam/i.test(k))?.[1] || 60;
+
+  // Clamp values to their maximums
+  if (caEl && caEl.value !== '') {
+    const v = parseFloat(caEl.value);
+    if (!isNaN(v) && v > maxCA) {
+      caEl.value = maxCA;
+      caEl.style.borderColor = '#ef4444';
+      caEl.title = `Maximum CA score is ${maxCA}`;
+    } else if (!isNaN(v) && v < 0) {
+      caEl.value = 0;
+    } else {
+      caEl.style.borderColor = '';
+      caEl.title = '';
+    }
+  }
+  if (examEl && examEl.value !== '') {
+    const v = parseFloat(examEl.value);
+    if (!isNaN(v) && v > maxExam) {
+      examEl.value = maxExam;
+      examEl.style.borderColor = '#ef4444';
+      examEl.title = `Maximum Exam score is ${maxExam}`;
+    } else if (!isNaN(v) && v < 0) {
+      examEl.value = 0;
+    } else {
+      examEl.style.borderColor = '';
+      examEl.title = '';
+    }
+  }
+
   const ca   = parseFloat(caEl?.value)   || 0;
   const exam = parseFloat(examEl?.value) || 0;
-  // Only show total if at least one value is entered
   const hasValue = (caEl?.value !== '' && caEl?.value != null) || (examEl?.value !== '' && examEl?.value != null);
   const total = hasValue ? (ca + exam) : null;
   const g = total !== null ? grade(total) : null;
@@ -710,7 +743,6 @@ window.calcTotal = function(input) {
   if (totalCell)  totalCell.textContent  = total !== null ? total : '-';
   if (gradeCell)  gradeCell.textContent  = g ? g.letter : '-';
   if (remarkCell) remarkCell.textContent = g ? g.remark : '-';
-  // Colour feedback
   if (totalCell && total !== null) {
     const pass = typeof getPassMark === 'function' ? getPassMark() : 40;
     totalCell.style.color      = total >= pass ? '#16a34a' : '#dc2626';
@@ -731,8 +763,11 @@ window.saveAllResults = async function(cls, arm, subject, term, session) {
     const sid      = row.dataset.sid;
     const caVal    = row.querySelector('.ca-input')?.value;
     const examVal  = row.querySelector('.exam-input')?.value;
-    const ca       = caVal   !== '' && caVal   != null ? parseFloat(caVal)   : null;
-    const exam     = examVal !== '' && examVal != null ? parseFloat(examVal) : null;
+    const bk2     = typeof getScoreBreakdown === 'function' ? getScoreBreakdown() : {};
+    const _maxCA   = Object.entries(bk2).filter(([k]) => /^ca/i.test(k)).reduce((s,[,v]) => s+v, 0) || 40;
+    const _maxExam = Object.entries(bk2).find(([k]) => /exam/i.test(k))?.[1] || 60;
+    const ca       = caVal   !== '' && caVal   != null ? Math.min(_maxCA,   Math.max(0, parseFloat(caVal)))   : null;
+    const exam     = examVal !== '' && examVal != null ? Math.min(_maxExam, Math.max(0, parseFloat(examVal))) : null;
     // Skip completely empty rows
     if (!sid || (ca === null && exam === null)) return;
     // Skip invalid values

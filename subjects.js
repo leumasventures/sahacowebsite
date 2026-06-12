@@ -1,4 +1,7 @@
 'use strict';
+/* selectStyle fallback — in case script.js hasn't defined it yet */
+if (typeof selectStyle === 'undefined') window.selectStyle = () => 'width:100%;padding:.52rem .75rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.875rem;font-family:inherit;outline:none;background:#fff;cursor:pointer;';
+if (typeof inputStyle  === 'undefined') window.inputStyle  = () => 'width:100%;padding:.52rem .75rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.875rem;font-family:inherit;outline:none;';
 /**
  * subjects.js — Sacred Heart College Eziukwu Aba (SAHARCO)
  * Subjects module: render, add, edit, delete subjects

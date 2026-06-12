@@ -94,6 +94,30 @@ function renderTeacherClassView() {
     </div>` : ''}`;
 }
 
+function renderTeacherClassView() {
+  const section = document.getElementById('classes');
+  if (!section) return;
+  const u = App.currentUser;
+  const cls = (App.data.classes || []).find(c => c.name === u.assignedClass);
+  if (!cls) {
+    section.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;"><div style="font-size:3rem;margin-bottom:1rem;">📋</div><h2 style="color:#1e3a5f;margin:0 0 .5rem;">No Class Assigned</h2><p style="color:#6b7280;max-width:400px;margin:0;">Contact the administrator to be assigned to a class.</p></div>`;
+    return;
+  }
+  const arm = u.assignedArm || '';
+  const students = (App.data.students || []).filter(s => s.class === u.assignedClass && s.arm === arm);
+  section.innerHTML = `
+    <div style="margin-bottom:1.5rem;"><h2 style="margin:0 0 .2rem;font-size:1.5rem;">My Class</h2>
+    <p style="margin:0;color:#6b7280;font-size:.875rem;">Assigned to <strong>${u.assignedClass} ${arm}</strong></p></div>
+    <div style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1rem;">
+      <h3 style="margin:0 0 1rem;font-size:1rem;color:#1e3a5f;">Quick Actions</h3>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <button onclick="navigate('results')" style="${btnStyle('primary')}">📝 Enter Results</button>
+        <button onclick="navigate('attendance')" style="${btnStyle('secondary')}">✅ Take Attendance</button>
+        <button onclick="navigate('students')" style="${btnStyle('secondary')}">👩‍🎓 View Students (${students.length})</button>
+      </div>
+    </div>`;
+}
+
 function renderClasses() {
   if (priv.isTeacher()) { renderTeacherClassView(); return; }
   if (!priv.canManage()) { accessDeniedPage('classes'); return; }

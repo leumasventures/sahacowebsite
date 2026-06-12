@@ -231,7 +231,21 @@ function renderResults() {
       const sel = document.getElementById(id);
       if (sel && classData) sel.innerHTML = classData.arms.map(a=>`<option ${a===preArm?'selected':''}>${a}</option>`).join('');
     });
+    // FIX: restrict the subject dropdown to subjects allocated to this teacher's class/arm
+    if (preClass && preArm) {
+      Results.getClassAllocation(preClass, preArm).then(resp => {
+        const raw   = resp.subjects || resp.data || [];
+        const names = raw.map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+        const sel   = document.getElementById('res-subject');
+        if (sel && names.length) {
+          sel.innerHTML = names.map(n => `<option>${n}</option>`).join('');
+          App.data.subjectAllocations[`${preClass}_${preArm}`] = names;
+        }
+        // If no allocation set yet, leave the full subject list as fallback
+      }).catch(e => console.warn('[results] allocation fetch failed:', e.message));
+    }
   } else {
+
     populateResultStudents();
     populateBulkArms();
   }

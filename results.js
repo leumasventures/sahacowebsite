@@ -1342,6 +1342,7 @@ window.openAutoPromotionWizard = function() {
       </div>
       <button onclick="document.getElementById('auto-promo-modal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;">×</button>
     </div>
+git add .
 
     <!-- Active Criteria display -->
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;">

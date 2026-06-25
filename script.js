@@ -83,15 +83,15 @@ const priv = {
    */
   canActOnClass: (cls, arm) => {
     if (priv.isAdmin()) return true;
-    const u = App.currentUser;
+    const u  = App.currentUser;
     const uc = (u.assignedClass || '').trim();
     const ua = (u.assignedArm   || '').trim();
     const c  = (cls || '').trim();
     const a  = (arm || '').trim();
-    if (!uc) return true;          // teacher has no class assigned — allow (admin should fix)
-    if (uc !== c) return false;    // class must match
-    if (!ua) return true;          // teacher assigned to whole class (no specific arm) — allow any arm
-    return ua === a;               // arm assigned — must match exactly
+    if (!uc) return true;       // no class assigned yet — allow (admin should fix)
+    if (uc !== c) return false; // class must match
+    if (!ua) return true;       // whole-class teacher — allow any arm
+    return ua === a;            // specific arm assigned — must match
   },
 };
 

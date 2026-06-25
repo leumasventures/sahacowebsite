@@ -295,16 +295,23 @@
       if (fixtures.length) App.data.fixtures = fixtures;
       if (notices.length)  App.data.notices  = notices;
       var userRole = (global.App && global.App.currentUser && global.App.currentUser.role) || '';
-      if (userRole !== 'Admin') {
-        console.info('[api] loadAppData done — classes:' + (App.data.classes||[]).length +
-          ' students:' + (App.data.students||[]).length +
-          ' staff:' + (App.data.teachers||[]).length +
-          ' subjects:' + (App.data.subjects||[]).length);
-        return Promise.resolve();
-      }
-      return Admin.getSettings().then(function (res) {
+      var settingsEndpoint = userRole === 'Admin' ? Admin.getSettings() : get('/admin/public-settings');
+      return settingsEndpoint.then(function (res) {
         var d = res && res.data;
         if (d && App.data.schoolInfo) {
+          // Sync score breakdown
+          if (d.score_breakdown) {
+            try { App.data.scoreBreakdown = JSON.parse(d.score_breakdown); } catch(e) {}
+          }
+          // Sync grading scale
+          if (d.grading_scale) {
+            try { App.data.gradingScale = JSON.parse(d.grading_scale); } catch(e) {}
+          }
+          // Sync pass mark
+          if (d.pass_mark) {
+            App.data.generalSettings = App.data.generalSettings || {};
+            App.data.generalSettings.passMark = parseInt(d.pass_mark) || 40;
+          }
           if (d.school_name)     App.data.schoolInfo.name      = d.school_name;
           if (d.current_session) App.data.schoolInfo.session   = d.current_session;
           if (d.current_term)    App.data.schoolInfo.term      = d.current_term;

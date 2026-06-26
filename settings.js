@@ -1316,7 +1316,7 @@ window.saveGradingAndDomains = function() {
 };
 
 function renderScoreBreakdownInputs() {
-  const defaults = App.data.scoreBreakdown || { 'CA 1': 10, 'CA 2': 10, 'Exam': 80 };
+  const defaults = App.data.scoreBreakdown || { 'CA': 40, 'Exam': 60 };
   return Object.entries(defaults).map(([k,v]) => `
     <div>
       <label style="${labelStyle()}">${k} (%)</label>

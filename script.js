@@ -169,7 +169,7 @@ function getSetting(key, fallback) {
 function getScoreBreakdown() {
   const bk = App?.data?.scoreBreakdown;
   if (bk && typeof bk === 'object' && Object.keys(bk).length) return bk;
-  return { 'CA 1': 10, 'CA 2': 10, 'Exam': 80 };
+  return { 'CA': 40, 'Exam': 60 };
 }
 
 function getPassMark()      { return getSetting('passMark', 40); }

@@ -128,7 +128,7 @@ function renderResults() {
           <div>
             <label style="${labelStyle()}">Term</label>
             <select id="res-term" style="${inputStyle()}">
-              <option>First Term</option><option selected>Second Term</option><option>Third Term</option>
+              ${['First Term','Second Term','Third Term'].map(t=>`<option ${t===(App.data.schoolInfo?.term||'Second Term')?'selected':''}>${t}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -703,6 +703,7 @@ window.calcTotal = function(input) {
   const bk      = typeof getScoreBreakdown === 'function' ? getScoreBreakdown() : {};
   const maxCA   = Object.entries(bk).filter(([k]) => /^ca/i.test(k)).reduce((s,[,v]) => s+v, 0) || 40;
   const maxExam = Object.entries(bk).find(([k]) => /exam/i.test(k))?.[1] || 60;
+  const maxTotal = maxCA + maxExam;
 
   // Clamp values to their maximums
   if (caEl && caEl.value !== '') {
@@ -745,8 +746,10 @@ window.calcTotal = function(input) {
   if (remarkCell) remarkCell.textContent = g ? g.remark : '-';
   if (totalCell && total !== null) {
     const pass = typeof getPassMark === 'function' ? getPassMark() : 40;
-    totalCell.style.color      = total >= pass ? '#16a34a' : '#dc2626';
+    const overMax = total > maxTotal;
+    totalCell.style.color      = overMax ? '#b45309' : (total >= pass ? '#16a34a' : '#dc2626');
     totalCell.style.fontWeight = '700';
+    totalCell.title            = overMax ? `Total exceeds maximum (${maxTotal})` : '';
   }
 };
 
@@ -780,23 +783,32 @@ window.saveAllResults = async function(cls, arm, subject, term, session) {
 
   let saved = 0, failed = 0;
   try {
-    // Use bulk endpoint for efficiency
     const resp = await Results.bulkCreate({
-      results: rows.map(r => ({ student_id: r.studentId, subject, term, session, ca: r.ca, exam: r.exam }))
+      results: rows.map(r => ({ student_id: r.studentId, studentId: r.studentId, subject, term, session, ca: r.ca, exam: r.exam }))
     });
-    saved = resp.saved || resp.data?.saved || rows.length;
-    failed = resp.skipped || 0;
 
-    // Update local cache
-    rows.forEach(r => {
-      const total = Math.min(r.ca + r.exam, getMaxScore ? getMaxScore() : 100);
+    console.log('[saveAllResults] response:', JSON.stringify(resp));
+
+    saved  = typeof resp.saved   === 'number' ? resp.saved   : rows.length;
+    failed = typeof resp.skipped === 'number' ? resp.skipped : (resp.errors?.length || 0);
+
+    if (saved === 0) {
+      const errMsg = resp.errors?.map(e => e.error).join('; ') || 'No records were saved — check Render logs for details.';
+      toast(`Save failed: ${errMsg}`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = origText || '💾 Save All Results'; }
+      return;
+    }
+
+    // Only update local cache when backend confirmed saves
+    rows.slice(0, saved).forEach(r => {
+      const total = r.ca + r.exam;
       const entry = { studentId: r.studentId, class: cls, arm, subject, term, session, ca: r.ca, exam: r.exam, total };
       const idx = App.data.results.findIndex(x => x.studentId===r.studentId && x.subject===subject && x.term===term && x.session===session);
       if (idx >= 0) App.data.results[idx] = { ...App.data.results[idx], ...entry };
       else App.data.results.push(entry);
     });
 
-    toast(`✅ ${saved} result(s) saved to database!${failed > 0 ? ` (${failed} skipped)` : ''}`, 'success');
+    toast(`✅ ${saved} result(s) saved!${failed > 0 ? ` (${failed} skipped)` : ''}`, 'success');
   } catch(e) {
     console.error('[saveAllResults]', e);
     toast('Save failed: ' + e.message, 'error');
@@ -1834,11 +1846,15 @@ window.submitQuickScore = async function(studentId, subject, cls, arm, term, ses
   if (ca === 0 && exam === 0) { toast('Enter at least one score', 'warning'); return; }
   try {
     const resp = await Results.create({ studentId, subject, term, session, ca, exam });
+    if (!resp.ok && !resp.data) { toast('Save failed: ' + (resp.message || 'unknown error'), 'error'); return; }
     const saved = resp.data || resp;
-    App.data.results.push(saved);
+    // Only add to cache if not already there
+    const exists = App.data.results.findIndex(x => x.studentId===studentId && x.subject===subject && x.term===term && x.session===session);
+    const entry = { ...saved, studentId, subject, term, session, ca, exam, total: ca + exam };
+    if (exists >= 0) App.data.results[exists] = entry;
+    else App.data.results.push(entry);
     closeModal();
     toast(`✓ Score saved for ${subject}`, 'success');
-    // Refresh the verify table
     loadVerifyResults();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 };
